@@ -382,6 +382,7 @@ body.menu-open{overflow:hidden}
     </div>
 
     <button class="nav-item" id="nav-usuarios" style="display:none" onclick="showPage('usuarios',this)"><span class="icon" data-lucide="users"></span>Usuários</button>
+    <button class="nav-item" onclick="showPage('docs-operacionais',this)"><span class="icon" data-lucide="shield-check"></span>Documentação<span id="docs-nav-badge" style="display:none;margin-left:auto;background:#EF4444;color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700"></span></button>
   </nav>
   <div class="sb-footer">
     <div style="font-size:10px;font-weight:600;color:var(--muted2)">ÚLTIMA ATUALIZAÇÃO</div>
@@ -1725,6 +1726,65 @@ body.menu-open{overflow:hidden}
       <div class="tbl-wrap"><table id="tbl-usuarios"><thead><tr><th>Email</th><th>Nível</th><th>Criado em</th><th>Ações</th></tr></thead><tbody><tr><td colspan="4" style="color:var(--muted)">Carregando…</td></tr></tbody></table></div>
     </div>
 
+    <!-- ===== CONTROLE DE DOCUMENTAÇÃO ===== -->
+    <div class="page" id="page-docs-operacionais">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:20px">
+        <div>
+          <div style="font-size:18px;font-weight:700;color:var(--text)">Controle de Documentação Operacional</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">Licenças, certificados e alvarás — Multilix &amp; Amsterdam</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-ghost" onclick="_docsExportCSV()">⬇ Exportar CSV</button>
+          <button class="btn btn-primary" onclick="_docsOpenModal()">+ Novo Documento</button>
+        </div>
+      </div>
+      <div id="docs-alert-bar" style="display:none;background:#EF444418;border:1px solid #EF444440;border-radius:10px;padding:10px 16px;margin-bottom:16px;font-size:12px;color:#FCA5A5"></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:20px">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px">Total</div><div id="docs-stat-total" style="font-size:26px;font-weight:700;color:var(--text);margin-top:4px">0</div></div>
+        <div style="background:var(--surface);border:1px solid #EF444430;border-radius:12px;padding:14px 16px"><div style="font-size:10px;color:#EF4444;text-transform:uppercase;letter-spacing:.8px">Vencidos</div><div id="docs-stat-vencido" style="font-size:26px;font-weight:700;color:#EF4444;margin-top:4px">0</div></div>
+        <div style="background:var(--surface);border:1px solid #F9731630;border-radius:12px;padding:14px 16px"><div style="font-size:10px;color:#FB923C;text-transform:uppercase;letter-spacing:.8px">Crítico ≤7d</div><div id="docs-stat-critico" style="font-size:26px;font-weight:700;color:#FB923C;margin-top:4px">0</div></div>
+        <div style="background:var(--surface);border:1px solid #EAB30830;border-radius:12px;padding:14px 16px"><div style="font-size:10px;color:#EAB308;text-transform:uppercase;letter-spacing:.8px">Atenção ≤30d</div><div id="docs-stat-atencao" style="font-size:26px;font-weight:700;color:#EAB308;margin-top:4px">0</div></div>
+        <div style="background:var(--surface);border:1px solid #10B98130;border-radius:12px;padding:14px 16px"><div style="font-size:10px;color:#10B981;text-transform:uppercase;letter-spacing:.8px">OK</div><div id="docs-stat-ok" style="font-size:26px;font-weight:700;color:#10B981;margin-top:4px">0</div></div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px">Sem data</div><div id="docs-stat-semdata" style="font-size:26px;font-weight:700;color:var(--muted);margin-top:4px">0</div></div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+        <select id="docs-f-frente" onchange="_docsRender()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"><option value="">Todas as frentes</option><option value="locacao_transporte">Locação / Transporte</option><option value="att">ATT</option><option value="destino_final">Destino Final</option></select>
+        <select id="docs-f-entidade" onchange="_docsRender()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"><option value="">Todas as entidades</option><option value="Multilix">Multilix</option><option value="Amsterdam">Amsterdam</option></select>
+        <select id="docs-f-tipo" onchange="_docsRender()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"><option value="">Todos os tipos</option><option value="cdo_cetesb">CDL CETESB</option><option value="licenca_operacao">Lic. de Operação</option><option value="cr_ibama">CR IBAMA</option><option value="carteirinha_sp_regula_veiculo">SP Regula – Veículo</option><option value="carteirinha_sp_regula_att">SP Regula – ATT</option><option value="cli_amsterdam">CLI Amsterdam</option><option value="clcb_bombeiros">CLCB Bombeiros</option><option value="alvara_municipal">Alvará Municipal</option><option value="outro">Outro</option></select>
+        <select id="docs-f-status" onchange="_docsRender()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"><option value="">Todos os status</option><option value="vencido">Vencidos</option><option value="critico">Crítico ≤7d</option><option value="atencao">Atenção ≤30d</option><option value="ok">OK</option><option value="sem_data">Sem data</option></select>
+        <input id="docs-f-busca" oninput="_docsRender()" placeholder="Buscar por nome…" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none;min-width:160px"/>
+      </div>
+      <div class="tbl-wrap"><table id="tbl-docs"><thead><tr><th>Nome</th><th>Tipo</th><th>Frente</th><th>Entidade</th><th>Placa</th><th>Vencimento</th><th>Status</th><th>Dias</th><th>Drive</th><th>Ações</th></tr></thead><tbody id="docs-tbody"><tr><td colspan="10" style="color:var(--muted);text-align:center;padding:32px">Carregando…</td></tr></tbody></table></div>
+    </div>
+
+    <!-- MODAL DOCUMENTO -->
+    <div id="docs-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:9300;overflow-y:auto;padding:20px 12px" onclick="if(event.target===this)_docsCloseModal()">
+      <div style="max-width:640px;margin:0 auto;background:#151922;border:1px solid #262D3D;border-radius:16px;padding:0 0 24px" onclick="event.stopPropagation()">
+        <div style="background:linear-gradient(90deg,#1e3a5f,#0f2744);border-radius:16px 16px 0 0;padding:16px 24px;display:flex;align-items:center;justify-content:space-between">
+          <span style="font-weight:700;font-size:15px;color:#fff" id="docs-modal-title">Novo Documento</span>
+          <button onclick="_docsCloseModal()" style="background:none;border:none;color:#9CA3AF;font-size:20px;cursor:pointer;line-height:1">✕</button>
+        </div>
+        <div style="padding:20px 24px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div class="fi" style="grid-column:1/-1"><label>Nome do documento *</label><input id="dm-nome" placeholder="Ex: CR IBAMA – Multilix" style="width:100%"/></div>
+          <div class="fi"><label>Tipo *</label><select id="dm-tipo" onchange="_docsModalTipoChange()"><option value="">Selecione…</option><option value="cdo_cetesb">CDL CETESB</option><option value="licenca_operacao">Licença de Operação (L.O.)</option><option value="cr_ibama">CR IBAMA</option><option value="carteirinha_sp_regula_veiculo">SP Regula – Veículo</option><option value="carteirinha_sp_regula_att">SP Regula – ATT</option><option value="cli_amsterdam">CLI Amsterdam</option><option value="clcb_bombeiros">CLCB Bombeiros</option><option value="alvara_municipal">Alvará Municipal</option><option value="outro">Outro</option></select></div>
+          <div class="fi"><label>Frente *</label><select id="dm-frente"><option value="">Selecione…</option><option value="locacao_transporte">Locação / Transporte</option><option value="att">ATT</option><option value="destino_final">Destino Final</option></select></div>
+          <div class="fi"><label>Entidade *</label><input id="dm-entidade" list="dm-entidade-list" placeholder="Multilix, Amsterdam…"/><datalist id="dm-entidade-list"><option value="Multilix"/><option value="Amsterdam"/></datalist></div>
+          <div class="fi" id="dm-placa-wrap" style="display:none"><label>Placa do veículo *</label><input id="dm-placa" placeholder="Ex: ABC-1234"/></div>
+          <div class="fi"><label>Nº / Processo</label><input id="dm-numero" placeholder="Ex: CDL-2024-00123"/></div>
+          <div class="fi"><label>Órgão emissor</label><input id="dm-orgao" list="dm-orgao-list" placeholder="CETESB, IBAMA…"/><datalist id="dm-orgao-list"><option value="CETESB"/><option value="IBAMA"/><option value="SP Regula"/><option value="Corpo de Bombeiros"/><option value="Prefeitura de Guarulhos"/><option value="Prefeitura Municipal"/></datalist></div>
+          <div class="fi"><label>Data de emissão</label><input type="date" id="dm-emissao"/></div>
+          <div class="fi"><label>Data de vencimento</label><input type="date" id="dm-vencimento"/></div>
+          <div class="fi"><label>Periodicidade</label><select id="dm-periodicidade"><option value="">Selecione…</option><option value="trimestral">Trimestral</option><option value="semestral">Semestral</option><option value="anual">Anual</option><option value="indeterminado">Indeterminado</option><option value="outro">Outro / Variável</option></select></div>
+          <div class="fi" style="grid-column:1/-1"><label>Link Google Drive</label><input id="dm-drive" type="url" placeholder="https://drive.google.com/…"/></div>
+          <div class="fi" style="grid-column:1/-1"><label>Observações</label><textarea id="dm-obs" rows="2" placeholder="Condições, renovações, notas…" style="resize:vertical"></textarea></div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;padding:0 24px">
+          <button class="btn btn-ghost" onclick="_docsCloseModal()">Cancelar</button>
+          <button class="btn btn-primary" onclick="_docsSubmitModal()">Salvar Documento</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -2473,7 +2533,7 @@ function rankTbl(data,l1,l2,top=10){
 }
 
 // ── NAV ────────────────────────────────────────────────────────
-const TITLES={overview:'Dashboard Executivo',data:'Fontes de Dados',consolidado:'Consolidado — Entrada de Resíduos',att:'Recebimento de Terceiros',locacao:'Locação de Caçambas',agregados:'Agregados Reciclados',destinacao:'Destinação de Resíduos','dest-pagamentos':'Pagamentos de Freteiros',cdf:'Certificado de Destinação Final',crm:'CRM',propostas:'Propostas Comerciais','prop-locacao':'Propostas — Locação','prop-att':'Propostas — Recebimento ATT','prop-agregados':'Propostas — Agregados',contratos:'Contratos',inconsistencias:'Inconsistências',resumo:'Resumo Executivo',config:'Metas & Configurações',usuarios:'Gerenciar Usuários'};
+const TITLES={overview:'Dashboard Executivo',data:'Fontes de Dados',consolidado:'Consolidado — Entrada de Resíduos',att:'Recebimento de Terceiros',locacao:'Locação de Caçambas',agregados:'Agregados Reciclados',destinacao:'Destinação de Resíduos','dest-pagamentos':'Pagamentos de Freteiros',cdf:'Certificado de Destinação Final',crm:'CRM',propostas:'Propostas Comerciais','prop-locacao':'Propostas — Locação','prop-att':'Propostas — Recebimento ATT','prop-agregados':'Propostas — Agregados',contratos:'Contratos',inconsistencias:'Inconsistências',resumo:'Resumo Executivo',config:'Metas & Configurações',usuarios:'Gerenciar Usuários','docs-operacionais':'Controle de Documentação'};
 function showPage(id,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -7046,7 +7106,297 @@ function _collectAgData(){
   };
 }
 
-document.addEventListener('DOMContentLoaded', () => { renderHistoricoPropostas(); renderHistoricoAgregados(); renderATTHistorico(); _refreshRespSelects(); });
+document.addEventListener('DOMContentLoaded', () => { renderHistoricoPropostas(); renderHistoricoAgregados(); renderATTHistorico(); _refreshRespSelects(); _docsUpdateNavBadge(); });
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO: CONTROLE DE DOCUMENTAÇÃO OPERACIONAL
+// ══════════════════════════════════════════════════════════════
+const _DOCS_KEY = 'multilix_docs_operacionais';
+const _DOCS_TIPOS = {
+  cdo_cetesb:                   { label:'CDL CETESB',            orgao:'CETESB',                    per:'indeterminado' },
+  licenca_operacao:             { label:'Lic. de Operação (L.O.)',orgao:'CETESB',                    per:'outro'         },
+  cr_ibama:                     { label:'CR IBAMA',              orgao:'IBAMA',                     per:'trimestral'    },
+  carteirinha_sp_regula_veiculo:{ label:'SP Regula – Veículo',   orgao:'SP Regula',                 per:'anual', placa:true },
+  carteirinha_sp_regula_att:    { label:'SP Regula – ATT',       orgao:'SP Regula',                 per:'anual'         },
+  cli_amsterdam:                { label:'CLI Amsterdam',         orgao:'Prefeitura de Guarulhos',   per:'outro'         },
+  clcb_bombeiros:               { label:'CLCB Bombeiros',        orgao:'Corpo de Bombeiros',        per:'outro'         },
+  alvara_municipal:             { label:'Alvará Municipal',      orgao:'Prefeitura Municipal',      per:'anual'         },
+  outro:                        { label:'Outro',                 orgao:'',                          per:'outro'         }
+};
+const _DOCS_FRENTES = { locacao_transporte:'Locação/Transp.', att:'ATT', destino_final:'Destino Final' };
+const _DOCS_PER     = { trimestral:'Trimestral', semestral:'Semestral', anual:'Anual', indeterminado:'Indeterminado', outro:'Outro' };
+
+let _docsEditId = null;
+let _docsData   = [];
+
+function _docsLoad() {
+  try { _docsData = JSON.parse(localStorage.getItem(_DOCS_KEY) || '[]'); } catch(e) { _docsData = []; }
+}
+function _docsSave() {
+  try { localStorage.setItem(_DOCS_KEY, JSON.stringify(_docsData)); } catch(e) {}
+}
+function _docsUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random()*16|0; return (c==='x'?r:(r&0x3|0x8)).toString(16);
+  });
+}
+
+function _docsStatus(dateStr) {
+  if (!dateStr) return { key:'sem_data', label:'Sem data', dias:null };
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const venc = new Date(dateStr + 'T00:00:00');
+  const dias = Math.round((venc - hoje) / 86400000);
+  if (dias < 0)   return { key:'vencido',     label:'Vencido',         dias: Math.abs(dias) };
+  if (dias <= 1)  return { key:'critico_1d',  label:'Vence amanhã',    dias };
+  if (dias <= 7)  return { key:'critico_7d',  label:`${dias}d`,        dias };
+  if (dias <= 15) return { key:'atencao_15d', label:`${dias}d`,        dias };
+  if (dias <= 30) return { key:'atencao_30d', label:`${dias}d`,        dias };
+  return { key:'ok', label:`${dias}d`, dias };
+}
+
+const _DOCS_BADGE = {
+  vencido:     'background:#EF444425;color:#EF4444;border:1px solid #EF444450',
+  critico_1d:  'background:#B91C1C25;color:#FCA5A5;border:1px solid #B91C1C50',
+  critico_7d:  'background:#F9731625;color:#FB923C;border:1px solid #F9731650',
+  atencao_15d: 'background:#EAB30825;color:#FCD34D;border:1px solid #EAB30850',
+  atencao_30d: 'background:#FEF08A20;color:#EAB308;border:1px solid #EAB30840',
+  ok:          'background:#10B98125;color:#34D399;border:1px solid #10B98150',
+  sem_data:    'background:#6B728020;color:#9CA3AF;border:1px solid #6B728040'
+};
+
+function _docsIsCritico(key) { return ['vencido','critico_1d','critico_7d'].includes(key); }
+function _docsIsAtencao(key) { return ['atencao_15d','atencao_30d'].includes(key); }
+
+function _docsUpdateStats() {
+  const ativos = _docsData.filter(d=>d.ativo!==false);
+  let venc=0,crit=0,aten=0,ok=0,sem=0;
+  ativos.forEach(d=>{
+    const s=_docsStatus(d.data_vencimento);
+    if(s.key==='vencido')           venc++;
+    else if(_docsIsCritico(s.key))  crit++;
+    else if(_docsIsAtencao(s.key))  aten++;
+    else if(s.key==='ok')           ok++;
+    else                            sem++;
+  });
+  const _sv=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  _sv('docs-stat-total', ativos.length);
+  _sv('docs-stat-vencido', venc);
+  _sv('docs-stat-critico', crit);
+  _sv('docs-stat-atencao', aten);
+  _sv('docs-stat-ok', ok);
+  _sv('docs-stat-semdata', sem);
+
+  // Alerta crítico
+  const alertBar = document.getElementById('docs-alert-bar');
+  if (!alertBar) return;
+  const urgentes = ativos.filter(d=>_docsIsCritico(_docsStatus(d.data_vencimento).key))
+    .sort((a,b)=>{ const sa=_docsStatus(a.data_vencimento),sb=_docsStatus(b.data_vencimento); return (sa.dias||0)-(sb.dias||0); });
+  if (urgentes.length) {
+    alertBar.style.display='block';
+    alertBar.innerHTML = '⚠️ <b>Atenção:</b> ' + urgentes.map(d=>{
+      const s=_docsStatus(d.data_vencimento);
+      return `<b>${d.nome}</b> — ${s.key==='vencido'?'vencido há '+s.dias+'d':'vence em '+s.dias+'d'}`;
+    }).join(' &nbsp;|&nbsp; ');
+  } else {
+    alertBar.style.display='none';
+  }
+}
+
+function _docsUpdateNavBadge() {
+  _docsLoad();
+  const ativos = _docsData.filter(d=>d.ativo!==false);
+  const cnt = ativos.filter(d=>_docsIsCritico(_docsStatus(d.data_vencimento).key)).length;
+  const badge = document.getElementById('docs-nav-badge');
+  if (!badge) return;
+  if (cnt > 0) { badge.textContent = cnt; badge.style.display='inline-block'; }
+  else         { badge.style.display='none'; }
+}
+
+function _docsRender() {
+  _docsLoad();
+  const fFrente   = document.getElementById('docs-f-frente')?.value   || '';
+  const fEntidade = document.getElementById('docs-f-entidade')?.value || '';
+  const fTipo     = document.getElementById('docs-f-tipo')?.value     || '';
+  const fStatus   = document.getElementById('docs-f-status')?.value   || '';
+  const fBusca    = (document.getElementById('docs-f-busca')?.value   || '').toLowerCase();
+
+  let rows = _docsData.filter(d=>d.ativo!==false);
+  if (fFrente)   rows = rows.filter(d=>d.frente===fFrente);
+  if (fEntidade) rows = rows.filter(d=>d.entidade===fEntidade);
+  if (fTipo)     rows = rows.filter(d=>d.tipo_documento===fTipo);
+  if (fBusca)    rows = rows.filter(d=>(d.nome||'').toLowerCase().includes(fBusca));
+  if (fStatus) {
+    rows = rows.filter(d=>{
+      const s=_docsStatus(d.data_vencimento);
+      if (fStatus==='vencido')  return s.key==='vencido';
+      if (fStatus==='critico')  return _docsIsCritico(s.key) && s.key!=='vencido';
+      if (fStatus==='atencao')  return _docsIsAtencao(s.key);
+      if (fStatus==='ok')       return s.key==='ok';
+      if (fStatus==='sem_data') return s.key==='sem_data';
+      return true;
+    });
+  }
+
+  // Ordena: vencidos primeiro, depois por dias restantes
+  rows.sort((a,b)=>{
+    const sa=_docsStatus(a.data_vencimento), sb=_docsStatus(b.data_vencimento);
+    const ord={'vencido':0,'critico_1d':1,'critico_7d':2,'atencao_15d':3,'atencao_30d':4,'ok':5,'sem_data':6};
+    if ((ord[sa.key]||5) !== (ord[sb.key]||5)) return (ord[sa.key]||5)-(ord[sb.key]||5);
+    return (sa.dias||999)-(sb.dias||999);
+  });
+
+  const tbody = document.getElementById('docs-tbody');
+  if (!tbody) return;
+  if (!rows.length) {
+    tbody.innerHTML='<tr><td colspan="10" style="color:var(--muted);text-align:center;padding:32px">Nenhum documento encontrado.</td></tr>';
+    _docsUpdateStats(); return;
+  }
+
+  const fmtDate = d=>{ if(!d)return '—'; const p=d.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; };
+  const tipoLabel = t=>(_DOCS_TIPOS[t]?.label)||t||'—';
+  const frenteLabel = f=>_DOCS_FRENTES[f]||f||'—';
+
+  tbody.innerHTML = rows.map(d=>{
+    const s = _docsStatus(d.data_vencimento);
+    const badgeStyle = _DOCS_BADGE[s.key]||_DOCS_BADGE.sem_data;
+    const driveBtn = d.drive_link
+      ? `<a href="${d.drive_link}" target="_blank" style="color:#3B82F6;font-size:11px;text-decoration:none">🔗 Abrir</a>`
+      : '<span style="color:var(--muted);font-size:11px">—</span>';
+    return `<tr>
+      <td style="font-weight:500">${d.nome||'—'}</td>
+      <td style="font-size:11px;color:var(--muted)">${tipoLabel(d.tipo_documento)}</td>
+      <td style="font-size:11px">${frenteLabel(d.frente)}</td>
+      <td style="font-size:11px">${d.entidade||'—'}</td>
+      <td style="font-size:11px;color:var(--muted)">${d.placa_veiculo||'—'}</td>
+      <td style="font-size:11px">${fmtDate(d.data_vencimento)}</td>
+      <td><span style="${badgeStyle};border-radius:6px;padding:3px 8px;font-size:10px;font-weight:600;white-space:nowrap">${s.key==='vencido'?'VENCIDO':s.key==='sem_data'?'SEM DATA':s.label}</span></td>
+      <td style="font-size:11px;color:var(--muted)">${s.key==='vencido'?'-'+s.dias+'d':s.dias!=null?'+'+s.dias+'d':'—'}</td>
+      <td>${driveBtn}</td>
+      <td style="white-space:nowrap">
+        <button onclick="_docsOpenModal('${d.id}')" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:3px 10px;cursor:pointer;font-size:11px;margin-right:4px">✏ Editar</button>
+        <button onclick="_docsDelete('${d.id}')" style="background:none;border:1px solid #EF444430;color:#EF4444;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:11px">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  _docsUpdateStats();
+  _docsUpdateNavBadge();
+}
+
+function _docsInit() { _docsLoad(); _docsRender(); }
+
+function _docsOpenModal(id) {
+  _docsEditId = id || null;
+  const doc = id ? _docsData.find(d=>d.id===id) : null;
+  const title = document.getElementById('docs-modal-title');
+  if (title) title.textContent = doc ? 'Editar Documento' : 'Novo Documento';
+  const _sv=(elId,v)=>{ const el=document.getElementById(elId); if(el) el.value=v||''; };
+  _sv('dm-nome',       doc?.nome);
+  _sv('dm-tipo',       doc?.tipo_documento);
+  _sv('dm-frente',     doc?.frente);
+  _sv('dm-entidade',   doc?.entidade);
+  _sv('dm-placa',      doc?.placa_veiculo);
+  _sv('dm-numero',     doc?.numero_documento);
+  _sv('dm-orgao',      doc?.orgao_emissor);
+  _sv('dm-emissao',    doc?.data_emissao);
+  _sv('dm-vencimento', doc?.data_vencimento);
+  _sv('dm-periodicidade', doc?.periodicidade);
+  _sv('dm-drive',      doc?.drive_link);
+  _sv('dm-obs',        doc?.obs);
+  _docsModalTipoChange(!!doc);
+  document.getElementById('docs-modal-overlay').style.display='block';
+}
+
+function _docsCloseModal() {
+  document.getElementById('docs-modal-overlay').style.display='none';
+  _docsEditId = null;
+}
+
+function _docsModalTipoChange(skipPrefill) {
+  const tipo = document.getElementById('dm-tipo')?.value||'';
+  const wrap = document.getElementById('dm-placa-wrap');
+  if (wrap) wrap.style.display = (_DOCS_TIPOS[tipo]?.placa) ? '' : 'none';
+  if (!skipPrefill && tipo && _DOCS_TIPOS[tipo]) {
+    const t = _DOCS_TIPOS[tipo];
+    const orgaoEl = document.getElementById('dm-orgao');
+    const perEl   = document.getElementById('dm-periodicidade');
+    if (orgaoEl && !orgaoEl.value) orgaoEl.value = t.orgao;
+    if (perEl && !perEl.value)     perEl.value = t.per;
+  }
+}
+
+function _docsSubmitModal() {
+  const _gv = id => (document.getElementById(id)?.value||'').trim();
+  const nome  = _gv('dm-nome');
+  const tipo  = _gv('dm-tipo');
+  const frente= _gv('dm-frente');
+  const ent   = _gv('dm-entidade');
+  if (!nome)   { alert('Informe o nome do documento.'); return; }
+  if (!tipo)   { alert('Selecione o tipo do documento.'); return; }
+  if (!frente) { alert('Selecione a frente operacional.'); return; }
+  if (!ent)    { alert('Informe a entidade.'); return; }
+  if (_DOCS_TIPOS[tipo]?.placa && !_gv('dm-placa')) { alert('Informe a placa do veículo.'); return; }
+
+  const now = new Date().toISOString();
+  if (_docsEditId) {
+    const idx = _docsData.findIndex(d=>d.id===_docsEditId);
+    if (idx>=0) {
+      _docsData[idx] = { ..._docsData[idx], nome, tipo_documento:tipo, frente, entidade:ent,
+        placa_veiculo:_gv('dm-placa'), numero_documento:_gv('dm-numero'), orgao_emissor:_gv('dm-orgao'),
+        data_emissao:_gv('dm-emissao'), data_vencimento:_gv('dm-vencimento'), periodicidade:_gv('dm-periodicidade'),
+        drive_link:_gv('dm-drive'), obs:_gv('dm-obs'), updated_at:now };
+    }
+  } else {
+    _docsData.push({ id:_docsUUID(), nome, tipo_documento:tipo, frente, entidade:ent,
+      placa_veiculo:_gv('dm-placa'), numero_documento:_gv('dm-numero'), orgao_emissor:_gv('dm-orgao'),
+      data_emissao:_gv('dm-emissao'), data_vencimento:_gv('dm-vencimento'), periodicidade:_gv('dm-periodicidade'),
+      drive_link:_gv('dm-drive'), obs:_gv('dm-obs'), origem:'manual', ativo:true,
+      created_at:now, updated_at:now });
+  }
+  _docsSave();
+  _docsCloseModal();
+  _docsRender();
+}
+
+function _docsDelete(id) {
+  const doc = _docsData.find(d=>d.id===id);
+  if (!doc) return;
+  if (!confirm(`Remover "${doc.nome}"?\nO documento será arquivado e poderá ser restaurado.`)) return;
+  const idx = _docsData.findIndex(d=>d.id===id);
+  if (idx>=0) { _docsData[idx].ativo=false; _docsData[idx].updated_at=new Date().toISOString(); }
+  _docsSave();
+  _docsRender();
+}
+
+function _docsExportCSV() {
+  _docsLoad();
+  const ativos = _docsData.filter(d=>d.ativo!==false);
+  const fmtDate = d=>{ if(!d)return ''; const p=d.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; };
+  const fmtStatus = d=>{ const s=_docsStatus(d); if(s.key==='vencido')return'Vencido'; if(s.key==='sem_data')return'Sem data'; if(_docsIsCritico(s.key))return'Crítico'; if(_docsIsAtencao(s.key))return'Atenção'; return'OK'; };
+  const header = ['Nome','Tipo','Frente','Entidade','Placa','Nº Documento','Órgão Emissor','Emissão','Vencimento','Periodicidade','Status','Dias Restantes','Link Drive','Obs'];
+  const rows = ativos.map(d=>{
+    const s=_docsStatus(d.data_vencimento);
+    return [d.nome,_DOCS_TIPOS[d.tipo_documento]?.label||d.tipo_documento,_DOCS_FRENTES[d.frente]||d.frente,
+      d.entidade,d.placa_veiculo||'',d.numero_documento||'',d.orgao_emissor||'',
+      fmtDate(d.data_emissao),fmtDate(d.data_vencimento),_DOCS_PER[d.periodicidade]||d.periodicidade||'',
+      fmtStatus(d.data_vencimento),s.dias!=null?s.dias+'':'',d.drive_link||'',d.obs||'']
+      .map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(',');
+  });
+  const csv = '﻿' + [header.join(','),...rows].join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download = 'documentos_operacionais_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+}
+
+// Integra showPage com _docsInit
+(function(){
+  const _origShowPage=showPage;
+  showPage=function(id,el){
+    _origShowPage(id,el);
+    if(id==='docs-operacionais') _docsInit();
+  };
+})();
 </script>
 </body>
 </html>
