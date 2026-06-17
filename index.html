@@ -516,7 +516,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:13
 .sb-footer{padding:14px 18px;border-top:1px solid var(--border);font-size:11px;color:var(--muted2)}
 #lastUpdate{font-size:10px;color:var(--muted2);margin-top:2px}
 
-#main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-height:100vh}
+#main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-height:100vh;transition:margin-left .25s}
+body.sidebar-collapsed #sidebar{transform:translateX(-100%)}
+body.sidebar-collapsed #main{margin-left:0}
+#sidebar{transition:transform .25s}
+#sb-toggle{position:fixed;bottom:20px;left:20px;z-index:300;width:34px;height:34px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:16px;transition:all .2s}
+#sb-toggle:hover{background:var(--surface);color:var(--text);border-color:var(--accent)}
+body.sidebar-collapsed #sb-toggle{left:12px}
 #topbar{background:rgba(13,15,20,.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border);height:60px;display:flex;align-items:center;padding:0 28px;gap:16px;position:sticky;top:0;z-index:100}
 .topbar-title{font-size:15px;font-weight:700;color:var(--text);flex:1;letter-spacing:-.2px}
 .topbar-sub{font-size:11px;color:var(--muted)}
@@ -591,7 +597,9 @@ th{background:#12161f;color:var(--muted);font-weight:600;padding:11px 12px;text-
 th:hover{background:#1c212d;color:var(--text)}
 th .sort-icon{display:inline-block;margin-left:4px;opacity:.4;font-size:10px}
 th.sort-asc .sort-icon,th.sort-desc .sort-icon{opacity:1;color:var(--blue)}
-td{padding:10px 12px;border-bottom:1px solid #ffffff05;color:var(--text)}
+td{padding:7px 10px;border-bottom:1px solid #ffffff05;color:var(--text);font-size:12px}
+#page-dest-conferencia td{padding:5px 8px;font-size:11px}
+#page-dest-conferencia th{padding:8px 8px;font-size:10px}
 tr:nth-child(even) td{background:#ffffff02}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:#3B82F60a}
@@ -853,6 +861,7 @@ body.menu-open{overflow:hidden}
   </div>
 </aside>
 
+<button id="sb-toggle" onclick="toggleSidebar()" title="Ocultar/mostrar menu">☰</button>
 <div id="mobile-backdrop" onclick="closeMobileMenu()" aria-hidden="true"></div>
 <div id="main">
   <!-- LOGIN OVERLAY -->
@@ -1488,6 +1497,43 @@ body.menu-open{overflow:hidden}
           <span class="panel-badge" id="conf-count-badge">0 registros</span>
         </div>
         <div class="tbl-wrap" id="tbl-conferencia"></div>
+      </div>
+    </div>
+
+    <!-- MODAL EDIÇÃO DE O.S. -->
+    <div id="os-edit-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:1000;overflow-y:auto;padding:30px 16px" onclick="if(event.target===this)osEditClose()">
+      <div style="max-width:640px;margin:0 auto;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px" onclick="event.stopPropagation()">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+          <div>
+            <h2 style="font-size:16px;font-weight:700;color:var(--text)">Editar O.S.</h2>
+            <div id="os-edit-num" style="font-size:11px;color:var(--accent);font-weight:700;margin-top:2px"></div>
+          </div>
+          <button onclick="osEditClose()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px">✕</button>
+        </div>
+        <input type="hidden" id="oe-id"/>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="fi"><label>Data de Saída *</label><input type="date" id="oe-data"/></div>
+          <div class="fi"><label>Hora de Saída</label><input type="time" id="oe-hora"/></div>
+          <div class="fi" style="grid-column:1/-1"><label>Freteiro *</label><select id="oe-freteiro" onchange="osEditOnFreteiro()"></select></div>
+          <div class="fi"><label>Tipo de Veículo *</label><select id="oe-veiculo" onchange="osEditOnVeiculo()"><option value="">—</option><option value="TRUCK">TRUCK</option><option value="CARRETA">CARRETA</option></select></div>
+          <div class="fi"><label>Capacidade (m³) *</label><input type="number" id="oe-cap" step="0.5"/></div>
+          <div class="fi"><label>Tipo de Resíduo *</label><select id="oe-residuo"><option value="">—</option><option value="MIX">MIX</option><option value="RACHÃO SUJO">RACHÃO SUJO</option></select></div>
+          <div class="fi"><label>Nº Vale Físico *</label><input type="text" id="oe-vale"/></div>
+          <div class="fi"><label>Preço Unitário (R$)</label><input type="number" id="oe-preco" step="0.01"/></div>
+          <div class="fi"><label>Status</label>
+            <select id="oe-status">
+              <option value="registrado">Registrado</option>
+              <option value="confirmado">Confirmado</option>
+              <option value="contestado">Contestado</option>
+              <option value="cancelado">Cancelado</option>
+            </select>
+          </div>
+          <div class="fi" style="grid-column:1/-1"><label>Observações</label><textarea id="oe-obs" rows="2" style="resize:none"></textarea></div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+          <button onclick="osEditClose()" class="btn btn-ghost btn-sm">Cancelar</button>
+          <button onclick="osEditSalvar()" class="btn btn-primary btn-sm">Salvar Alterações</button>
+        </div>
       </div>
     </div>
 
@@ -5821,7 +5867,10 @@ function confRenderTable(rows) {
       ? `<button onclick="window.open('${v.foto_vale_url}','_blank')" style="background:#8B5CF620;border:1px solid #8B5CF640;color:#8B5CF6;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px;white-space:nowrap">🧾 Vale</button>`
       : '<span style="color:var(--muted2);font-size:11px">—</span>';
 
-    const acoes = cancelado ? '' : `
+    const btnEditar = `<button onclick="osEditOpen('${v.id}')" title="Editar O.S." style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:12px">✏</button>`;
+    const acoes = cancelado
+      ? `${btnEditar}<button onclick="confAtualizarStatus('${v.id}','registrado')" title="Reativar O.S." style="background:#3B82F620;border:1px solid #3B82F640;color:#3B82F6;border-radius:6px;padding:3px 7px;cursor:pointer;font-size:12px">↩</button>`
+      : `${btnEditar}
       <button onclick="confAtualizarStatus('${v.id}','confirmado')" title="Confirmar" style="background:#10B98120;border:1px solid #10B98140;color:#10B981;border-radius:6px;padding:3px 7px;cursor:pointer;font-size:12px">✓</button>
       <button onclick="confAtualizarStatus('${v.id}','contestado')" title="Contestar" style="background:#F59E0B20;border:1px solid #F59E0B40;color:#F59E0B;border-radius:6px;padding:3px 7px;cursor:pointer;font-size:12px">⚠</button>
       <button onclick="confAtualizarStatus('${v.id}','cancelado')" title="Cancelar O.S." style="background:#EF444420;border:1px solid #EF444440;color:#EF4444;border-radius:6px;padding:3px 7px;cursor:pointer;font-size:12px">✕</button>`;
@@ -5917,6 +5966,82 @@ function confClear() {
   document.getElementById('tbl-conferencia').innerHTML = '';
   document.getElementById('conf-count-badge').textContent = '0 registros';
   document.getElementById('conf-bulk-bar').style.display = 'none';
+}
+
+// ── EDIÇÃO DE O.S. ─────────────────────────────────────────────
+let _osEditFreteiros = [];
+
+async function osEditOpen(id) {
+  const v = _confRows.find(x => x.id === id);
+  if(!v) return;
+
+  // Carrega freteiros se ainda não carregados
+  if(!_osEditFreteiros.length) {
+    const r = await fetch(`${SUPA_URL}/rest/v1/freteiros?select=id,nome&order=nome.asc&limit=200`, {
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+(_session?.access_token||SUPA_KEY)}
+    });
+    _osEditFreteiros = await r.json();
+  }
+  const sel = document.getElementById('oe-freteiro');
+  sel.innerHTML = '<option value="">Selecione...</option>';
+  _osEditFreteiros.forEach(f => {
+    const o = document.createElement('option');
+    o.value = f.id; o.textContent = f.nome;
+    if(f.id === v.freteiro_id) o.selected = true;
+    sel.appendChild(o);
+  });
+
+  document.getElementById('oe-id').value       = v.id;
+  document.getElementById('os-edit-num').textContent = v.os_numero || '';
+  document.getElementById('oe-data').value     = v.data_saida || '';
+  document.getElementById('oe-hora').value     = v.hora_saida || '';
+  document.getElementById('oe-veiculo').value  = v.tipo_veiculo || '';
+  document.getElementById('oe-cap').value      = v.capacidade_m3 || '';
+  document.getElementById('oe-residuo').value  = v.tipo_residuo || '';
+  document.getElementById('oe-vale').value     = v.numero_vale_fisico || '';
+  document.getElementById('oe-preco').value    = v.preco_unitario || '';
+  document.getElementById('oe-status').value   = v.status || 'registrado';
+  document.getElementById('oe-obs').value      = v.observacoes || '';
+  document.getElementById('os-edit-overlay').style.display = 'block';
+}
+
+function osEditClose() {
+  document.getElementById('os-edit-overlay').style.display = 'none';
+}
+
+async function osEditSalvar() {
+  const id = document.getElementById('oe-id').value;
+  const body = {
+    data_saida:         document.getElementById('oe-data').value || null,
+    hora_saida:         document.getElementById('oe-hora').value || null,
+    freteiro_id:        document.getElementById('oe-freteiro').value || null,
+    tipo_veiculo:       document.getElementById('oe-veiculo').value || null,
+    capacidade_m3:      parseFloat(document.getElementById('oe-cap').value) || null,
+    tipo_residuo:       document.getElementById('oe-residuo').value || null,
+    numero_vale_fisico: document.getElementById('oe-vale').value || null,
+    preco_unitario:     parseFloat(document.getElementById('oe-preco').value) || null,
+    status:             document.getElementById('oe-status').value,
+    observacoes:        document.getElementById('oe-obs').value.trim() || null,
+  };
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/vales_destinacao?id=eq.${id}`, {
+      method:'PATCH',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+_session.access_token,'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    if(!r.ok){ const e=await r.json(); throw new Error(JSON.stringify(e)); }
+    osEditClose();
+    confLoad();
+  } catch(e) { alert('Erro ao salvar: ' + e.message); }
+}
+
+// ── SIDEBAR TOGGLE ─────────────────────────────────────────────
+function toggleSidebar() {
+  document.body.classList.toggle('sidebar-collapsed');
+  const btn = document.getElementById('sb-toggle');
+  btn.textContent = document.body.classList.contains('sidebar-collapsed') ? '▶' : '☰';
+  // Redimensiona charts após transição
+  setTimeout(() => window.dispatchEvent(new Event('resize')), 280);
 }
 
 if(window.lucide&&window.lucide.createIcons){window.lucide.createIcons();}
