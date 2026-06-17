@@ -7118,7 +7118,7 @@ document.addEventListener('DOMContentLoaded', () => { renderHistoricoPropostas()
 // GOOGLE DRIVE SYNC — DOCUMENTAÇÃO OPERACIONAL
 // ══════════════════════════════════════════════════════════════
 const _DRIVE_CLIENT_ID  = '878225802860-prqdmokrkd964lg2r28019qhptpca689.apps.googleusercontent.com';
-const _DRIVE_FOLDER_ID  = '1GXZCQFTwNGoDnMRo0I1wi8zieQEClxcb';
+const _DRIVE_FOLDER_ID  = '11gim2F6C1V9FMKQAEPaOfxPvZ9KclVqI';
 const _DRIVE_SCOPE      = 'https://www.googleapis.com/auth/drive.readonly';
 let   _driveTokenClient = null;
 let   _driveToken       = null;
@@ -7161,10 +7161,13 @@ async function _driveFetchFolder(folderId) {
   do {
     const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
     const fields = encodeURIComponent('nextPageToken,files(id,name,mimeType,modifiedTime,webViewLink,size)');
-    let url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fields}&pageSize=200`;
+    let url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fields}&pageSize=200&includeItemsFromAllDrives=true&supportsAllDrives=true`;
     if (pageToken) url += '&pageToken=' + pageToken;
     const res = await fetch(url, { headers: { Authorization: 'Bearer ' + _driveToken } });
-    if (!res.ok) throw new Error('Drive API: ' + res.status);
+    if (!res.ok) {
+      const errText = await res.text().catch(()=>'');
+      throw new Error('Drive API: ' + res.status + ' — ' + errText.slice(0,120));
+    }
     const data = await res.json();
     files = files.concat(data.files || []);
     pageToken = data.nextPageToken;
