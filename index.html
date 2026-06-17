@@ -1332,18 +1332,17 @@ body.menu-open{overflow:hidden}
             <div class="fi"><label>Endereço de Entrega</label><input id="ag-endereco" placeholder="Rua, número, bairro, cidade - CEP"/></div>
           </div>
 
-          <div style="font-size:10px;font-weight:700;color:#5b6478;text-transform:uppercase;letter-spacing:.8px;margin:16px 0 8px">Produtos (até 4 materiais)</div>
-          <div id="ag-produtos">
-            <div class="ag-prod-row" style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;margin-bottom:6px;align-items:end">
-              <div class="fi"><label>Material 1</label>
-                <select class="ag-mat"><option value="">Selecione...</option><option>Areia Reciclada</option><option>Brita Reciclada</option><option>BGS Reciclada</option><option>Rachão Reciclado</option><option>Bica Corrida Reciclada</option><option>Solo Reciclado</option><option>Terra para Aterro</option><option>Pó de Pedra Reciclado</option></select>
-              </div>
-              <div class="fi"><label>Qtde (m³)</label><input type="number" class="ag-qtd" placeholder="0"/></div>
-              <div class="fi"><label>Preço/m³ (R$)</label><input type="number" class="ag-preco" placeholder="35" step="0.01"/></div>
-              <span></span>
-            </div>
+          <div style="font-size:10px;font-weight:700;color:#5b6478;text-transform:uppercase;letter-spacing:.8px;margin:16px 0 6px">Produtos</div>
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr auto;gap:8px;padding:0 4px 6px;border-bottom:1px solid #262D3D;margin-bottom:4px">
+            <span style="font-size:10px;color:#5b6478;font-weight:600">PRODUTO</span>
+            <span style="font-size:10px;color:#5b6478;font-weight:600">UNIDADE</span>
+            <span style="font-size:10px;color:#5b6478;font-weight:600">QTDE</span>
+            <span style="font-size:10px;color:#5b6478;font-weight:600">VALOR UNIT.</span>
+            <span style="font-size:10px;color:#5b6478;font-weight:600">TOTAL</span>
+            <span></span>
           </div>
-          <button onclick="_addAgProdRow()" style="background:#1c212d;border:1px dashed #262D3D;color:#8a93ab;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px;width:100%;margin-bottom:14px">+ Adicionar Material</button>
+          <div id="ag-produtos"></div>
+          <button onclick="_addAgProdRow()" style="background:#1c212d;border:1px dashed #262D3D;color:#8a93ab;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px;width:100%;margin-bottom:14px">+ Adicionar Produto</button>
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
             <div class="fi"><label>Entrega ou Retirada</label>
@@ -1372,6 +1371,88 @@ body.menu-open{overflow:hidden}
           <div style="display:flex;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid #262D3D;gap:10px">
             <button class="btn btn-ghost" onclick="document.getElementById('prop-agreg-overlay').style.display='none'">Cancelar</button>
             <button style="background:linear-gradient(135deg,#7c5c1e,#5c3d12);color:#fff;border:none;border-radius:9px;padding:9px 22px;cursor:pointer;font-weight:700;font-size:13px" onclick="gerarPDFAgregado()">📄 Gerar PDF Agregado</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MODAL CONFIG AGREGADOS ===== -->
+    <div id="agr-config-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:9200;overflow-y:auto;padding:20px 12px" onclick="if(event.target===this)closeAgregConfig()">
+      <div style="max-width:760px;margin:0 auto;background:#151922;border:1px solid #262D3D;border-radius:16px;padding:0 0 24px" onclick="event.stopPropagation()">
+        <div style="background:linear-gradient(90deg,#7c5c1e,#5c3d12);border-radius:16px 16px 0 0;padding:16px 24px;display:flex;align-items:center;justify-content:space-between">
+          <h2 style="font-size:16px;font-weight:700;color:#fff;margin:0">⚙️ Cadastro Padrão — Agregados Reciclados</h2>
+          <button onclick="closeAgregConfig()" style="background:rgba(255,255,255,.15);border:none;color:#fff;cursor:pointer;font-size:18px;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center">✕</button>
+        </div>
+        <div style="padding:20px 24px">
+          <!-- 1. PRODUTOS PADRÃO -->
+          <div style="font-size:10px;font-weight:700;color:#5b6478;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">🪨 Produtos Padrão</div>
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:6px;padding:0 0 6px;border-bottom:1px solid #262D3D;margin-bottom:4px">
+            <span style="font-size:10px;color:#5b6478;font-weight:600">PRODUTO</span>
+            <span style="font-size:10px;color:#5b6478;font-weight:600">UNIDADE</span>
+            <span style="font-size:10px;color:#5b6478;font-weight:600">VALOR PADRÃO</span>
+            <span style="font-size:10px;color:#5b6478;font-weight:600">STATUS</span>
+            <span></span>
+          </div>
+          <div id="agrc-prod-list" style="margin-bottom:10px;max-height:260px;overflow-y:auto"></div>
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:6px;padding-top:8px;border-top:1px dashed #262D3D;margin-bottom:22px">
+            <input id="agrc-new-nome" placeholder="Nome do produto" style="background:#1c212d;border:1px solid #262D3D;border-radius:8px;padding:7px 9px;color:#eef0ff;font-size:12px;outline:none"/>
+            <select id="agrc-new-un" style="background:#1c212d;border:1px solid #262D3D;border-radius:8px;padding:7px 9px;color:#eef0ff;font-size:12px;outline:none">
+              <option>m³</option><option>tonelada</option><option>unidade</option><option>viagem</option>
+            </select>
+            <input id="agrc-new-val" type="number" placeholder="0.00" step="0.01" min="0" style="background:#1c212d;border:1px solid #262D3D;border-radius:8px;padding:7px 9px;color:#eef0ff;font-size:12px;outline:none"/>
+            <select id="agrc-new-st" style="background:#1c212d;border:1px solid #262D3D;border-radius:8px;padding:7px 9px;color:#eef0ff;font-size:12px;outline:none">
+              <option value="ativo">Ativo</option><option value="inativo">Inativo</option>
+            </select>
+            <button onclick="addAgregProdutoPadrao()" style="background:#F59E0B15;border:1px solid #F59E0B;color:#F59E0B;border-radius:8px;padding:7px 12px;cursor:pointer;font-size:14px;font-weight:700">+</button>
+          </div>
+          <!-- 2. CONDIÇÕES COMERCIAIS -->
+          <div style="font-size:10px;font-weight:700;color:#5b6478;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">💰 Condições Comerciais</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:22px">
+            <div class="fi"><label>% de Imposto</label><input id="agrc-imposto" type="number" value="18" min="0" max="100"/></div>
+            <div class="fi"><label>Condição de Pagamento Padrão</label>
+              <select id="agrc-pgto">
+                <option>Pagamento antecipado</option><option>Pagamento no ato da retirada</option>
+                <option>Boleto 7 DDE</option><option>Boleto 14 DDE</option><option>Boleto 21 DDE</option>
+                <option>Boleto 28 DDE</option><option>À combinar</option>
+              </select>
+            </div>
+            <div class="fi"><label>Validade da Proposta</label>
+              <select id="agrc-validade"><option>7 dias</option><option>15 dias</option><option>30 dias</option><option>À combinar</option></select>
+            </div>
+            <div class="fi"><label>Prazo de Entrega</label>
+              <select id="agrc-prazo">
+                <option>Imediato, conforme disponibilidade</option><option>Até 24 horas</option>
+                <option>Até 48 horas</option><option>À combinar</option>
+              </select>
+            </div>
+            <div class="fi"><label>Atendimento</label><input id="agrc-atendimento" placeholder="Ex: Diurno e Noturno"/></div>
+            <div class="fi" style="grid-column:1/-1"><label>Observações Comerciais Padrão</label><textarea id="agrc-obs" rows="2" placeholder="Condições especiais, notas comerciais..."></textarea></div>
+          </div>
+          <!-- 3. RESPONSÁVEL -->
+          <div style="font-size:10px;font-weight:700;color:#5b6478;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">👤 Responsável pelo Envio</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:22px">
+            <div class="fi"><label>Nome</label><input id="agrc-resp-nome" placeholder="Ex: Carolina Gabriel"/></div>
+            <div class="fi"><label>Cargo</label><input id="agrc-resp-cargo" placeholder="Ex: Consultora Comercial"/></div>
+            <div class="fi"><label>Telefone</label><input id="agrc-resp-tel" placeholder="(11) 9xxxx-xxxx"/></div>
+            <div class="fi"><label>E-mail</label><input id="agrc-resp-email" placeholder="email@multilix.com.br"/></div>
+          </div>
+          <!-- 4. TEXTOS PDF -->
+          <div style="font-size:10px;font-weight:700;color:#5b6478;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">📄 Textos Padrão do PDF</div>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
+            <div class="fi"><label>Introdução da Proposta</label><textarea id="agrc-txt-intro" rows="2" placeholder="Texto de introdução da proposta..."></textarea></div>
+            <div class="fi"><label>Texto Institucional</label><textarea id="agrc-txt-inst" rows="2" placeholder="Texto institucional da Multilix..."></textarea></div>
+            <div class="fi"><label>Descrição dos Agregados Reciclados</label><textarea id="agrc-txt-desc" rows="2" placeholder="Descrição técnica dos produtos..."></textarea></div>
+            <div class="fi"><label>Condições Comerciais (texto livre)</label><textarea id="agrc-txt-cond" rows="2" placeholder="Detalhamento das condições..."></textarea></div>
+            <div class="fi"><label>Observações Importantes</label><textarea id="agrc-txt-obs" rows="2" placeholder="Observações que aparecem no PDF..."></textarea></div>
+            <div class="fi"><label>Encerramento</label><textarea id="agrc-txt-enc" rows="2" placeholder="Ex: Atenciosamente,..."></textarea></div>
+          </div>
+          <!-- BOTÕES -->
+          <div style="display:flex;justify-content:space-between;align-items:center;padding-top:16px;border-top:1px solid #262D3D;flex-wrap:wrap;gap:10px">
+            <button onclick="resetAgregConfig()" style="background:#EF444415;border:1px solid #EF444440;color:#EF4444;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:12px">🔄 Restaurar Padrão Original</button>
+            <div style="display:flex;gap:10px">
+              <button onclick="closeAgregConfig()" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:8px 16px;cursor:pointer;font-size:12px">Fechar</button>
+              <button onclick="saveAgregConfig()" style="background:linear-gradient(135deg,#7c5c1e,#5c3d12);color:#fff;border:none;border-radius:9px;padding:9px 22px;cursor:pointer;font-weight:700;font-size:13px">💾 Salvar Cadastro Padrão</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1540,6 +1621,7 @@ body.menu-open{overflow:hidden}
         <span><i data-lucide="gem" style="width:13px;height:13px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Propostas — Agregados Reciclados</span>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button style="background:#F59E0B15;border:1px solid #F59E0B;color:#F59E0B;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600" onclick="showPropAgregado()">🪨 Nova Proposta Agregado</button>
+          <button style="background:#92400E15;border:1px solid #D97706;color:#D97706;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600" onclick="showAgregConfig()">⚙️ Cadastro Padrão</button>
         </div>
       </div>
       <div class="panel">
@@ -6152,9 +6234,8 @@ function showPropAgregado(editIdx) {
     document.getElementById('ag-carga').value='17';
     document.getElementById('ag-entrega').value='entrega';
     document.getElementById('ag-imposto').value='com';
-    // Reset products to 1 empty row
-    const pc=document.getElementById('ag-produtos');
-    if(pc) pc.innerHTML='<div class="ag-prod-row" style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;margin-bottom:6px;align-items:end"><div class="fi"><label>Material 1</label><select class="ag-mat"><option value="">Selecione...</option><option>Areia Reciclada</option><option>Brita Reciclada</option><option>BGS Reciclada</option><option>Rachão Reciclado</option><option>Bica Corrida Reciclada</option><option>Solo Reciclado</option><option>Terra para Aterro</option><option>Pó de Pedra Reciclado</option></select></div><div class="fi"><label>Qtde (m³)</label><input type="number" class="ag-qtd" placeholder="0"/></div><div class="fi"><label>Preço/m³ (R$)</label><input type="number" class="ag-preco" placeholder="35" step="0.01"/></div><span></span></div>';
+    // Reset products from Cadastro Padrão
+    loadAgregProdutosNaProposta();
   } else {
     _fillAgForm(_propHistorico[_agEditIdx]);
   }
@@ -6289,7 +6370,7 @@ function gerarPDFAgregado(dataOverride) {
     doc.rect(mg,y,tw,8,'F');
     doc.setDrawColor(200,220,200);doc.setLineWidth(0.15);doc.line(mg,y+8,mg+tw,y+8);
     doc.setFont('helvetica','normal');doc.setFontSize(11);doc.setTextColor(40,40,40);
-    doc.text(p.mat,mg+3,y+5.5);doc.text('m³',mg+80,y+5.5);
+    doc.text(p.mat,mg+3,y+5.5);doc.text(p.un||'m³',mg+80,y+5.5);
     doc.text('R$ '+p.precoFinal.toLocaleString('pt-BR',{minimumFractionDigits:2}),mg+130,y+5.5);
     y+=8;
   });
@@ -6732,6 +6813,198 @@ function _renderATTCadResp(){
 }
 function saveATTConfig(){_saveAttCad();alert('Cadastros ATT salvos!');}
 function resetATTConfig(){_attCad=JSON.parse(JSON.stringify(ATT_DEFAULTS));_saveAttCad();_renderATTCadItens();alert('Padrão restaurado.');}
+
+// ── AGREGADOS CADASTRO PADRÃO ──
+const _AGREG_CAD_KEY='multilix_prop_agregados_config';
+const _AGREG_CAD_DEFAULTS={
+  produtos:[
+    {nome:'Areia Reciclada',unidade:'m³',valor:0,status:'ativo'},
+    {nome:'BGS Reciclada',unidade:'m³',valor:0,status:'ativo'},
+    {nome:'Rachão Reciclado',unidade:'m³',valor:0,status:'ativo'}
+  ],
+  condComerciais:{imposto:'18',pgto:'Pagamento antecipado',validade:'15 dias',prazo:'Imediato, conforme disponibilidade',atendimento:'',obs:''},
+  responsavel:{nome:'',cargo:'',tel:'',email:''},
+  textos:{intro:'Atendendo sua solicitação, apresentamos abaixo proposta comercial para fornecimento de material reciclado.',institucional:'',descricao:'Nossos agregados são obtidos através de um moderno tratamento mecanizado de RCC (Resíduos de Construção Civil) e são livres de materiais celulósicos, plásticos, metais e contaminantes.',condicoes:'',observacoes:'',encerramento:'Atenciosamente,'}
+};
+let _agregCad=(()=>{try{const d=JSON.parse(localStorage.getItem(_AGREG_CAD_KEY));return d||null;}catch(e){return null;}})() || JSON.parse(JSON.stringify(_AGREG_CAD_DEFAULTS));
+function _saveAgregCad(){localStorage.setItem(_AGREG_CAD_KEY,JSON.stringify(_agregCad));}
+function _agEsc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function showAgregConfig(){
+  document.getElementById('agr-config-overlay').style.display='block';
+  renderAgregProdutosPadrao();
+  _loadAgregConfigForm();
+}
+function closeAgregConfig(){document.getElementById('agr-config-overlay').style.display='none';}
+
+function _loadAgregConfigForm(){
+  const s=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};
+  const c=_agregCad.condComerciais;
+  s('agrc-imposto',c.imposto);s('agrc-pgto',c.pgto);s('agrc-validade',c.validade);
+  s('agrc-prazo',c.prazo);s('agrc-atendimento',c.atendimento);s('agrc-obs',c.obs);
+  const r=_agregCad.responsavel;
+  s('agrc-resp-nome',r.nome);s('agrc-resp-cargo',r.cargo);s('agrc-resp-tel',r.tel);s('agrc-resp-email',r.email);
+  const t=_agregCad.textos;
+  s('agrc-txt-intro',t.intro);s('agrc-txt-inst',t.institucional);s('agrc-txt-desc',t.descricao);
+  s('agrc-txt-cond',t.condicoes);s('agrc-txt-obs',t.observacoes);s('agrc-txt-enc',t.encerramento);
+}
+
+function renderAgregProdutosPadrao(){
+  const el=document.getElementById('agrc-prod-list');if(!el)return;
+  if(!_agregCad.produtos.length){el.innerHTML='<div style="padding:12px;text-align:center;color:var(--muted);font-size:12px">Nenhum produto cadastrado. Adicione abaixo.</div>';return;}
+  el.innerHTML=_agregCad.produtos.map((p,i)=>`
+    <div id="agrc-pv-${i}" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:6px;align-items:center;padding:7px 0;border-bottom:1px solid #1e2535">
+      <span style="font-size:12px;color:var(--text);font-weight:600">${_agEsc(p.nome)}</span>
+      <span style="font-size:12px;color:var(--muted)">${_agEsc(p.unidade)}</span>
+      <span style="font-size:12px;color:var(--text)">R$ ${parseFloat(p.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>
+      <span style="font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;background:${p.status==='ativo'?'#10B98120':'#EF444415'};color:${p.status==='ativo'?'#10B981':'#EF4444'}">${p.status==='ativo'?'Ativo':'Inativo'}</span>
+      <span style="display:flex;gap:4px">
+        <button onclick="editAgregProdutoPadrao(${i})" style="background:#F59E0B15;border:1px solid #F59E0B40;color:#F59E0B;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px">✏️</button>
+        <button onclick="removeAgregProdutoPadrao(${i})" style="background:#EF444415;border:1px solid #EF444440;color:#EF4444;border-radius:6px;padding:3px 7px;cursor:pointer;font-size:11px">✕</button>
+      </span>
+    </div>
+    <div id="agrc-pe-${i}" style="display:none;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:6px;align-items:end;padding:7px 0;border-bottom:1px solid #1e2535">
+      <input id="agrc-en-${i}" value="${_agEsc(p.nome)}" style="background:#1c212d;border:1px solid #262D3D;border-radius:7px;padding:6px 8px;color:#eef0ff;font-size:12px;outline:none"/>
+      <select id="agrc-eu-${i}" style="background:#1c212d;border:1px solid #262D3D;border-radius:7px;padding:6px 8px;color:#eef0ff;font-size:12px">
+        <option ${p.unidade==='m³'?'selected':''}>m³</option><option ${p.unidade==='tonelada'?'selected':''}>tonelada</option><option ${p.unidade==='unidade'?'selected':''}>unidade</option><option ${p.unidade==='viagem'?'selected':''}>viagem</option>
+      </select>
+      <input id="agrc-ev-${i}" value="${parseFloat(p.valor||0).toFixed(2)}" type="number" step="0.01" min="0" style="background:#1c212d;border:1px solid #262D3D;border-radius:7px;padding:6px 8px;color:#eef0ff;font-size:12px;outline:none"/>
+      <select id="agrc-es-${i}" style="background:#1c212d;border:1px solid #262D3D;border-radius:7px;padding:6px 8px;color:#eef0ff;font-size:12px">
+        <option value="ativo" ${p.status==='ativo'?'selected':''}>Ativo</option><option value="inativo" ${p.status==='inativo'?'selected':''}>Inativo</option>
+      </select>
+      <span style="display:flex;gap:4px">
+        <button onclick="saveAgregProdutoPadrao(${i})" style="background:#10B98115;border:1px solid #10B981;color:#10B981;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px">💾</button>
+        <button onclick="cancelAgregProdutoPadrao(${i})" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:11px">✕</button>
+      </span>
+    </div>
+  `).join('');
+}
+
+function editAgregProdutoPadrao(i){document.getElementById('agrc-pv-'+i).style.display='none';document.getElementById('agrc-pe-'+i).style.display='grid';}
+function cancelAgregProdutoPadrao(i){renderAgregProdutosPadrao();}
+function saveAgregProdutoPadrao(i){
+  const n=document.getElementById('agrc-en-'+i).value.trim();
+  if(!n){alert('Nome não pode estar vazio.');return;}
+  _agregCad.produtos[i]={nome:n,unidade:document.getElementById('agrc-eu-'+i).value,valor:parseFloat(document.getElementById('agrc-ev-'+i).value)||0,status:document.getElementById('agrc-es-'+i).value};
+  renderAgregProdutosPadrao();
+}
+function removeAgregProdutoPadrao(i){
+  if(!confirm('Tem certeza que deseja excluir este produto padrão?'))return;
+  _agregCad.produtos.splice(i,1);renderAgregProdutosPadrao();
+}
+function addAgregProdutoPadrao(){
+  const n=document.getElementById('agrc-new-nome').value.trim();
+  if(!n){alert('Informe o nome do produto.');return;}
+  _agregCad.produtos.push({nome:n,unidade:document.getElementById('agrc-new-un').value,valor:parseFloat(document.getElementById('agrc-new-val').value)||0,status:document.getElementById('agrc-new-st').value});
+  document.getElementById('agrc-new-nome').value='';document.getElementById('agrc-new-val').value='';
+  renderAgregProdutosPadrao();
+}
+
+function saveAgregConfig(){
+  const g=id=>{const el=document.getElementById(id);return el?el.value:'';};
+  _agregCad.condComerciais={imposto:g('agrc-imposto'),pgto:g('agrc-pgto'),validade:g('agrc-validade'),prazo:g('agrc-prazo'),atendimento:g('agrc-atendimento'),obs:g('agrc-obs')};
+  _agregCad.responsavel={nome:g('agrc-resp-nome'),cargo:g('agrc-resp-cargo'),tel:g('agrc-resp-tel'),email:g('agrc-resp-email')};
+  _agregCad.textos={intro:g('agrc-txt-intro'),institucional:g('agrc-txt-inst'),descricao:g('agrc-txt-desc'),condicoes:g('agrc-txt-cond'),observacoes:g('agrc-txt-obs'),encerramento:g('agrc-txt-enc')};
+  _saveAgregCad();
+  alert('Cadastro Padrão de Agregados salvo com sucesso!');
+  closeAgregConfig();
+}
+function resetAgregConfig(){
+  if(!confirm('Restaurar todos os padrões originais? Os dados cadastrados serão perdidos.'))return;
+  _agregCad=JSON.parse(JSON.stringify(_AGREG_CAD_DEFAULTS));
+  _saveAgregCad();renderAgregProdutosPadrao();_loadAgregConfigForm();
+  alert('Padrão original restaurado.');
+}
+
+function calcularTotalLinhaAgregado(row){
+  const qtd=parseFloat(row.querySelector('.ag-qtd').value)||0;
+  const preco=parseFloat(row.querySelector('.ag-preco').value)||0;
+  const t=row.querySelector('.ag-total');
+  if(t) t.value=(qtd*preco).toFixed(2);
+}
+
+function _buildAgProdRow(mat,un,qtd,preco,idx,isFirst){
+  const ativos=_agregCad.produtos.filter(p=>p.status==='ativo');
+  const opts='<option value="">Selecione...</option>'+ativos.map(p=>`<option value="${_agEsc(p.nome)}" data-un="${_agEsc(p.unidade)}" data-val="${p.valor}"${mat===p.nome?' selected':''}>${_agEsc(p.nome)}</option>`).join('');
+  const unOpts=['m³','tonelada','unidade','viagem'].map(u=>`<option${un===u?' selected':''}>${u}</option>`).join('');
+  const total=((parseFloat(qtd)||0)*(parseFloat(preco)||0)).toFixed(2);
+  const rmBtn=isFirst?'<span></span>':`<button onclick="this.closest('.ag-prod-row').remove()" style="background:#EF444415;border:1px solid #EF444440;color:#EF4444;border-radius:6px;padding:4px 8px;cursor:pointer;margin-bottom:5px">✕</button>`;
+  return `<div class="ag-prod-row" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr auto;gap:8px;margin-bottom:6px;align-items:end">
+    <div class="fi"><label>Produto ${idx}</label><select class="ag-mat" onchange="(function(s){const o=s.options[s.selectedIndex];if(!o)return;const r=s.closest('.ag-prod-row');if(o.dataset.val!==undefined){r.querySelector('.ag-preco').value=o.dataset.val;const u=r.querySelector('.ag-un');if(u&&o.dataset.un)u.value=o.dataset.un;}calcularTotalLinhaAgregado(r);})(this)">${opts}</select></div>
+    <div class="fi"><label>Unidade</label><select class="ag-un">${unOpts}</select></div>
+    <div class="fi"><label>Qtde</label><input type="number" class="ag-qtd" value="${qtd||''}" placeholder="0" oninput="calcularTotalLinhaAgregado(this.closest('.ag-prod-row'))"/></div>
+    <div class="fi"><label>Valor Unit. (R$)</label><input type="number" class="ag-preco" value="${preco||''}" placeholder="0.00" step="0.01" oninput="calcularTotalLinhaAgregado(this.closest('.ag-prod-row'))"/></div>
+    <div class="fi"><label>Total (R$)</label><input type="number" class="ag-total" value="${total}" readonly style="background:var(--surface2);color:var(--muted);cursor:default"/></div>
+    ${rmBtn}
+  </div>`;
+}
+
+function loadAgregProdutosNaProposta(){
+  const pc=document.getElementById('ag-produtos');if(!pc)return;
+  const ativos=_agregCad.produtos.filter(p=>p.status==='ativo');
+  if(!ativos.length){pc.innerHTML=_buildAgProdRow('','m³','','',1,true);return;}
+  pc.innerHTML=ativos.slice(0,8).map((p,i)=>_buildAgProdRow(p.nome,p.unidade,'',p.valor,i+1,i===0)).join('');
+}
+
+// Override _addAgProdRow to use new structure
+function _addAgProdRow(){
+  const c=document.getElementById('ag-produtos');if(!c)return;
+  const n=c.querySelectorAll('.ag-prod-row').length+1;
+  if(n>8){alert('Máximo 8 materiais.');return;}
+  const d=document.createElement('div');
+  d.innerHTML=_buildAgProdRow('','m³','','',n,false);
+  c.appendChild(d.firstElementChild);
+}
+
+// Override _fillAgForm to use new structure
+function _fillAgForm(p){
+  if(!p)return;
+  _v('ag-razao',p.empresa);_v('ag-contato',p.contato);_v('ag-tel',p.tel);
+  _v('ag-email',p.email);_v('ag-endereco',p.endereco);
+  _v('ag-frete',p.frete);_v('ag-carga',p.carga||17);
+  _v('ag-pgto',p.pgto);_v('ag-pgto-custom',p.pgtoCustom||'');
+  _v('ag-entrega',p.entregaTipo||'entrega');
+  _v('ag-imposto',p.imposto||'com');
+  _v('ag-obs',p.obs||'');
+  const pc=document.getElementById('ag-produtos');if(!pc)return;
+  pc.innerHTML='';
+  (p.produtos||[]).forEach((pr,i)=>{
+    const d=document.createElement('div');
+    d.innerHTML=_buildAgProdRow(pr.mat,pr.un||'m³',pr.qtd,pr.preco,i+1,i===0);
+    pc.appendChild(d.firstElementChild);
+  });
+}
+
+// Override _collectAgData to include unidade
+function _collectAgData(){
+  const prods=[...document.querySelectorAll('.ag-prod-row')].map(r=>({
+    mat:r.querySelector('.ag-mat')?r.querySelector('.ag-mat').value:'',
+    un:r.querySelector('.ag-un')?r.querySelector('.ag-un').value:'m³',
+    qtd:parseFloat(r.querySelector('.ag-qtd')?r.querySelector('.ag-qtd').value:0)||0,
+    preco:parseFloat(r.querySelector('.ag-preco')?r.querySelector('.ag-preco').value:0)||0
+  })).filter(p=>p.mat);
+  const frete=parseFloat(_g('ag-frete'))||0;
+  const carga=parseFloat(_g('ag-carga'))||17;
+  const entregaTipo=_g('ag-entrega');
+  const imposto=_g('ag-imposto');
+  const fretePorM3=(entregaTipo==='entrega'&&frete>0&&carga>0)?frete/carga:0;
+  const prodsPriced=prods.map(p=>{
+    const base=p.preco||35;
+    const comFrete=base+fretePorM3;
+    const final=imposto==='com'?comFrete*1.03:comFrete;
+    return{...p,precoFinal:Math.round(final*100)/100};
+  });
+  const pgto=_g('ag-pgto-custom')||_g('ag-pgto')||'A combinar';
+  const respIdx=parseInt(_g('ag-resp'));
+  const resp=(!isNaN(respIdx)&&_propCad.responsaveis&&_propCad.responsaveis[respIdx])?_propCad.responsaveis[respIdx]:(_agregCad.responsavel.nome?_agregCad.responsavel:{nome:'Carolina Gabriel',email:'comercialatt@multilix.com.br',tel:'(11) 9 4559 8431'});
+  return{
+    tipo:'agregado',empresa:_g('ag-razao')||'Cliente',contato:_g('ag-contato'),
+    tel:_g('ag-tel'),email:_g('ag-email'),endereco:_g('ag-endereco'),
+    entregaTipo,frete,carga,imposto,pgto,pgtoCustom:_g('ag-pgto-custom'),
+    obs:_g('ag-obs'),responsavel:resp,produtos:prods,prodsPriced,
+    data:new Date().toLocaleDateString('pt-BR')
+  };
+}
 
 document.addEventListener('DOMContentLoaded', () => { renderHistoricoPropostas(); renderHistoricoAgregados(); renderATTHistorico(); _refreshRespSelects(); });
 </script>
