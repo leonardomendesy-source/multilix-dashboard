@@ -7219,45 +7219,47 @@ function _driveExtractPlaca(fileName) {
 function _driveExtractDate(texto) {
   if (!texto) return '';
   const n = texto;
+  const _lastDay = (yr, mo) => new Date(parseInt(yr), parseInt(mo), 0).getDate();
+  const _pad = v => String(v).padStart(2,'0');
 
-  // DD.MM.AAAA ou DD/MM/AAAA (ex: 23.04.2027)
-  let m = n.match(/\b(\d{1,2})[.\/-](\d{2})[.\/-](\d{4})\b/);
-  if (m) {
-    const d = m[1].padStart(2,'0'), mo = m[2].padStart(2,'0'), yr = m[3];
-    if (parseInt(mo) >= 1 && parseInt(mo) <= 12)
-      return `${yr}-${mo}-${d}`;
-  }
+  const MESES = {
+    janeiro:1,fevereiro:2,'março':3,marco:3,abril:4,maio:5,junho:6,
+    julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12,
+    jan:1,fev:2,mar:3,abr:4,mai:5,jun:6,jul:7,ago:8,set:9,out:10,nov:11,dez:12
+  };
 
-  // MM.AAAA (ex: 06.2025 ou 08.2026)
-  m = n.match(/\b(\d{2})[.\/-](\d{4})\b/);
-  if (m) {
-    const mo = m[1], yr = m[2];
-    if (parseInt(mo) >= 1 && parseInt(mo) <= 12) {
-      const last = new Date(parseInt(yr), parseInt(mo), 0).getDate();
-      return `${yr}-${mo.padStart(2,'0')}-${String(last).padStart(2,'0')}`;
-    }
-  }
+  // DD de Mês de AAAA  (ex: 23 de abril de 2027)
+  let m = n.match(/(\d{1,2})\s+de\s+([a-záéíóúâêôãõç]+)\s+de\s+(\d{4})/i);
+  if (m) { const mes=MESES[m[2].toLowerCase()]; if(mes) return `${m[3]}-${_pad(mes)}-${_pad(m[1])}`; }
 
-  // VENC/VALIDADE XX.YY — descobre qual é mês e qual é ano
-  m = n.match(/(?:venc(?:imento)?|validade|valid|val)[^\d]*(\d{2})[.\/-](\d{2})(?!\d)/i);
+  // Mês de AAAA  (ex: junho de 2025)
+  m = n.match(/\b([a-záéíóúâêôãõç]{3,})\s+de\s+(\d{4})\b/i);
+  if (m) { const mes=MESES[m[1].toLowerCase()]; if(mes){ const ld=_lastDay(m[2],mes); return `${m[2]}-${_pad(mes)}-${_pad(ld)}`; } }
+
+  // DD/MM/AAAA ou DD.MM.AAAA
+  m = n.match(/\b(\d{1,2})[\/.\-](\d{2})[\/.\-](\d{4})\b/);
+  if (m) { const mo=parseInt(m[2]); if(mo>=1&&mo<=12) return `${m[3]}-${_pad(mo)}-${_pad(m[1])}`; }
+
+  // MM/AAAA ou MM.AAAA
+  m = n.match(/\b(\d{2})[\/.\-](\d{4})\b/);
+  if (m) { const mo=parseInt(m[1]); if(mo>=1&&mo<=12){ const ld=_lastDay(m[2],mo); return `${m[2]}-${_pad(mo)}-${_pad(ld)}`; } }
+
+  // VENC / VALIDADE XX.YY — auto-detecta se XX é ano ou mês
+  m = n.match(/(?:venc(?:imento)?|validade|val)[^\d]*(\d{2})[.\/-](\d{2})(?!\d)/i);
   if (m) {
-    let a = parseInt(m[1]), b = parseInt(m[2]);
+    const a=parseInt(m[1]), b=parseInt(m[2]);
     let mo, yr;
-    if (a > 12 && b <= 12)      { yr = m[1]; mo = m[2]; }  // VENC 24.06 → yr=24, mo=06
-    else if (b > 12 && a <= 12) { mo = m[1]; yr = m[2]; }  // VENC 06.24 → mo=06, yr=24
-    else                         { mo = m[1]; yr = m[2]; }  // ambíguo → assume mo.yr
-    const fullYr = parseInt(yr) < 50 ? '20'+yr : '19'+yr;
-    const last = new Date(parseInt(fullYr), parseInt(mo), 0).getDate();
-    return `${fullYr}-${mo.padStart(2,'0')}-${String(last).padStart(2,'0')}`;
+    if (a>12)       { yr=m[1]; mo=m[2]; }
+    else if (b>12)  { mo=m[1]; yr=m[2]; }
+    else            { mo=m[1]; yr=m[2]; }
+    const fullYr = parseInt(yr)<50 ? '20'+yr : '19'+yr;
+    const ld = _lastDay(fullYr, parseInt(mo));
+    return `${fullYr}-${_pad(mo)}-${_pad(ld)}`;
   }
 
-  // DD.MM.AA (ex: 23.04.27)
+  // DD.MM.AA (último recurso)
   m = n.match(/\b(\d{2})[.\/-](\d{2})[.\/-](\d{2})\b/);
-  if (m) {
-    const d = m[1], mo = m[2], yr = (parseInt(m[3]) < 50 ? '20' : '19') + m[3];
-    if (parseInt(mo) >= 1 && parseInt(mo) <= 12)
-      return `${yr}-${mo.padStart(2,'0')}-${d.padStart(2,'0')}`;
-  }
+  if (m) { const mo=parseInt(m[2]); if(mo>=1&&mo<=12){ const yr=(parseInt(m[3])<50?'20':'19')+m[3]; return `${yr}-${_pad(mo)}-${_pad(m[1])}`; } }
 
   return '';
 }
@@ -7311,49 +7313,51 @@ async function _driveSyncExecute() {
       }
     }
 
-    _driveSyncStatus(`🔄 Processando ${allFiles.length} arquivos…`, 'info');
+    _driveSyncStatus(`🔄 Encontrados ${allFiles.length} arquivos. Lendo conteúdo…`, 'info');
 
-    let added = 0, updated = 0;
-    for (const { file, folderName } of allFiles) {
+    // Remove todos os registros antigos que vieram do Drive (reimporta limpo)
+    _docsData = _docsData.filter(d => d.origem !== 'drive');
+
+    let added = 0;
+    for (let i = 0; i < allFiles.length; i++) {
+      const { file, folderName } = allFiles[i];
+      _driveSyncStatus(`🔍 [${i+1}/${allFiles.length}] ${file.name.slice(0,45)}…`, 'info');
+
       const tipo      = _driveGuessDocType(file.name, folderName);
       const frente    = _driveGuessFrente(folderName, tipo);
       const entidade  = _driveGuessEntidade(folderName, file.name);
       const placa     = tipo === 'carteirinha_sp_regula_veiculo' ? _driveExtractPlaca(file.name) : '';
-      const driveLink    = file.webViewLink || `https://drive.google.com/file/d/${file.id}/view`;
-      const orgao        = _DOCS_TIPOS[tipo]?.orgao || '';
-      const per          = _DOCS_TIPOS[tipo]?.per    || 'outro';
-      let   dataVenc     = _driveExtractDate(file.name);
+      const driveLink = file.webViewLink || `https://drive.google.com/file/d/${file.id}/view`;
+      const orgao     = _DOCS_TIPOS[tipo]?.orgao || '';
+      const per       = _DOCS_TIPOS[tipo]?.per    || 'outro';
 
-      // Se não achou data no nome, lê o conteúdo do PDF
+      // 1º tenta extrair data do nome do arquivo
+      let dataVenc = _driveExtractDate(file.name);
+
+      // 2º se não achou, abre o PDF e lê o conteúdo
       if (!dataVenc && file.mimeType === 'application/pdf') {
-        _driveSyncStatus(`🔍 Lendo PDF: ${file.name.slice(0,40)}…`, 'info');
         const pdfTxt = await _driveFetchPDFText(file.id);
-        if (pdfTxt) dataVenc = _driveExtractDate(pdfTxt);
+        dataVenc = _driveExtractDate(pdfTxt);
       }
 
-      /* Verifica se já existe pelo link do Drive */
-      const existing = _docsData.find(d => d.drive_link === driveLink);
-      if (existing) {
-        existing.nome           = file.name;
-        existing.data_vencimento = dataVenc || existing.data_vencimento;
-        existing.updated_at     = new Date().toISOString();
-        existing.ativo          = true;
-        updated++;
-      } else {
-        _docsData.push({
-          id: _docsUUID(), nome: file.name, tipo_documento: tipo, frente, entidade,
-          placa_veiculo: placa, numero_documento: '', orgao_emissor: orgao,
-          data_emissao: '', data_vencimento: dataVenc, periodicidade: per,
-          drive_link: driveLink, obs: `Importado automaticamente da pasta "${folderName}"`,
-          origem: 'drive', ativo: true,
-          created_at: new Date().toISOString(), updated_at: new Date().toISOString()
-        });
-        added++;
-      }
+      _docsData.push({
+        id: _docsUUID(), nome: file.name, tipo_documento: tipo, frente, entidade,
+        placa_veiculo: placa, numero_documento: '', orgao_emissor: orgao,
+        data_emissao: '', data_vencimento: dataVenc, periodicidade: per,
+        drive_link: driveLink,
+        obs: `Pasta: ${folderName}${dataVenc ? '' : ' — data não encontrada no arquivo'}`,
+        origem: 'drive', ativo: true,
+        created_at: new Date().toISOString(), updated_at: new Date().toISOString()
+      });
+      added++;
+
+      // Salva a cada 10 arquivos para não perder progresso
+      if (added % 10 === 0) { _docsSave(); _docsRender(); }
     }
 
     _docsSave();
-    _driveSyncStatus(`✅ Sincronizado: ${added} novos, ${updated} atualizados.`, 'ok');
+    const comData = _docsData.filter(d=>d.origem==='drive'&&d.data_vencimento).length;
+    _driveSyncStatus(`✅ ${added} arquivos importados. ${comData} com data encontrada.`, 'ok');
     _docsRender();
 
   } catch(e) {
