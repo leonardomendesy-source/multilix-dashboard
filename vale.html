@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<title>Multilix — Registro de Vale</title>
+<style>
+  :root{
+    --bg:#0B0D11;--surface:#151922;--surface2:#1c212d;--border:#262D3D;
+    --text:#eef0ff;--muted:#8a93ab;--muted2:#5b6478;
+    --accent:#F59E0B;--accent2:#D97706;
+    --green:#10B981;--red:#EF4444;--blue:#3B82F6;
+    --radius:12px;--font:'Inter',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;min-height:100dvh;display:flex;flex-direction:column}
+  .header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10}
+  .header-logo{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:#000;flex-shrink:0}
+  .header-title{font-size:15px;font-weight:700;color:var(--text)}
+  .header-sub{font-size:11px;color:var(--muted);margin-top:1px}
+  .content{flex:1;padding:20px 16px;max-width:500px;width:100%;margin:0 auto}
+  .field{margin-bottom:16px}
+  label{display:block;font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px}
+  select,input[type=text],input[type=number],textarea{
+    width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);
+    border-radius:var(--radius);padding:13px 14px;font-size:15px;outline:none;
+    transition:border-color .15s;-webkit-appearance:none;appearance:none;font-family:var(--font)
+  }
+  select:focus,input:focus,textarea:focus{border-color:var(--accent)}
+  select option{background:var(--surface2)}
+  textarea{resize:none;height:80px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .preco-preview{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:13px 14px;font-size:22px;font-weight:800;color:var(--accent);letter-spacing:-.5px}
+  .preco-label{font-size:10px;color:var(--muted2);margin-top:2px}
+
+  /* Foto */
+  .foto-btn{
+    width:100%;background:var(--surface2);border:2px dashed var(--border);
+    border-radius:var(--radius);padding:18px;cursor:pointer;text-align:center;
+    transition:border-color .2s,background .2s;position:relative;overflow:hidden
+  }
+  .foto-btn:active{background:var(--surface);border-color:var(--accent)}
+  .foto-btn.ok{border-style:solid;border-color:var(--green);background:#10B98110}
+  .foto-btn-icon{font-size:28px;display:block;margin-bottom:6px}
+  .foto-btn-label{font-size:13px;font-weight:600;color:var(--muted)}
+  .foto-btn.ok .foto-btn-label{color:var(--green)}
+  .foto-preview{width:100%;max-height:200px;object-fit:cover;border-radius:8px;margin-top:10px;display:none}
+  .foto-input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+
+  /* Botão principal */
+  .btn-registrar{
+    width:100%;padding:17px;background:linear-gradient(135deg,var(--accent),var(--accent2));
+    border:none;border-radius:var(--radius);color:#000;font-size:16px;font-weight:800;
+    cursor:pointer;letter-spacing:-.2px;transition:opacity .15s;margin-top:8px
+  }
+  .btn-registrar:disabled{opacity:.4;cursor:not-allowed}
+  .btn-registrar:active:not(:disabled){opacity:.85}
+
+  /* Tela de confirmação */
+  #tela-confirmacao{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:80dvh;padding:30px 20px;text-align:center}
+  .confirm-icon{font-size:64px;margin-bottom:16px}
+  .confirm-os{font-size:28px;font-weight:900;color:var(--accent);letter-spacing:-.5px;margin-bottom:4px}
+  .confirm-label{font-size:12px;color:var(--muted2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:20px}
+  .confirm-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;width:100%;max-width:360px;margin-bottom:20px;text-align:left}
+  .confirm-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}
+  .confirm-row:last-child{border-bottom:none}
+  .confirm-row-label{font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px}
+  .confirm-row-value{font-size:13px;font-weight:700;color:var(--text);text-align:right}
+  .btn-novo{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);padding:13px 24px;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px}
+
+  /* Loading */
+  #loading-overlay{display:none;position:fixed;inset:0;background:rgba(11,13,17,.85);z-index:100;align-items:center;justify-content:center;flex-direction:column;gap:16px}
+  .spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loading-text{font-size:13px;color:var(--muted)}
+
+  .alert{background:#EF444415;border:1px solid #EF444440;border-radius:var(--radius);padding:12px 14px;font-size:13px;color:var(--red);margin-bottom:16px;display:none}
+  .sec-title{font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.8px;margin:20px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">M</div>
+  <div>
+    <div class="header-title">Registro de Vale</div>
+    <div class="header-sub">Operador de Pátio — Saída de Resíduos</div>
+  </div>
+</div>
+
+<!-- FORMULÁRIO -->
+<div class="content" id="tela-form">
+  <div id="alert-msg" class="alert"></div>
+
+  <div class="sec-title">Dados do Freteiro</div>
+
+  <div class="field">
+    <label>Freteiro *</label>
+    <select id="v-freteiro" onchange="onFreteiroChange()">
+      <option value="">Carregando...</option>
+    </select>
+  </div>
+
+  <div class="row2">
+    <div class="field">
+      <label>Tipo de Veículo *</label>
+      <select id="v-veiculo" onchange="onVeiculoChange()">
+        <option value="">—</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Capacidade (m³)</label>
+      <select id="v-capacidade" onchange="onCapacidadeChange()">
+        <option value="">—</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Tipo de Resíduo *</label>
+    <select id="v-residuo" onchange="onResiduoChange()">
+      <option value="">—</option>
+    </select>
+  </div>
+
+  <div class="row2">
+    <div class="field">
+      <label>Preço Unitário</label>
+      <div class="preco-preview" id="v-preco-display">—</div>
+    </div>
+    <div class="field">
+      <label>Nº Vale Físico *</label>
+      <input type="number" id="v-vale" placeholder="0000" inputmode="numeric"/>
+    </div>
+  </div>
+
+  <div class="sec-title">Fotografias Obrigatórias</div>
+
+  <div class="field">
+    <label>Foto do Caminhão Carregado</label>
+    <div class="foto-btn" id="btn-foto-caminhao">
+      <input type="file" accept="image/*" capture="environment" class="foto-input" id="input-foto-caminhao" onchange="onFoto('caminhao',this)"/>
+      <span class="foto-btn-icon">📷</span>
+      <span class="foto-btn-label">Fotografar Caminhão</span>
+      <img class="foto-preview" id="prev-caminhao"/>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Foto do Vale Físico</label>
+    <div class="foto-btn" id="btn-foto-vale">
+      <input type="file" accept="image/*" capture="environment" class="foto-input" id="input-foto-vale" onchange="onFoto('vale',this)"/>
+      <span class="foto-btn-icon">🧾</span>
+      <span class="foto-btn-label">Fotografar Vale</span>
+      <img class="foto-preview" id="prev-vale"/>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Observações (opcional)</label>
+    <textarea id="v-obs" placeholder="Informações adicionais..."></textarea>
+  </div>
+
+  <button class="btn-registrar" id="btn-registrar" onclick="registrarSaida()">Registrar Saída</button>
+  <div style="height:32px"></div>
+</div>
+
+<!-- CONFIRMAÇÃO -->
+<div id="tela-confirmacao">
+  <div class="confirm-icon">✅</div>
+  <div class="confirm-os" id="confirm-os">—</div>
+  <div class="confirm-label">Ordem de Serviço gerada</div>
+  <div class="confirm-card">
+    <div class="confirm-row"><span class="confirm-row-label">Freteiro</span><span class="confirm-row-value" id="cf-freteiro">—</span></div>
+    <div class="confirm-row"><span class="confirm-row-label">Veículo</span><span class="confirm-row-value" id="cf-veiculo">—</span></div>
+    <div class="confirm-row"><span class="confirm-row-label">Resíduo</span><span class="confirm-row-value" id="cf-residuo">—</span></div>
+    <div class="confirm-row"><span class="confirm-row-label">Nº Vale</span><span class="confirm-row-value" id="cf-vale">—</span></div>
+    <div class="confirm-row"><span class="confirm-row-label">Valor</span><span class="confirm-row-value" id="cf-valor">—</span></div>
+    <div class="confirm-row"><span class="confirm-row-label">Hora</span><span class="confirm-row-value" id="cf-hora">—</span></div>
+  </div>
+  <button class="btn-novo" onclick="novoRegistro()">+ Novo Registro</button>
+</div>
+
+<!-- LOADING -->
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loading-text">Salvando...</div>
+</div>
+
+<script>
+const SUPA_URL = 'https://nbotdfkeiwqwgbesgkve.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ib3RkZmtlaXdxd2diZXNna3ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NDYyMDksImV4cCI6MjA5NjEyMjIwOX0.GmobP5xGzZtxUPwNrZIhMaevJdLz5Db2zEL_o6YtSqg';
+const HDR = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
+
+let _freteiros = [];
+let _fotos = { caminhao: null, vale: null }; // blobs comprimidos
+let _precoSelecionado = null;
+
+// ── INIT ──────────────────────────────────────────────────────
+async function init() {
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/freteiros?select=*,freteiros_tabela_precos(*)&ativo=eq.true&order=nome.asc&limit=200`, {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+    });
+    _freteiros = await r.json();
+    const sel = document.getElementById('v-freteiro');
+    sel.innerHTML = '<option value="">Selecione o freteiro...</option>';
+    _freteiros.forEach(f => {
+      const opt = document.createElement('option');
+      opt.value = f.id;
+      opt.textContent = f.nome;
+      sel.appendChild(opt);
+    });
+  } catch(e) {
+    showAlert('Erro ao carregar freteiros. Verifique a conexão.');
+  }
+}
+
+// ── CASCATA DE SELECTS ────────────────────────────────────────
+function onFreteiroChange() {
+  const fid = document.getElementById('v-freteiro').value;
+  const f = _freteiros.find(x => x.id === fid);
+  const precos = (f?.freteiros_tabela_precos || []).filter(p => p.ativo);
+
+  // veículos únicos
+  const veiculos = [...new Set(precos.map(p => p.tipo_veiculo))];
+  const selV = document.getElementById('v-veiculo');
+  selV.innerHTML = '<option value="">—</option>';
+  veiculos.forEach(v => { const o=document.createElement('option'); o.value=v; o.textContent=v; selV.appendChild(o); });
+  if(veiculos.length === 1) { selV.value = veiculos[0]; onVeiculoChange(); }
+  else { resetCapacidade(); resetResiduo(); resetPreco(); }
+}
+
+function onVeiculoChange() {
+  const fid = document.getElementById('v-freteiro').value;
+  const veiculo = document.getElementById('v-veiculo').value;
+  const f = _freteiros.find(x => x.id === fid);
+  const precos = (f?.freteiros_tabela_precos || []).filter(p => p.ativo && p.tipo_veiculo === veiculo);
+
+  const caps = [...new Set(precos.map(p => p.capacidade_m3))].sort((a,b)=>a-b);
+  const selC = document.getElementById('v-capacidade');
+  selC.innerHTML = '<option value="">—</option>';
+  caps.forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c+'m³'; selC.appendChild(o); });
+  if(caps.length === 1) { selC.value = caps[0]; onCapacidadeChange(); }
+  else { resetResiduo(); resetPreco(); }
+}
+
+function onCapacidadeChange() {
+  const fid = document.getElementById('v-freteiro').value;
+  const veiculo = document.getElementById('v-veiculo').value;
+  const cap = parseFloat(document.getElementById('v-capacidade').value);
+  const f = _freteiros.find(x => x.id === fid);
+  const precos = (f?.freteiros_tabela_precos || []).filter(p => p.ativo && p.tipo_veiculo === veiculo && p.capacidade_m3 === cap);
+
+  const residuos = [...new Set(precos.map(p => p.tipo_residuo))];
+  const selR = document.getElementById('v-residuo');
+  selR.innerHTML = '<option value="">—</option>';
+  residuos.forEach(r => { const o=document.createElement('option'); o.value=r; o.textContent=r; selR.appendChild(o); });
+  if(residuos.length === 1) { selR.value = residuos[0]; onResiduoChange(); }
+  else resetPreco();
+}
+
+function onResiduoChange() {
+  const fid = document.getElementById('v-freteiro').value;
+  const veiculo = document.getElementById('v-veiculo').value;
+  const cap = parseFloat(document.getElementById('v-capacidade').value);
+  const residuo = document.getElementById('v-residuo').value;
+  const f = _freteiros.find(x => x.id === fid);
+  const p = (f?.freteiros_tabela_precos || []).find(x => x.ativo && x.tipo_veiculo === veiculo && x.capacidade_m3 === cap && x.tipo_residuo === residuo);
+  _precoSelecionado = p || null;
+  document.getElementById('v-preco-display').textContent = p ? 'R$ ' + Number(p.preco_unitario).toLocaleString('pt-BR') : '—';
+}
+
+function resetCapacidade(){ const s=document.getElementById('v-capacidade'); s.innerHTML='<option value="">—</option>'; }
+function resetResiduo(){ const s=document.getElementById('v-residuo'); s.innerHTML='<option value="">—</option>'; resetPreco(); }
+function resetPreco(){ _precoSelecionado=null; document.getElementById('v-preco-display').textContent='—'; }
+
+// ── FOTOS ─────────────────────────────────────────────────────
+function onFoto(tipo, input) {
+  const file = input.files[0];
+  if(!file) return;
+  comprimirImagem(file, 800, 0.75, blob => {
+    _fotos[tipo] = blob;
+    const prev = document.getElementById('prev-' + tipo);
+    prev.src = URL.createObjectURL(blob);
+    prev.style.display = 'block';
+    document.getElementById('btn-foto-' + tipo).classList.add('ok');
+    document.querySelector('#btn-foto-' + tipo + ' .foto-btn-label').textContent = '✓ Foto capturada';
+  });
+}
+
+function comprimirImagem(file, maxPx, quality, callback) {
+  const img = new Image();
+  const url = URL.createObjectURL(file);
+  img.onload = () => {
+    let w = img.width, h = img.height;
+    if(w > maxPx || h > maxPx) {
+      if(w > h) { h = Math.round(h * maxPx / w); w = maxPx; }
+      else { w = Math.round(w * maxPx / h); h = maxPx; }
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+    canvas.toBlob(blob => { URL.revokeObjectURL(url); callback(blob); }, 'image/jpeg', quality);
+  };
+  img.src = url;
+}
+
+// ── REGISTRAR ─────────────────────────────────────────────────
+async function registrarSaida() {
+  hideAlert();
+  const fid     = document.getElementById('v-freteiro').value;
+  const veiculo = document.getElementById('v-veiculo').value;
+  const cap     = parseFloat(document.getElementById('v-capacidade').value);
+  const residuo = document.getElementById('v-residuo').value;
+  const vale    = document.getElementById('v-vale').value.trim();
+
+  if(!fid)             return showAlert('Selecione o freteiro.');
+  if(!veiculo)         return showAlert('Selecione o tipo de veículo.');
+  if(!cap)             return showAlert('Selecione a capacidade.');
+  if(!residuo)         return showAlert('Selecione o tipo de resíduo.');
+  if(!vale)            return showAlert('Informe o número do vale físico.');
+  if(!_fotos.caminhao) return showAlert('Foto do caminhão é obrigatória.');
+  if(!_fotos.vale)     return showAlert('Foto do vale é obrigatória.');
+
+  const freteiro = _freteiros.find(x => x.id === fid);
+  const hoje = new Date().toLocaleDateString('sv-SE', {timeZone:'America/Sao_Paulo'}); // YYYY-MM-DD
+
+  setLoading(true, 'Enviando fotos...');
+
+  try {
+    // Upload fotos
+    const prefix = `${hoje}/${fid}`;
+    const tsCaminhao = Date.now();
+    const urlCaminhao = await uploadFoto(_fotos.caminhao, `${prefix}/${tsCaminhao}_caminhao.jpg`);
+    const urlVale     = await uploadFoto(_fotos.vale,     `${prefix}/${tsCaminhao}_vale.jpg`);
+
+    setLoading(true, 'Salvando registro...');
+
+    const body = {
+      data_saida:         hoje,
+      freteiro_id:        fid,
+      tipo_veiculo:       veiculo,
+      capacidade_m3:      cap,
+      tipo_residuo:       residuo,
+      numero_vale_fisico: vale,
+      preco_unitario:     _precoSelecionado?.preco_unitario || null,
+      foto_caminhao_url:  urlCaminhao,
+      foto_vale_url:      urlVale,
+      observacoes:        document.getElementById('v-obs').value.trim() || null,
+      status:             'registrado'
+    };
+
+    const r = await fetch(`${SUPA_URL}/rest/v1/vales_destinacao`, {
+      method: 'POST', headers: HDR, body: JSON.stringify(body)
+    });
+    if(!r.ok){ const e=await r.json(); throw new Error(JSON.stringify(e)); }
+    const res = await r.json();
+    const registro = res[0];
+
+    setLoading(false);
+    mostrarConfirmacao(registro, freteiro.nome);
+
+  } catch(e) {
+    setLoading(false);
+    showAlert('Erro ao registrar: ' + e.message);
+  }
+}
+
+async function uploadFoto(blob, path) {
+  const r = await fetch(`${SUPA_URL}/storage/v1/object/destinacao-fotos/${path}`, {
+    method: 'POST',
+    headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'image/jpeg', 'x-upsert': 'true' },
+    body: blob
+  });
+  if(!r.ok){ const e=await r.text(); throw new Error('Upload falhou: ' + e); }
+  return `${SUPA_URL}/storage/v1/object/public/destinacao-fotos/${path}`;
+}
+
+// ── CONFIRMAÇÃO ───────────────────────────────────────────────
+function mostrarConfirmacao(reg, nomeFreterio) {
+  document.getElementById('confirm-os').textContent = reg.os_numero || '—';
+  document.getElementById('cf-freteiro').textContent = nomeFreterio;
+  document.getElementById('cf-veiculo').textContent  = `${reg.tipo_veiculo} ${reg.capacidade_m3}m³`;
+  document.getElementById('cf-residuo').textContent  = reg.tipo_residuo;
+  document.getElementById('cf-vale').textContent     = reg.numero_vale_fisico;
+  document.getElementById('cf-valor').textContent    = reg.total ? 'R$ ' + Number(reg.total).toLocaleString('pt-BR') : '—';
+  const hora = new Date(reg.created_at).toLocaleTimeString('pt-BR', {timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('cf-hora').textContent = hora;
+
+  document.getElementById('tela-form').style.display = 'none';
+  const conf = document.getElementById('tela-confirmacao');
+  conf.style.display = 'flex';
+}
+
+function novoRegistro() {
+  document.getElementById('tela-form').style.display = 'block';
+  document.getElementById('tela-confirmacao').style.display = 'none';
+  document.getElementById('v-freteiro').value = '';
+  document.getElementById('v-veiculo').innerHTML = '<option value="">—</option>';
+  document.getElementById('v-capacidade').innerHTML = '<option value="">—</option>';
+  document.getElementById('v-residuo').innerHTML = '<option value="">—</option>';
+  document.getElementById('v-preco-display').textContent = '—';
+  document.getElementById('v-vale').value = '';
+  document.getElementById('v-obs').value = '';
+  _fotos = { caminhao: null, vale: null };
+  _precoSelecionado = null;
+  ['caminhao','vale'].forEach(t => {
+    document.getElementById('btn-foto-'+t).classList.remove('ok');
+    document.querySelector('#btn-foto-'+t+' .foto-btn-label').textContent = t==='caminhao' ? 'Fotografar Caminhão' : 'Fotografar Vale';
+    const prev = document.getElementById('prev-'+t);
+    prev.src=''; prev.style.display='none';
+    document.getElementById('input-foto-'+t).value='';
+  });
+  hideAlert();
+}
+
+// ── UTILS ─────────────────────────────────────────────────────
+function showAlert(msg){ const el=document.getElementById('alert-msg'); el.textContent=msg; el.style.display='block'; window.scrollTo({top:0,behavior:'smooth'}); }
+function hideAlert(){ document.getElementById('alert-msg').style.display='none'; }
+function setLoading(show, txt=''){
+  const ov=document.getElementById('loading-overlay');
+  ov.style.display=show?'flex':'none';
+  if(txt) document.getElementById('loading-text').textContent=txt;
+  document.getElementById('btn-registrar').disabled=show;
+}
+
+init();
+</script>
+</body>
+</html>
