@@ -1333,26 +1333,29 @@ body.menu-open{overflow:hidden}
           </div>
 
           <div style="font-size:10px;font-weight:700;color:#5b6478;text-transform:uppercase;letter-spacing:.8px;margin:16px 0 6px">Produtos</div>
-          <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr auto;gap:8px;padding:0 4px 6px;border-bottom:1px solid #262D3D;margin-bottom:4px">
+          <div style="overflow-x:auto">
+          <div style="display:grid;grid-template-columns:2fr 0.6fr 0.7fr 1.1fr 2.2fr 1.2fr auto;gap:8px;padding:0 4px 6px;border-bottom:1px solid #262D3D;margin-bottom:4px;min-width:640px">
             <span style="font-size:10px;color:#5b6478;font-weight:600">PRODUTO</span>
-            <span style="font-size:10px;color:#5b6478;font-weight:600">UNIDADE</span>
+            <span style="font-size:10px;color:#5b6478;font-weight:600">UN.</span>
             <span style="font-size:10px;color:#5b6478;font-weight:600">QTDE</span>
-            <span style="font-size:10px;color:#5b6478;font-weight:600">VALOR UNIT.</span>
-            <span style="font-size:10px;color:#5b6478;font-weight:600">TOTAL</span>
+            <span style="font-size:10px;color:#5b6478;font-weight:600">VALOR BASE (s/ imp.)</span>
+            <span style="font-size:10px;color:#10B981;font-weight:600">💡 CALCULADORA</span>
+            <span style="font-size:10px;color:#F59E0B;font-weight:600">PREÇO FINAL (edit.)</span>
             <span></span>
           </div>
-          <div id="ag-produtos"></div>
+          <div id="ag-produtos" style="min-width:640px"></div>
+          </div>
           <button onclick="_addAgProdRow()" style="background:#1c212d;border:1px dashed #262D3D;color:#8a93ab;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px;width:100%;margin-bottom:14px">+ Adicionar Produto</button>
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
             <div class="fi"><label>Entrega ou Retirada</label>
-              <select id="ag-entrega"><option value="entrega">Entrega (com frete)</option><option value="retira">Retirada (sem frete)</option></select>
+              <select id="ag-entrega" onchange="recalcularTodasLinhasAgregado()"><option value="entrega">Entrega (com frete)</option><option value="retira">Retirada (sem frete)</option></select>
             </div>
             <div class="fi"><label>Acesso a caminhão?</label>
               <select id="ag-acesso"><option value="s">Sim</option><option value="n">Não</option></select>
             </div>
-            <div class="fi"><label>Valor do Frete (R$)</label><input type="number" id="ag-frete" placeholder="Ex: 180" step="0.01"/></div>
-            <div class="fi"><label>Tamanho da Carga (m³)</label><input type="number" id="ag-carga" value="17"/></div>
+            <div class="fi"><label>Valor do Frete (R$)</label><input type="number" id="ag-frete" placeholder="Ex: 500" step="0.01" oninput="recalcularTodasLinhasAgregado()"/></div>
+            <div class="fi"><label>Volume da Carga (m³)</label><input type="number" id="ag-carga" value="17" oninput="recalcularTodasLinhasAgregado()"/></div>
             <div class="fi"><label>Condição de Pagamento</label>
               <select id="ag-pgto"><option value="">Selecione...</option></select>
             </div>
@@ -1360,8 +1363,9 @@ body.menu-open{overflow:hidden}
             <div class="fi"><label>Responsável pelo Envio</label>
               <select id="ag-resp"></select>
             </div>
-            <div class="fi"><label>Incluir impostos no preço?</label>
-              <select id="ag-imposto"><option value="com">Com imposto</option><option value="sem">Sem imposto</option></select>
+            <div class="fi"><label>Imposto (%)</label>
+              <input type="number" id="ag-imposto" min="0" max="100" step="0.01" placeholder="0" oninput="recalcularTodasLinhasAgregado()" style=""/>
+              <span style="font-size:10px;color:var(--muted);margin-top:3px;display:block">Padrão do Cadastro. Pode ajustar por proposta.</span>
             </div>
             <div class="fi" style="grid-column:1/-1"><label>Observações</label>
               <textarea id="ag-obs" rows="2" placeholder="Informações adicionais..."></textarea>
@@ -6233,7 +6237,7 @@ function showPropAgregado(editIdx) {
     ['ag-razao','ag-contato','ag-tel','ag-email','ag-endereco','ag-frete','ag-pgto-custom','ag-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
     document.getElementById('ag-carga').value='17';
     document.getElementById('ag-entrega').value='entrega';
-    document.getElementById('ag-imposto').value='com';
+    document.getElementById('ag-imposto').value=_agregCad.condComerciais.imposto||'0';
     // Reset products from Cadastro Padrão
     loadAgregProdutosNaProposta();
   } else {
@@ -6321,9 +6325,11 @@ function gerarPDFAgregado(dataOverride) {
   let prodsPriced = d.prodsPriced;
   if (!prodsPriced && d.produtos) {
     const fretePorM3=(d.entregaTipo==='entrega'&&d.frete>0&&d.carga>0)?d.frete/d.carga:0;
+    const imp=parseFloat(d.imposto)||0;
     prodsPriced=d.produtos.map(p=>{
-      const base=p.preco||35;const comFrete=base+fretePorM3;
-      const final=d.imposto==='com'?comFrete*1.03:comFrete;
+      if(p.precoFinal) return {...p};
+      const base=p.preco||0;
+      const final=base*(1+imp/100)+fretePorM3;
       return{...p,precoFinal:Math.round(final*100)/100};
     });
   }
@@ -6923,18 +6929,20 @@ function calcularTotalLinhaAgregado(row){
   if(t) t.value=(qtd*preco).toFixed(2);
 }
 
-function _buildAgProdRow(mat,un,qtd,preco,idx,isFirst){
+function _buildAgProdRow(mat,un,qtd,preco,idx,isFirst,precoFinal){
   const ativos=_agregCad.produtos.filter(p=>p.status==='ativo');
   const opts='<option value="">Selecione...</option>'+ativos.map(p=>`<option value="${_agEsc(p.nome)}" data-un="${_agEsc(p.unidade)}" data-val="${p.valor}"${mat===p.nome?' selected':''}>${_agEsc(p.nome)}</option>`).join('');
   const unOpts=['m³','tonelada','unidade','viagem'].map(u=>`<option${un===u?' selected':''}>${u}</option>`).join('');
-  const total=((parseFloat(qtd)||0)*(parseFloat(preco)||0)).toFixed(2);
-  const rmBtn=isFirst?'<span></span>':`<button onclick="this.closest('.ag-prod-row').remove()" style="background:#EF444415;border:1px solid #EF444440;color:#EF4444;border-radius:6px;padding:4px 8px;cursor:pointer;margin-bottom:5px">✕</button>`;
-  return `<div class="ag-prod-row" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr auto;gap:8px;margin-bottom:6px;align-items:end">
-    <div class="fi"><label>Produto ${idx}</label><select class="ag-mat" onchange="(function(s){const o=s.options[s.selectedIndex];if(!o)return;const r=s.closest('.ag-prod-row');if(o.dataset.val!==undefined){r.querySelector('.ag-preco').value=o.dataset.val;const u=r.querySelector('.ag-un');if(u&&o.dataset.un)u.value=o.dataset.un;}calcularTotalLinhaAgregado(r);})(this)">${opts}</select></div>
-    <div class="fi"><label>Unidade</label><select class="ag-un">${unOpts}</select></div>
-    <div class="fi"><label>Qtde</label><input type="number" class="ag-qtd" value="${qtd||''}" placeholder="0" oninput="calcularTotalLinhaAgregado(this.closest('.ag-prod-row'))"/></div>
-    <div class="fi"><label>Valor Unit. (R$)</label><input type="number" class="ag-preco" value="${preco||''}" placeholder="0.00" step="0.01" oninput="calcularTotalLinhaAgregado(this.closest('.ag-prod-row'))"/></div>
-    <div class="fi"><label>Total (R$)</label><input type="number" class="ag-total" value="${total}" readonly style="background:var(--surface2);color:var(--muted);cursor:default"/></div>
+  const rmBtn=isFirst?'<span></span>':`<button onclick="this.closest('.ag-prod-row').remove()" style="background:#EF444415;border:1px solid #EF444440;color:#EF4444;border-radius:6px;padding:4px 8px;cursor:pointer;align-self:center">✕</button>`;
+  return `<div class="ag-prod-row" style="display:grid;grid-template-columns:2fr 0.6fr 0.7fr 1.1fr 2.2fr 1.2fr auto;gap:8px;margin-bottom:8px;align-items:end">
+    <div class="fi"><label>Produto ${idx}</label>
+      <select class="ag-mat" onchange="(function(s){const o=s.options[s.selectedIndex];if(!o)return;const r=s.closest('.ag-prod-row');if(o.dataset.val!==undefined){r.querySelector('.ag-preco').value=o.dataset.val;const u=r.querySelector('.ag-un');if(u&&o.dataset.un)u.value=o.dataset.un;}calcularLinhaAgregado(r);})(this)">${opts}</select>
+    </div>
+    <div class="fi"><label>Un.</label><select class="ag-un" onchange="calcularLinhaAgregado(this.closest('.ag-prod-row'))">${unOpts}</select></div>
+    <div class="fi"><label>Qtde</label><input type="number" class="ag-qtd" value="${qtd||''}" placeholder="0" oninput="calcularLinhaAgregado(this.closest('.ag-prod-row'))"/></div>
+    <div class="fi"><label>Valor Base (R$/un.)</label><input type="number" class="ag-preco" value="${preco||''}" placeholder="0.00" step="0.01" oninput="calcularLinhaAgregado(this.closest('.ag-prod-row'))"/></div>
+    <div class="ag-calc" style="background:#0d1117;border:1px solid #2a3347;border-radius:8px;padding:7px 10px;font-size:11px;align-self:end;min-height:54px;display:flex;flex-direction:column;justify-content:center"><span style="color:var(--muted);font-size:11px">Preencha o valor base →</span></div>
+    <div class="fi"><label style="color:#F59E0B">Preço Final (R$/un.)</label><input type="number" class="ag-preco-final" value="${precoFinal!==undefined?precoFinal:(preco||'')}" placeholder="0.00" step="0.01" style="border-color:#F59E0B40;color:#F59E0B"/></div>
     ${rmBtn}
   </div>`;
 }
@@ -6944,6 +6952,42 @@ function loadAgregProdutosNaProposta(){
   const ativos=_agregCad.produtos.filter(p=>p.status==='ativo');
   if(!ativos.length){pc.innerHTML=_buildAgProdRow('','m³','','',1,true);return;}
   pc.innerHTML=ativos.slice(0,8).map((p,i)=>_buildAgProdRow(p.nome,p.unidade,'',p.valor,i+1,i===0)).join('');
+  setTimeout(recalcularTodasLinhasAgregado,0);
+}
+
+// ── CALCULADORA AO VIVO ──
+function _fmtBRL(v){return parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+
+function calcularLinhaAgregado(row){
+  const base      = parseFloat(row.querySelector('.ag-preco')?.value)||0;
+  const qtd       = parseFloat(row.querySelector('.ag-qtd')?.value)||0;
+  const frete     = parseFloat(document.getElementById('ag-frete')?.value)||0;
+  const carga     = parseFloat(document.getElementById('ag-carga')?.value)||17;
+  const imp       = parseFloat(document.getElementById('ag-imposto')?.value)||0;
+  const comFrete  = (document.getElementById('ag-entrega')?.value||'entrega')==='entrega' && frete>0 && carga>0;
+  const fretePorM3= comFrete ? frete/carga : 0;
+  const impostoVal= base * imp / 100;
+  const calculado = base + impostoVal + fretePorM3;
+
+  // Atualiza caixa calculadora
+  const calc = row.querySelector('.ag-calc');
+  if(calc){
+    const linhas=[];
+    linhas.push(`<div style="font-size:11px;color:var(--muted)">Base: <b style="color:var(--text)">R$ ${_fmtBRL(base)}</b></div>`);
+    if(imp>0) linhas.push(`<div style="font-size:11px;color:#F59E0B">+ Imp. ${imp}%: R$ ${_fmtBRL(impostoVal)}</div>`);
+    if(fretePorM3>0) linhas.push(`<div style="font-size:11px;color:#3B82F6">+ Frete/m³: R$ ${_fmtBRL(fretePorM3)}</div>`);
+    linhas.push(`<div style="font-size:12px;font-weight:700;color:#10B981;border-top:1px solid #262D3D;margin-top:4px;padding-top:4px">= R$ ${_fmtBRL(calculado)}</div>`);
+    if(qtd>0) linhas.push(`<div style="font-size:10px;color:var(--muted);margin-top:2px">${qtd} × R$ ${_fmtBRL(calculado)} = <b style="color:var(--text)">R$ ${_fmtBRL(qtd*calculado)}</b></div>`);
+    calc.innerHTML=linhas.join('');
+  }
+
+  // Preenche Preço Final com o valor calculado
+  const pf = row.querySelector('.ag-preco-final');
+  if(pf) pf.value = calculado.toFixed(2);
+}
+
+function recalcularTodasLinhasAgregado(){
+  document.querySelectorAll('#ag-produtos .ag-prod-row').forEach(r=>calcularLinhaAgregado(r));
 }
 
 // Override _addAgProdRow to use new structure
@@ -6964,43 +7008,39 @@ function _fillAgForm(p){
   _v('ag-frete',p.frete);_v('ag-carga',p.carga||17);
   _v('ag-pgto',p.pgto);_v('ag-pgto-custom',p.pgtoCustom||'');
   _v('ag-entrega',p.entregaTipo||'entrega');
-  _v('ag-imposto',p.imposto||'com');
+  _v('ag-imposto',p.imposto!==undefined?p.imposto:(_agregCad.condComerciais.imposto||'0'));
   _v('ag-obs',p.obs||'');
   const pc=document.getElementById('ag-produtos');if(!pc)return;
   pc.innerHTML='';
   (p.produtos||[]).forEach((pr,i)=>{
     const d=document.createElement('div');
-    d.innerHTML=_buildAgProdRow(pr.mat,pr.un||'m³',pr.qtd,pr.preco,i+1,i===0);
+    d.innerHTML=_buildAgProdRow(pr.mat,pr.un||'m³',pr.qtd,pr.preco,i+1,i===0,pr.precoFinal);
     pc.appendChild(d.firstElementChild);
   });
+  recalcularTodasLinhasAgregado();
 }
 
-// Override _collectAgData to include unidade
+// Override _collectAgData — usa preço final editável e imposto numérico
 function _collectAgData(){
-  const prods=[...document.querySelectorAll('.ag-prod-row')].map(r=>({
-    mat:r.querySelector('.ag-mat')?r.querySelector('.ag-mat').value:'',
-    un:r.querySelector('.ag-un')?r.querySelector('.ag-un').value:'m³',
-    qtd:parseFloat(r.querySelector('.ag-qtd')?r.querySelector('.ag-qtd').value:0)||0,
-    preco:parseFloat(r.querySelector('.ag-preco')?r.querySelector('.ag-preco').value:0)||0
+  const prods=[...document.querySelectorAll('#ag-produtos .ag-prod-row')].map(r=>({
+    mat:r.querySelector('.ag-mat')?.value||'',
+    un:r.querySelector('.ag-un')?.value||'m³',
+    qtd:parseFloat(r.querySelector('.ag-qtd')?.value)||0,
+    preco:parseFloat(r.querySelector('.ag-preco')?.value)||0,
+    precoFinal:Math.round((parseFloat(r.querySelector('.ag-preco-final')?.value)||0)*100)/100
   })).filter(p=>p.mat);
+  const prodsPriced=prods.map(p=>({...p}));
   const frete=parseFloat(_g('ag-frete'))||0;
   const carga=parseFloat(_g('ag-carga'))||17;
   const entregaTipo=_g('ag-entrega');
-  const imposto=_g('ag-imposto');
-  const fretePorM3=(entregaTipo==='entrega'&&frete>0&&carga>0)?frete/carga:0;
-  const prodsPriced=prods.map(p=>{
-    const base=p.preco||35;
-    const comFrete=base+fretePorM3;
-    const final=imposto==='com'?comFrete*1.03:comFrete;
-    return{...p,precoFinal:Math.round(final*100)/100};
-  });
+  const impostoNum=parseFloat(_g('ag-imposto'))||0;
   const pgto=_g('ag-pgto-custom')||_g('ag-pgto')||'A combinar';
   const respIdx=parseInt(_g('ag-resp'));
   const resp=(!isNaN(respIdx)&&_propCad.responsaveis&&_propCad.responsaveis[respIdx])?_propCad.responsaveis[respIdx]:(_agregCad.responsavel.nome?_agregCad.responsavel:{nome:'Carolina Gabriel',email:'comercialatt@multilix.com.br',tel:'(11) 9 4559 8431'});
   return{
     tipo:'agregado',empresa:_g('ag-razao')||'Cliente',contato:_g('ag-contato'),
     tel:_g('ag-tel'),email:_g('ag-email'),endereco:_g('ag-endereco'),
-    entregaTipo,frete,carga,imposto,pgto,pgtoCustom:_g('ag-pgto-custom'),
+    entregaTipo,frete,carga,imposto:impostoNum,pgto,pgtoCustom:_g('ag-pgto-custom'),
     obs:_g('ag-obs'),responsavel:resp,produtos:prods,prodsPriced,
     data:new Date().toLocaleDateString('pt-BR')
   };
