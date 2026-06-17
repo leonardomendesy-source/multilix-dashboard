@@ -810,6 +810,7 @@ body.menu-open{overflow:hidden}
       <div class="nav-group-children"><div>
         <button class="nav-item" onclick="showPage('dest-pagamentos',this)"><span class="icon" data-lucide="receipt"></span>Pagamentos</button>
         <button class="nav-item" onclick="showPage('dest-freteiros',this)"><span class="icon" data-lucide="users"></span>Freteiros</button>
+        <button class="nav-item" onclick="showPage('dest-conferencia',this)"><span class="icon" data-lucide="clipboard-check"></span>Conferência</button>
       </div></div>
     </div>
 
@@ -1456,6 +1457,25 @@ body.menu-open{overflow:hidden}
           <span class="panel-badge" id="freteiros-count-badge">0 freteiros</span>
         </div>
         <div class="tbl-wrap" id="tbl-freteiros"></div>
+      </div>
+    </div>
+
+    <!-- DESTINAÇÃO > CONFERÊNCIA -->
+    <div class="page" id="page-dest-conferencia">
+      <div class="filterbar">
+        <div class="fg"><label>De</label><input type="date" id="cf-from" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"/></div>
+        <div class="fg"><label>Até</label><input type="date" id="cf-to" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"/></div>
+        <div class="fg"><label>Freteiro</label><select id="cf-freteiro" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"><option value="">Todos</option></select></div>
+        <div class="fg"><label>Status</label><select id="cf-status" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"><option value="">Todos</option><option value="registrado">Registrado</option><option value="confirmado">Confirmado</option><option value="contestado">Contestado</option></select></div>
+        <button class="btn btn-primary btn-sm" onclick="confLoad()"><i data-lucide="search" style="width:12px;height:12px;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Buscar</button>
+        <button class="btn btn-ghost btn-sm" onclick="confClear()"><i data-lucide="rotate-ccw" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Limpar</button>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Vales Registrados</span>
+          <span class="panel-badge" id="conf-count-badge">0 registros</span>
+        </div>
+        <div class="tbl-wrap" id="tbl-conferencia"></div>
       </div>
     </div>
 
@@ -2531,7 +2551,7 @@ function rankTbl(data,l1,l2,top=10){
 }
 
 // ── NAV ────────────────────────────────────────────────────────
-const TITLES={overview:'Dashboard Executivo',data:'Fontes de Dados',consolidado:'Consolidado — Entrada de Resíduos',att:'Recebimento de Terceiros',locacao:'Locação de Caçambas',agregados:'Agregados Reciclados',destinacao:'Destinação de Resíduos','dest-pagamentos':'Pagamentos de Freteiros','dest-freteiros':'Cadastro de Freteiros',cdf:'Certificado de Destinação Final',crm:'CRM',propostas:'Propostas Comerciais','prop-locacao':'Propostas — Locação','prop-att':'Propostas — Recebimento ATT','prop-agregados':'Propostas — Agregados',contratos:'Contratos',inconsistencias:'Inconsistências',resumo:'Resumo Executivo',config:'Metas & Configurações',usuarios:'Gerenciar Usuários'};
+const TITLES={overview:'Dashboard Executivo',data:'Fontes de Dados',consolidado:'Consolidado — Entrada de Resíduos',att:'Recebimento de Terceiros',locacao:'Locação de Caçambas',agregados:'Agregados Reciclados',destinacao:'Destinação de Resíduos','dest-pagamentos':'Pagamentos de Freteiros','dest-freteiros':'Cadastro de Freteiros','dest-conferencia':'Conferência de Vales',cdf:'Certificado de Destinação Final',crm:'CRM',propostas:'Propostas Comerciais','prop-locacao':'Propostas — Locação','prop-att':'Propostas — Recebimento ATT','prop-agregados':'Propostas — Agregados',contratos:'Contratos',inconsistencias:'Inconsistências',resumo:'Resumo Executivo',config:'Metas & Configurações',usuarios:'Gerenciar Usuários'};
 function showPage(id,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -2547,6 +2567,7 @@ function showPage(id,el){
   if(id==='dest-pagamentos') showDestPagamentoPage();
   if(id==='consolidado') updateConsolidado();
   if(id==='dest-freteiros') freteiroLoadPage();
+  if(id==='dest-conferencia') confInit();
 }
 
 // ── NAV ACCORDION ──────────────────────────────────────────────
@@ -5671,6 +5692,141 @@ async function freteiroSalvar() {
   } catch(e) {
     alert('Erro ao salvar freteiro:\n' + e.message);
   }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MÓDULO CONFERÊNCIA DE VALES
+// ═══════════════════════════════════════════════════════════════
+
+let _confInicializado = false;
+
+async function confInit() {
+  // Popula dropdown de freteiros na primeira vez
+  if(!_confInicializado) {
+    _confInicializado = true;
+    // Data padrão: hoje
+    const hoje = new Date().toLocaleDateString('sv-SE', {timeZone:'America/Sao_Paulo'});
+    document.getElementById('cf-from').value = hoje;
+    document.getElementById('cf-to').value   = hoje;
+    // Carrega freteiros para o filtro
+    try {
+      const r = await fetch(`${SUPA_URL}/rest/v1/freteiros?select=id,nome&order=nome.asc&limit=200`, {
+        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+(_session?.access_token||SUPA_KEY)}
+      });
+      const freteiros = await r.json();
+      const sel = document.getElementById('cf-freteiro');
+      freteiros.forEach(f => {
+        const o = document.createElement('option');
+        o.value = f.id; o.textContent = f.nome; sel.appendChild(o);
+      });
+    } catch(e) {}
+  }
+  confLoad();
+}
+
+async function confLoad() {
+  const tbl   = document.getElementById('tbl-conferencia');
+  const badge = document.getElementById('conf-count-badge');
+  tbl.innerHTML = '<div style="padding:20px;color:var(--muted);text-align:center">Carregando...</div>';
+
+  const from    = document.getElementById('cf-from').value;
+  const to      = document.getElementById('cf-to').value;
+  const freteiro = document.getElementById('cf-freteiro').value;
+  const status  = document.getElementById('cf-status').value;
+
+  let params = 'select=*,freteiros(nome)&order=created_at.desc&limit=500';
+  if(from)    params += `&data_saida=gte.${from}`;
+  if(to)      params += `&data_saida=lte.${to}`;
+  if(freteiro) params += `&freteiro_id=eq.${freteiro}`;
+  if(status)  params += `&status=eq.${status}`;
+
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/vales_destinacao?${params}`, {
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+(_session?.access_token||SUPA_KEY)}
+    });
+    const rows = await r.json();
+    badge.textContent = rows.length + ' registro' + (rows.length!==1?'s':'');
+    confRenderTable(rows);
+  } catch(e) {
+    tbl.innerHTML = '<div style="padding:20px;color:#EF4444">Erro ao carregar vales.</div>';
+  }
+}
+
+function confRenderTable(rows) {
+  const tbl = document.getElementById('tbl-conferencia');
+  if(!rows.length){ tbl.innerHTML='<div style="padding:20px;color:var(--muted);text-align:center">Nenhum vale encontrado para o período.</div>'; return; }
+
+  const statusBadge = s => ({
+    registrado: '<span style="background:#3B82F620;color:#3B82F6;border:1px solid #3B82F640;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700">REGISTRADO</span>',
+    confirmado: '<span style="background:#10B98120;color:#10B981;border:1px solid #10B98140;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700">CONFIRMADO</span>',
+    contestado: '<span style="background:#EF444420;color:#EF4444;border:1px solid #EF444440;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700">CONTESTADO</span>',
+  }[s] || s);
+
+  let html = `<table style="width:100%;border-collapse:collapse">
+    <thead><tr>
+      <th>O.S.</th><th>Data</th><th>Hora</th><th>Freteiro</th><th>Veículo</th><th>Resíduo</th><th>Nº Vale</th><th>m³</th><th>Valor</th><th>Status</th><th>Fotos</th><th>Ações</th>
+    </tr></thead><tbody>`;
+
+  rows.forEach(v => {
+    const nome  = v.freteiros?.nome || '—';
+    const hora  = v.created_at ? new Date(v.created_at).toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'}) : '—';
+    const data  = v.data_saida ? v.data_saida.split('-').reverse().join('/') : '—';
+    const valor = v.total != null ? 'R$ '+Number(v.total).toLocaleString('pt-BR') : '—';
+
+    const btnCaminhao = v.foto_caminhao_url
+      ? `<button onclick="window.open('${v.foto_caminhao_url}','_blank')" style="background:#3B82F620;border:1px solid #3B82F640;color:#3B82F6;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px;white-space:nowrap">📷 Camin.</button>`
+      : '<span style="color:var(--muted2);font-size:11px">—</span>';
+    const btnVale = v.foto_vale_url
+      ? `<button onclick="window.open('${v.foto_vale_url}','_blank')" style="background:#8B5CF620;border:1px solid #8B5CF640;color:#8B5CF6;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px;white-space:nowrap">🧾 Vale</button>`
+      : '<span style="color:var(--muted2);font-size:11px">—</span>';
+
+    const btnConfirmar = v.status !== 'confirmado'
+      ? `<button onclick="confAtualizarStatus('${v.id}','confirmado')" style="background:#10B98120;border:1px solid #10B98140;color:#10B981;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px">✓</button>`
+      : '';
+    const btnContestar = v.status !== 'contestado'
+      ? `<button onclick="confAtualizarStatus('${v.id}','contestado')" style="background:#EF444420;border:1px solid #EF444440;color:#EF4444;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px">✕</button>`
+      : '';
+
+    html += `<tr>
+      <td style="font-weight:700;font-size:11px;color:var(--muted)">${v.os_numero||'—'}</td>
+      <td>${data}</td>
+      <td style="color:var(--muted)">${hora}</td>
+      <td style="font-weight:600">${nome}</td>
+      <td style="color:var(--muted)">${v.tipo_veiculo||'—'} ${v.capacidade_m3||''}m³</td>
+      <td>${v.tipo_residuo||'—'}</td>
+      <td style="font-weight:600">${v.numero_vale_fisico||'—'}</td>
+      <td>${v.capacidade_m3||'—'}</td>
+      <td style="font-weight:600">${valor}</td>
+      <td>${statusBadge(v.status)}</td>
+      <td style="display:flex;gap:4px;padding:10px 12px">${btnCaminhao} ${btnVale}</td>
+      <td><div style="display:flex;gap:4px">${btnConfirmar}${btnContestar}</div></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  tbl.innerHTML = html;
+}
+
+async function confAtualizarStatus(id, status) {
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/vales_destinacao?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: {'apikey':SUPA_KEY,'Authorization':'Bearer '+_session.access_token,'Content-Type':'application/json'},
+      body: JSON.stringify({status})
+    });
+    if(!r.ok) throw new Error();
+    confLoad();
+  } catch(e) {
+    alert('Erro ao atualizar status.');
+  }
+}
+
+function confClear() {
+  document.getElementById('cf-from').value = '';
+  document.getElementById('cf-to').value   = '';
+  document.getElementById('cf-freteiro').value = '';
+  document.getElementById('cf-status').value   = '';
+  document.getElementById('tbl-conferencia').innerHTML = '';
+  document.getElementById('conf-count-badge').textContent = '0 registros';
 }
 
 if(window.lucide&&window.lucide.createIcons){window.lucide.createIcons();}
