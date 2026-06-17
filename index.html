@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Multilix Dashboard v7</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
@@ -1733,7 +1734,12 @@ body.menu-open{overflow:hidden}
           <div style="font-size:18px;font-weight:700;color:var(--text)">Controle de Documentação Operacional</div>
           <div style="font-size:12px;color:var(--muted);margin-top:2px">Licenças, certificados e alvarás — Multilix &amp; Amsterdam</div>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <span id="docs-sync-status" style="font-size:11px;color:var(--muted)"></span>
+          <button class="btn btn-ghost" onclick="_driveSyncFromDrive()" style="border-color:#4285F440;color:#4285F4">
+            <svg width="14" height="14" viewBox="0 0 87.3 78" style="vertical-align:middle;margin-right:4px"><path d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3L28.6 48H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="M43.65 25L29.25 0c-1.35.8-2.5 1.9-3.3 3.3L1.2 43.5C.4 44.9 0 46.45 0 48h28.6z" fill="#00ac47"/><path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75L85.1 52.5c.8-1.4 1.2-2.95 1.2-4.5H57.7l6.4 12.35z" fill="#ea4335"/><path d="M43.65 25L58.05 0H29.25z" fill="#00832d"/><path d="M57.7 48H28.6L14.2 76.8h58.9z" fill="#2684fc"/><path d="M85.1 52.5L71.35 28.7c-.8-1.4-1.95-2.5-3.3-3.3L43.65 25 57.7 48h27.6c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/></svg>
+            Sincronizar Drive
+          </button>
           <button class="btn btn-ghost" onclick="_docsExportCSV()">⬇ Exportar CSV</button>
           <button class="btn btn-primary" onclick="_docsOpenModal()">+ Novo Documento</button>
         </div>
@@ -7107,6 +7113,172 @@ function _collectAgData(){
 }
 
 document.addEventListener('DOMContentLoaded', () => { renderHistoricoPropostas(); renderHistoricoAgregados(); renderATTHistorico(); _refreshRespSelects(); _docsUpdateNavBadge(); });
+
+// ══════════════════════════════════════════════════════════════
+// GOOGLE DRIVE SYNC — DOCUMENTAÇÃO OPERACIONAL
+// ══════════════════════════════════════════════════════════════
+const _DRIVE_CLIENT_ID  = '878225802860-prqdmokrkd964lg2r28019qhptpca689.apps.googleusercontent.com';
+const _DRIVE_FOLDER_ID  = '1GXZCQFTwNGoDnMRo0I1wi8zieQEClxcb';
+const _DRIVE_SCOPE      = 'https://www.googleapis.com/auth/drive.readonly';
+let   _driveTokenClient = null;
+let   _driveToken       = null;
+
+/* Inicializa o cliente OAuth (chamado quando o script GSI carrega) */
+function _driveInit() {
+  if (typeof google === 'undefined' || !google.accounts) return;
+  _driveTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: _DRIVE_CLIENT_ID,
+    scope: _DRIVE_SCOPE,
+    callback: async (resp) => {
+      if (resp.error) { _driveSyncStatus('❌ Erro de autenticação: ' + resp.error, 'err'); return; }
+      _driveToken = resp.access_token;
+      await _driveSyncExecute();
+    }
+  });
+}
+/* Garante init após o script GSI carregar */
+window.addEventListener('load', () => setTimeout(_driveInit, 800));
+
+/* Botão "Sincronizar com Drive" */
+function _driveSyncFromDrive() {
+  if (!_driveTokenClient) { _driveInit(); }
+  if (!_driveTokenClient) { alert('Google Identity Services ainda carregando. Aguarde e tente novamente.'); return; }
+  _driveSyncStatus('🔄 Autenticando…', 'info');
+  _driveTokenClient.requestAccessToken({ prompt: _driveToken ? '' : 'select_account' });
+}
+
+function _driveSyncStatus(msg, type) {
+  const el = document.getElementById('docs-sync-status');
+  if (!el) return;
+  const colors = { info:'#3B82F6', ok:'#10B981', err:'#EF4444', warn:'#F59E0B' };
+  el.style.color = colors[type] || colors.info;
+  el.textContent = msg;
+}
+
+/* Busca arquivos de uma pasta via Drive API v3 */
+async function _driveFetchFolder(folderId) {
+  let files = [], pageToken = null;
+  do {
+    const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
+    const fields = encodeURIComponent('nextPageToken,files(id,name,mimeType,modifiedTime,webViewLink,size)');
+    let url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fields}&pageSize=200`;
+    if (pageToken) url += '&pageToken=' + pageToken;
+    const res = await fetch(url, { headers: { Authorization: 'Bearer ' + _driveToken } });
+    if (!res.ok) throw new Error('Drive API: ' + res.status);
+    const data = await res.json();
+    files = files.concat(data.files || []);
+    pageToken = data.nextPageToken;
+  } while (pageToken);
+  return files;
+}
+
+/* Regras de mapeamento: nome do arquivo/pasta → tipo e frente */
+function _driveGuessDocType(fileName, folderName) {
+  const n = (fileName + ' ' + folderName).toLowerCase();
+  if (/sp.?regula.*veic|carteirinha.*transp|transp.*carteirinha|placa/i.test(n)) return 'carteirinha_sp_regula_veiculo';
+  if (/sp.?regula.*att|att.*sp.?regula/i.test(n))                               return 'carteirinha_sp_regula_att';
+  if (/sp.?regula/i.test(n))                                                    return 'carteirinha_sp_regula_veiculo';
+  if (/cr.?ibama|ibama/i.test(n))                                               return 'cr_ibama';
+  if (/cdl|c\.?d\.?l|dispensa.*licen|certif.*dispensa/i.test(n))               return 'cdo_cetesb';
+  if (/licen[cç]a.*opera|l\.?o\.|opera[cç].*licen/i.test(n))                  return 'licenca_operacao';
+  if (/cli|licenciamento.?integrado/i.test(n))                                  return 'cli_amsterdam';
+  if (/bombeiro|clcb|c\.?l\.?c\.?b/i.test(n))                                  return 'clcb_bombeiros';
+  if (/alvar[aá]|funcionamento/i.test(n))                                       return 'alvara_municipal';
+  return 'outro';
+}
+
+function _driveGuessFrente(folderName, docType) {
+  const f = folderName.toLowerCase();
+  if (/destino.?final|destinos/i.test(f))   return 'destino_final';
+  if (/transbordo|att|amsterdam/i.test(f))  return 'att';
+  if (/sp.?regula|licen[cç]a|veic|transp/i.test(f)) return 'locacao_transporte';
+  if (docType === 'carteirinha_sp_regula_att' || docType === 'cli_amsterdam' || docType === 'clcb_bombeiros') return 'att';
+  if (docType === 'carteirinha_sp_regula_veiculo') return 'locacao_transporte';
+  return 'locacao_transporte';
+}
+
+function _driveGuessEntidade(folderName, docName) {
+  const n = (folderName + ' ' + docName).toLowerCase();
+  if (/amsterdam/i.test(n)) return 'Amsterdam';
+  if (/multilix/i.test(n))  return 'Multilix';
+  if (/att|transbordo/i.test(n)) return 'Amsterdam';
+  if (/destino|final/i.test(n)) return '';
+  return 'Multilix';
+}
+
+function _driveExtractPlaca(fileName) {
+  const m = fileName.match(/\b([A-Z]{3}[\s\-]?\d[A-Z0-9]\d{2}|[A-Z]{3}[\s\-]?\d{4})\b/i);
+  return m ? m[1].toUpperCase() : '';
+}
+
+/* Sincronização principal */
+async function _driveSyncExecute() {
+  try {
+    _driveSyncStatus('🔄 Lendo pasta raiz…', 'info');
+    _docsLoad();
+
+    const rootItems = await _driveFetchFolder(_DRIVE_FOLDER_ID);
+    const folders   = rootItems.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
+    const rootFiles = rootItems.filter(f => f.mimeType !== 'application/vnd.google-apps.folder');
+
+    let allFiles = rootFiles.map(f => ({ file: f, folderName: 'Documentos' }));
+
+    for (const folder of folders) {
+      _driveSyncStatus(`🔄 Lendo pasta "${folder.name}"…`, 'info');
+      const subItems = await _driveFetchFolder(folder.id);
+      const subFiles = subItems.filter(i => i.mimeType !== 'application/vnd.google-apps.folder');
+      subFiles.forEach(f => allFiles.push({ file: f, folderName: folder.name }));
+
+      /* Subpastas de 2º nível */
+      const subFolders = subItems.filter(i => i.mimeType === 'application/vnd.google-apps.folder');
+      for (const sf of subFolders) {
+        const deepItems = await _driveFetchFolder(sf.id);
+        deepItems.filter(i => i.mimeType !== 'application/vnd.google-apps.folder')
+          .forEach(f => allFiles.push({ file: f, folderName: sf.name || folder.name }));
+      }
+    }
+
+    _driveSyncStatus(`🔄 Processando ${allFiles.length} arquivos…`, 'info');
+
+    let added = 0, updated = 0;
+    for (const { file, folderName } of allFiles) {
+      const tipo      = _driveGuessDocType(file.name, folderName);
+      const frente    = _driveGuessFrente(folderName, tipo);
+      const entidade  = _driveGuessEntidade(folderName, file.name);
+      const placa     = tipo === 'carteirinha_sp_regula_veiculo' ? _driveExtractPlaca(file.name) : '';
+      const driveLink = file.webViewLink || `https://drive.google.com/file/d/${file.id}/view`;
+      const orgao     = _DOCS_TIPOS[tipo]?.orgao || '';
+      const per       = _DOCS_TIPOS[tipo]?.per    || 'outro';
+
+      /* Verifica se já existe pelo link do Drive */
+      const existing = _docsData.find(d => d.drive_link === driveLink);
+      if (existing) {
+        existing.nome            = file.name;
+        existing.updated_at      = new Date().toISOString();
+        existing.ativo           = true;
+        updated++;
+      } else {
+        _docsData.push({
+          id: _docsUUID(), nome: file.name, tipo_documento: tipo, frente, entidade,
+          placa_veiculo: placa, numero_documento: '', orgao_emissor: orgao,
+          data_emissao: '', data_vencimento: '', periodicidade: per,
+          drive_link: driveLink, obs: `Importado automaticamente da pasta "${folderName}"`,
+          origem: 'drive', ativo: true,
+          created_at: new Date().toISOString(), updated_at: new Date().toISOString()
+        });
+        added++;
+      }
+    }
+
+    _docsSave();
+    _driveSyncStatus(`✅ Sincronizado: ${added} novos, ${updated} atualizados.`, 'ok');
+    _docsRender();
+
+  } catch(e) {
+    console.error('Drive sync error:', e);
+    _driveSyncStatus('❌ Erro: ' + e.message, 'err');
+  }
+}
 
 // ══════════════════════════════════════════════════════════════
 // MÓDULO: CONTROLE DE DOCUMENTAÇÃO OPERACIONAL
