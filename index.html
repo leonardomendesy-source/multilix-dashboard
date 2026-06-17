@@ -7144,7 +7144,8 @@ function _driveSyncFromDrive() {
   if (!_driveTokenClient) { _driveInit(); }
   if (!_driveTokenClient) { alert('Google Identity Services ainda carregando. Aguarde e tente novamente.'); return; }
   _driveSyncStatus('🔄 Autenticando…', 'info');
-  _driveTokenClient.requestAccessToken({ prompt: _driveToken ? '' : 'select_account' });
+  _driveToken = null;
+  _driveTokenClient.requestAccessToken({ prompt: 'select_account' });
 }
 
 function _driveSyncStatus(msg, type) {
