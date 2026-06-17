@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Multilix Dashboard v7</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
@@ -7215,47 +7216,72 @@ function _driveExtractPlaca(fileName) {
   return m ? m[1].toUpperCase() : '';
 }
 
-function _driveExtractDate(fileName) {
-  // Padrões suportados nos nomes dos arquivos:
-  // VENC 24.06 → 2024-06 (sem dia → último dia do mês)
-  // VENC 24.06.2025 / VALIDADE 23.04.2027 / VENC 08.26 (MM.AA) / 01.08.2025
-  const n = fileName;
+function _driveExtractDate(texto) {
+  if (!texto) return '';
+  const n = texto;
 
-  // DD.MM.AAAA ou DD/MM/AAAA
-  let m = n.match(/\b(\d{2})[.\/-](\d{2})[.\/-](\d{4})\b/);
-  if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
-
-  // DD.MM.AA ou DD/MM/AA
-  m = n.match(/\b(\d{2})[.\/-](\d{2})[.\/-](\d{2})\b/);
+  // DD.MM.AAAA ou DD/MM/AAAA (ex: 23.04.2027)
+  let m = n.match(/\b(\d{1,2})[.\/-](\d{2})[.\/-](\d{4})\b/);
   if (m) {
-    const yr = parseInt(m[3]) < 50 ? '20'+m[3] : '19'+m[3];
-    return `${yr}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+    const d = m[1].padStart(2,'0'), mo = m[2].padStart(2,'0'), yr = m[3];
+    if (parseInt(mo) >= 1 && parseInt(mo) <= 12)
+      return `${yr}-${mo}-${d}`;
   }
 
-  // VENC MM.AA ou VALIDADE MM.AA (ex: VENC 24.06 = junho/2024 → 30/06/2024)
-  m = n.match(/(?:venc|validade|valid|val)[\s\-\.]+(\d{2})[.\/-](\d{2})(?!\d)/i);
-  if (m) {
-    const yr = parseInt(m[2]) < 50 ? '20'+m[2] : '19'+m[2];
-    const mo = m[1].padStart(2,'0');
-    const lastDay = new Date(parseInt(yr), parseInt(mo), 0).getDate();
-    return `${yr}-${mo}-${String(lastDay).padStart(2,'0')}`;
-  }
-
-  // VENC MM.AAAA (ex: VENC 06.2025)
-  m = n.match(/(?:venc|validade|valid|val)[\s\-\.]+(\d{2})[.\/-](\d{4})/i);
-  if (m) {
-    const lastDay = new Date(parseInt(m[2]), parseInt(m[1]), 0).getDate();
-    return `${m[2]}-${m[1].padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
-  }
-
-  // Qualquer MM.AAAA solto no nome
+  // MM.AAAA (ex: 06.2025 ou 08.2026)
   m = n.match(/\b(\d{2})[.\/-](\d{4})\b/);
   if (m) {
-    const lastDay = new Date(parseInt(m[2]), parseInt(m[1]), 0).getDate();
-    return `${m[2]}-${m[1].padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+    const mo = m[1], yr = m[2];
+    if (parseInt(mo) >= 1 && parseInt(mo) <= 12) {
+      const last = new Date(parseInt(yr), parseInt(mo), 0).getDate();
+      return `${yr}-${mo.padStart(2,'0')}-${String(last).padStart(2,'0')}`;
+    }
+  }
+
+  // VENC/VALIDADE XX.YY — descobre qual é mês e qual é ano
+  m = n.match(/(?:venc(?:imento)?|validade|valid|val)[^\d]*(\d{2})[.\/-](\d{2})(?!\d)/i);
+  if (m) {
+    let a = parseInt(m[1]), b = parseInt(m[2]);
+    let mo, yr;
+    if (a > 12 && b <= 12)      { yr = m[1]; mo = m[2]; }  // VENC 24.06 → yr=24, mo=06
+    else if (b > 12 && a <= 12) { mo = m[1]; yr = m[2]; }  // VENC 06.24 → mo=06, yr=24
+    else                         { mo = m[1]; yr = m[2]; }  // ambíguo → assume mo.yr
+    const fullYr = parseInt(yr) < 50 ? '20'+yr : '19'+yr;
+    const last = new Date(parseInt(fullYr), parseInt(mo), 0).getDate();
+    return `${fullYr}-${mo.padStart(2,'0')}-${String(last).padStart(2,'0')}`;
+  }
+
+  // DD.MM.AA (ex: 23.04.27)
+  m = n.match(/\b(\d{2})[.\/-](\d{2})[.\/-](\d{2})\b/);
+  if (m) {
+    const d = m[1], mo = m[2], yr = (parseInt(m[3]) < 50 ? '20' : '19') + m[3];
+    if (parseInt(mo) >= 1 && parseInt(mo) <= 12)
+      return `${yr}-${mo.padStart(2,'0')}-${d.padStart(2,'0')}`;
   }
 
   return '';
+}
+
+/* Lê PDF do Drive e extrai texto das primeiras 3 páginas */
+async function _driveFetchPDFText(fileId) {
+  try {
+    if (typeof pdfjsLib === 'undefined') return '';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const res = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&supportsAllDrives=true`,
+      { headers: { Authorization: 'Bearer ' + _driveToken } }
+    );
+    if (!res.ok) return '';
+    const buf = await res.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    let txt = '';
+    for (let i = 1; i <= Math.min(pdf.numPages, 3); i++) {
+      const pg = await pdf.getPage(i);
+      const ct = await pg.getTextContent();
+      txt += ct.items.map(it => it.str).join(' ') + ' ';
+    }
+    return txt;
+  } catch(e) { return ''; }
 }
 
 /* Sincronização principal */
@@ -7296,7 +7322,14 @@ async function _driveSyncExecute() {
       const driveLink    = file.webViewLink || `https://drive.google.com/file/d/${file.id}/view`;
       const orgao        = _DOCS_TIPOS[tipo]?.orgao || '';
       const per          = _DOCS_TIPOS[tipo]?.per    || 'outro';
-      const dataVenc     = _driveExtractDate(file.name);
+      let   dataVenc     = _driveExtractDate(file.name);
+
+      // Se não achou data no nome, lê o conteúdo do PDF
+      if (!dataVenc && file.mimeType === 'application/pdf') {
+        _driveSyncStatus(`🔍 Lendo PDF: ${file.name.slice(0,40)}…`, 'info');
+        const pdfTxt = await _driveFetchPDFText(file.id);
+        if (pdfTxt) dataVenc = _driveExtractDate(pdfTxt);
+      }
 
       /* Verifica se já existe pelo link do Drive */
       const existing = _docsData.find(d => d.drive_link === driveLink);
