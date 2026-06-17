@@ -1761,7 +1761,7 @@ body.menu-open{overflow:hidden}
         <select id="docs-f-status" onchange="_docsRender()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"><option value="">Todos os status</option><option value="vencido">Vencidos</option><option value="critico">Crítico ≤7d</option><option value="atencao">Atenção ≤30d</option><option value="ok">OK</option><option value="sem_data">Sem data</option></select>
         <input id="docs-f-busca" oninput="_docsRender()" placeholder="Buscar por nome…" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none;min-width:160px"/>
       </div>
-      <div class="tbl-wrap"><table id="tbl-docs"><thead><tr><th>Nome</th><th>Tipo</th><th>Frente</th><th>Entidade</th><th>Placa</th><th>Vencimento</th><th>Status</th><th>Dias</th><th>Drive</th><th>Ações</th></tr></thead><tbody id="docs-tbody"><tr><td colspan="10" style="color:var(--muted);text-align:center;padding:32px">Carregando…</td></tr></tbody></table></div>
+      <div class="tbl-wrap"><table id="tbl-docs"><thead><tr><th onclick="_docsSort('nome')" style="cursor:pointer" id="docs-th-nome">Nome <span id="docs-si-nome"></span></th><th onclick="_docsSort('tipo')" style="cursor:pointer" id="docs-th-tipo">Tipo <span id="docs-si-tipo"></span></th><th onclick="_docsSort('frente')" style="cursor:pointer" id="docs-th-frente">Frente <span id="docs-si-frente"></span></th><th onclick="_docsSort('entidade')" style="cursor:pointer" id="docs-th-entidade">Entidade <span id="docs-si-entidade"></span></th><th>Placa</th><th onclick="_docsSort('vencimento')" style="cursor:pointer" id="docs-th-vencimento">Vencimento <span id="docs-si-vencimento"></span></th><th onclick="_docsSort('status')" style="cursor:pointer" id="docs-th-status">Status <span id="docs-si-status"></span></th><th onclick="_docsSort('dias')" style="cursor:pointer" id="docs-th-dias">Dias <span id="docs-si-dias"></span></th><th>Drive</th><th>Ações</th></tr></thead><tbody id="docs-tbody"><tr><td colspan="10" style="color:var(--muted);text-align:center;padding:32px">Carregando…</td></tr></tbody></table></div>
     </div>
 
     <!-- MODAL DOCUMENTO -->
@@ -7244,6 +7244,16 @@ function _driveExtractDate(texto) {
   m = n.match(/\b(\d{2})[\/.\-](\d{4})\b/);
   if (m) { const mo=parseInt(m[1]); if(mo>=1&&mo<=12){ const ld=_lastDay(m[2],mo); return `${m[2]}-${_pad(mo)}-${_pad(ld)}`; } }
 
+  // VENC DD.MM.YY (3 partes) — ex: "VENC 15.08.26"
+  m = n.match(/(?:venc(?:imento)?|validade|val)[^\d]*(\d{1,2})[.\/-](\d{2})[.\/-](\d{2,4})(?!\d)/i);
+  if (m) {
+    const mo=parseInt(m[2]);
+    if (mo>=1&&mo<=12) {
+      const yr = m[3].length===4 ? m[3] : (parseInt(m[3])<50?'20':'19')+m[3];
+      return `${yr}-${_pad(mo)}-${_pad(m[1])}`;
+    }
+  }
+
   // VENC / VALIDADE XX.YY — auto-detecta se XX é ano ou mês
   m = n.match(/(?:venc(?:imento)?|validade|val)[^\d]*(\d{2})[.\/-](\d{2})(?!\d)/i);
   if (m) {
@@ -7384,8 +7394,18 @@ const _DOCS_TIPOS = {
 const _DOCS_FRENTES = { locacao_transporte:'Locação/Transp.', att:'ATT', destino_final:'Destino Final' };
 const _DOCS_PER     = { trimestral:'Trimestral', semestral:'Semestral', anual:'Anual', indeterminado:'Indeterminado', outro:'Outro' };
 
-let _docsEditId = null;
-let _docsData   = [];
+let _docsEditId  = null;
+let _docsData    = [];
+let _docsSortCol = '';
+let _docsSortDir = 1;
+function _docsSort(col) {
+  if (_docsSortCol===col) _docsSortDir*=-1; else { _docsSortCol=col; _docsSortDir=1; }
+  ['nome','tipo','frente','entidade','vencimento','status','dias'].forEach(c=>{
+    const el=document.getElementById('docs-si-'+c);
+    if (el) el.textContent = c===_docsSortCol ? (_docsSortDir===1?'▲':'▼') : '';
+  });
+  _docsRender();
+}
 
 function _docsLoad() {
   try { _docsData = JSON.parse(localStorage.getItem(_DOCS_KEY) || '[]'); } catch(e) { _docsData = []; }
@@ -7449,15 +7469,7 @@ function _docsUpdateStats() {
   if (!alertBar) return;
   const urgentes = ativos.filter(d=>_docsIsCritico(_docsStatus(d.data_vencimento).key))
     .sort((a,b)=>{ const sa=_docsStatus(a.data_vencimento),sb=_docsStatus(b.data_vencimento); return (sa.dias||0)-(sb.dias||0); });
-  if (urgentes.length) {
-    alertBar.style.display='block';
-    alertBar.innerHTML = '⚠️ <b>Atenção:</b> ' + urgentes.map(d=>{
-      const s=_docsStatus(d.data_vencimento);
-      return `<b>${d.nome}</b> — ${s.key==='vencido'?'vencido há '+s.dias+'d':'vence em '+s.dias+'d'}`;
-    }).join(' &nbsp;|&nbsp; ');
-  } else {
-    alertBar.style.display='none';
-  }
+  alertBar.style.display='none';
 }
 
 function _docsUpdateNavBadge() {
@@ -7495,13 +7507,27 @@ function _docsRender() {
     });
   }
 
-  // Ordena: vencidos primeiro, depois por dias restantes
-  rows.sort((a,b)=>{
-    const sa=_docsStatus(a.data_vencimento), sb=_docsStatus(b.data_vencimento);
-    const ord={'vencido':0,'critico_1d':1,'critico_7d':2,'atencao_15d':3,'atencao_30d':4,'ok':5,'sem_data':6};
-    if ((ord[sa.key]||5) !== (ord[sb.key]||5)) return (ord[sa.key]||5)-(ord[sb.key]||5);
-    return (sa.dias||999)-(sb.dias||999);
-  });
+  if (_docsSortCol) {
+    rows.sort((a,b)=>{
+      let va='', vb='';
+      if (_docsSortCol==='nome')       { va=a.nome||''; vb=b.nome||''; }
+      else if (_docsSortCol==='tipo')  { va=(_DOCS_TIPOS[a.tipo_documento]?.label)||''; vb=(_DOCS_TIPOS[b.tipo_documento]?.label)||''; }
+      else if (_docsSortCol==='frente'){ va=_DOCS_FRENTES[a.frente]||''; vb=_DOCS_FRENTES[b.frente]||''; }
+      else if (_docsSortCol==='entidade'){ va=a.entidade||''; vb=b.entidade||''; }
+      else if (_docsSortCol==='vencimento'){ va=a.data_vencimento||'9999'; vb=b.data_vencimento||'9999'; }
+      else if (_docsSortCol==='status'){ const ord={'vencido':0,'critico_1d':1,'critico_7d':2,'atencao_15d':3,'atencao_30d':4,'ok':5,'sem_data':6}; const sa=_docsStatus(a.data_vencimento),sb=_docsStatus(b.data_vencimento); return _docsSortDir*((ord[sa.key]||5)-(ord[sb.key]||5)); }
+      else if (_docsSortCol==='dias')  { const sa=_docsStatus(a.data_vencimento),sb=_docsStatus(b.data_vencimento); return _docsSortDir*((sa.dias||999)-(sb.dias||999)); }
+      return _docsSortDir*(va<vb?-1:va>vb?1:0);
+    });
+  } else {
+    // Ordena padrão: vencidos primeiro, depois por dias restantes
+    rows.sort((a,b)=>{
+      const sa=_docsStatus(a.data_vencimento), sb=_docsStatus(b.data_vencimento);
+      const ord={'vencido':0,'critico_1d':1,'critico_7d':2,'atencao_15d':3,'atencao_30d':4,'ok':5,'sem_data':6};
+      if ((ord[sa.key]||5) !== (ord[sb.key]||5)) return (ord[sa.key]||5)-(ord[sb.key]||5);
+      return (sa.dias||999)-(sb.dias||999);
+    });
+  }
 
   const tbody = document.getElementById('docs-tbody');
   if (!tbody) return;
