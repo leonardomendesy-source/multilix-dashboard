@@ -7215,6 +7215,49 @@ function _driveExtractPlaca(fileName) {
   return m ? m[1].toUpperCase() : '';
 }
 
+function _driveExtractDate(fileName) {
+  // Padrões suportados nos nomes dos arquivos:
+  // VENC 24.06 → 2024-06 (sem dia → último dia do mês)
+  // VENC 24.06.2025 / VALIDADE 23.04.2027 / VENC 08.26 (MM.AA) / 01.08.2025
+  const n = fileName;
+
+  // DD.MM.AAAA ou DD/MM/AAAA
+  let m = n.match(/\b(\d{2})[.\/-](\d{2})[.\/-](\d{4})\b/);
+  if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+
+  // DD.MM.AA ou DD/MM/AA
+  m = n.match(/\b(\d{2})[.\/-](\d{2})[.\/-](\d{2})\b/);
+  if (m) {
+    const yr = parseInt(m[3]) < 50 ? '20'+m[3] : '19'+m[3];
+    return `${yr}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  }
+
+  // VENC MM.AA ou VALIDADE MM.AA (ex: VENC 24.06 = junho/2024 → 30/06/2024)
+  m = n.match(/(?:venc|validade|valid|val)[\s\-\.]+(\d{2})[.\/-](\d{2})(?!\d)/i);
+  if (m) {
+    const yr = parseInt(m[2]) < 50 ? '20'+m[2] : '19'+m[2];
+    const mo = m[1].padStart(2,'0');
+    const lastDay = new Date(parseInt(yr), parseInt(mo), 0).getDate();
+    return `${yr}-${mo}-${String(lastDay).padStart(2,'0')}`;
+  }
+
+  // VENC MM.AAAA (ex: VENC 06.2025)
+  m = n.match(/(?:venc|validade|valid|val)[\s\-\.]+(\d{2})[.\/-](\d{4})/i);
+  if (m) {
+    const lastDay = new Date(parseInt(m[2]), parseInt(m[1]), 0).getDate();
+    return `${m[2]}-${m[1].padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+  }
+
+  // Qualquer MM.AAAA solto no nome
+  m = n.match(/\b(\d{2})[.\/-](\d{4})\b/);
+  if (m) {
+    const lastDay = new Date(parseInt(m[2]), parseInt(m[1]), 0).getDate();
+    return `${m[2]}-${m[1].padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+  }
+
+  return '';
+}
+
 /* Sincronização principal */
 async function _driveSyncExecute() {
   try {
@@ -7250,22 +7293,24 @@ async function _driveSyncExecute() {
       const frente    = _driveGuessFrente(folderName, tipo);
       const entidade  = _driveGuessEntidade(folderName, file.name);
       const placa     = tipo === 'carteirinha_sp_regula_veiculo' ? _driveExtractPlaca(file.name) : '';
-      const driveLink = file.webViewLink || `https://drive.google.com/file/d/${file.id}/view`;
-      const orgao     = _DOCS_TIPOS[tipo]?.orgao || '';
-      const per       = _DOCS_TIPOS[tipo]?.per    || 'outro';
+      const driveLink    = file.webViewLink || `https://drive.google.com/file/d/${file.id}/view`;
+      const orgao        = _DOCS_TIPOS[tipo]?.orgao || '';
+      const per          = _DOCS_TIPOS[tipo]?.per    || 'outro';
+      const dataVenc     = _driveExtractDate(file.name);
 
       /* Verifica se já existe pelo link do Drive */
       const existing = _docsData.find(d => d.drive_link === driveLink);
       if (existing) {
-        existing.nome            = file.name;
-        existing.updated_at      = new Date().toISOString();
-        existing.ativo           = true;
+        existing.nome           = file.name;
+        existing.data_vencimento = dataVenc || existing.data_vencimento;
+        existing.updated_at     = new Date().toISOString();
+        existing.ativo          = true;
         updated++;
       } else {
         _docsData.push({
           id: _docsUUID(), nome: file.name, tipo_documento: tipo, frente, entidade,
           placa_veiculo: placa, numero_documento: '', orgao_emissor: orgao,
-          data_emissao: '', data_vencimento: '', periodicidade: per,
+          data_emissao: '', data_vencimento: dataVenc, periodicidade: per,
           drive_link: driveLink, obs: `Importado automaticamente da pasta "${folderName}"`,
           origem: 'drive', ativo: true,
           created_at: new Date().toISOString(), updated_at: new Date().toISOString()
