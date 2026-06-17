@@ -1466,10 +1466,22 @@ body.menu-open{overflow:hidden}
         <div class="fg"><label>De</label><input type="date" id="cf-from" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"/></div>
         <div class="fg"><label>Até</label><input type="date" id="cf-to" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"/></div>
         <div class="fg"><label>Freteiro</label><select id="cf-freteiro" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"><option value="">Todos</option></select></div>
-        <div class="fg"><label>Status</label><select id="cf-status" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"><option value="">Todos</option><option value="registrado">Registrado</option><option value="confirmado">Confirmado</option><option value="contestado">Contestado</option></select></div>
+        <div class="fg"><label>Status</label><select id="cf-status" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"><option value="">Todos</option><option value="registrado">Registrado</option><option value="confirmado">Confirmado</option><option value="contestado">Contestado</option><option value="cancelado">Cancelado</option></select></div>
         <button class="btn btn-primary btn-sm" onclick="confLoad()"><i data-lucide="search" style="width:12px;height:12px;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Buscar</button>
         <button class="btn btn-ghost btn-sm" onclick="confClear()"><i data-lucide="rotate-ccw" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Limpar</button>
       </div>
+
+      <!-- Barra de ações em lote -->
+      <div id="conf-bulk-bar" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 16px;margin-bottom:14px;display:none;align-items:center;flex-wrap:wrap;gap:10px">
+        <span id="conf-sel-count" style="font-size:12px;font-weight:700;color:var(--text)">0 selecionados</span>
+        <button onclick="confSelectAll()" class="btn btn-ghost btn-sm">Selecionar todos</button>
+        <button onclick="confDeselectAll()" class="btn btn-ghost btn-sm">Desmarcar todos</button>
+        <div style="flex:1"></div>
+        <button onclick="confBulkStatus('confirmado')" style="background:#10B98120;border:1px solid #10B98140;color:#10B981;border-radius:7px;padding:5px 12px;cursor:pointer;font-size:12px;font-weight:600">✓ Confirmar selecionados</button>
+        <button onclick="confBulkStatus('contestado')" style="background:#F59E0B20;border:1px solid #F59E0B40;color:#F59E0B;border-radius:7px;padding:5px 12px;cursor:pointer;font-size:12px;font-weight:600">⚠ Contestar selecionados</button>
+        <button onclick="confBulkStatus('cancelado')" style="background:#EF444420;border:1px solid #EF444440;color:#EF4444;border-radius:7px;padding:5px 12px;cursor:pointer;font-size:12px;font-weight:600">✕ Cancelar selecionados</button>
+      </div>
+
       <div class="panel">
         <div class="panel-head">
           <span class="panel-title">Vales Registrados</span>
@@ -5699,16 +5711,15 @@ async function freteiroSalvar() {
 // ═══════════════════════════════════════════════════════════════
 
 let _confInicializado = false;
+let _confRows = [];
+let _confSort = {col:'os_numero', dir:'asc'};
 
 async function confInit() {
-  // Popula dropdown de freteiros na primeira vez
   if(!_confInicializado) {
     _confInicializado = true;
-    // Data padrão: hoje
     const hoje = new Date().toLocaleDateString('sv-SE', {timeZone:'America/Sao_Paulo'});
     document.getElementById('cf-from').value = hoje;
     document.getElementById('cf-to').value   = hoje;
-    // Carrega freteiros para o filtro
     try {
       const r = await fetch(`${SUPA_URL}/rest/v1/freteiros?select=id,nome&order=nome.asc&limit=200`, {
         headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+(_session?.access_token||SUPA_KEY)}
@@ -5728,28 +5739,48 @@ async function confLoad() {
   const tbl   = document.getElementById('tbl-conferencia');
   const badge = document.getElementById('conf-count-badge');
   tbl.innerHTML = '<div style="padding:20px;color:var(--muted);text-align:center">Carregando...</div>';
+  confDeselectAll();
 
-  const from    = document.getElementById('cf-from').value;
-  const to      = document.getElementById('cf-to').value;
+  const from     = document.getElementById('cf-from').value;
+  const to       = document.getElementById('cf-to').value;
   const freteiro = document.getElementById('cf-freteiro').value;
-  const status  = document.getElementById('cf-status').value;
+  const status   = document.getElementById('cf-status').value;
 
-  let params = 'select=*,freteiros(nome)&order=created_at.desc&limit=500';
-  if(from)    params += `&data_saida=gte.${from}`;
-  if(to)      params += `&data_saida=lte.${to}`;
+  let params = 'select=*,freteiros(nome)&limit=1000';
+  if(from)     params += `&data_saida=gte.${from}`;
+  if(to)       params += `&data_saida=lte.${to}`;
   if(freteiro) params += `&freteiro_id=eq.${freteiro}`;
-  if(status)  params += `&status=eq.${status}`;
+  if(status)   params += `&status=eq.${status}`;
 
   try {
     const r = await fetch(`${SUPA_URL}/rest/v1/vales_destinacao?${params}`, {
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+(_session?.access_token||SUPA_KEY)}
     });
-    const rows = await r.json();
-    badge.textContent = rows.length + ' registro' + (rows.length!==1?'s':'');
-    confRenderTable(rows);
+    _confRows = await r.json();
+    badge.textContent = _confRows.length + ' registro' + (_confRows.length!==1?'s':'');
+    confSortAndRender();
   } catch(e) {
     tbl.innerHTML = '<div style="padding:20px;color:#EF4444">Erro ao carregar vales.</div>';
   }
+}
+
+function confSortAndRender() {
+  const {col, dir} = _confSort;
+  const sorted = [..._confRows].sort((a, b) => {
+    let va = a[col] ?? (col==='freteiros' ? a.freteiros?.nome : '') ?? '';
+    let vb = b[col] ?? (col==='freteiros' ? b.freteiros?.nome : '') ?? '';
+    if(col === 'freteiros'){ va = a.freteiros?.nome||''; vb = b.freteiros?.nome||''; }
+    if(col === 'numero_vale_fisico'){ va = parseInt(va)||0; vb = parseInt(vb)||0; return dir==='asc' ? va-vb : vb-va; }
+    if(col === 'total' || col === 'capacidade_m3'){ va = parseFloat(va)||0; vb = parseFloat(vb)||0; return dir==='asc' ? va-vb : vb-va; }
+    return dir==='asc' ? String(va).localeCompare(String(vb),'pt-BR') : String(vb).localeCompare(String(va),'pt-BR');
+  });
+  confRenderTable(sorted);
+}
+
+function confSetSort(col) {
+  if(_confSort.col === col) _confSort.dir = _confSort.dir==='asc'?'desc':'asc';
+  else { _confSort.col = col; _confSort.dir = 'asc'; }
+  confSortAndRender();
 }
 
 function confRenderTable(rows) {
@@ -5759,12 +5790,20 @@ function confRenderTable(rows) {
   const statusBadge = s => ({
     registrado: '<span style="background:#3B82F620;color:#3B82F6;border:1px solid #3B82F640;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700">REGISTRADO</span>',
     confirmado: '<span style="background:#10B98120;color:#10B981;border:1px solid #10B98140;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700">CONFIRMADO</span>',
-    contestado: '<span style="background:#EF444420;color:#EF4444;border:1px solid #EF444440;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700">CONTESTADO</span>',
+    contestado: '<span style="background:#F59E0B20;color:#F59E0B;border:1px solid #F59E0B40;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700">CONTESTADO</span>',
+    cancelado:  '<span style="background:#6B728020;color:#9CA3AF;border:1px solid #6B728040;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700">CANCELADO</span>',
   }[s] || s);
+
+  const arrow = col => _confSort.col===col ? (_confSort.dir==='asc'?' ↑':' ↓') : '';
+  const th = (col, label) => `<th onclick="confSetSort('${col}')" style="cursor:pointer;user-select:none">${label}${arrow(col)}</th>`;
 
   let html = `<table style="width:100%;border-collapse:collapse">
     <thead><tr>
-      <th>O.S.</th><th>Data</th><th>Hora</th><th>Freteiro</th><th>Veículo</th><th>Resíduo</th><th>Nº Vale</th><th>m³</th><th>Valor</th><th>Status</th><th>Fotos</th><th>Ações</th>
+      <th style="width:36px"><input type="checkbox" id="cf-chk-all" onchange="confToggleAll(this.checked)" style="accent-color:var(--accent)"/></th>
+      ${th('os_numero','O.S.')}${th('data_saida','Data')}${th('created_at','Hora')}${th('freteiros','Freteiro')}
+      ${th('tipo_veiculo','Veículo')}${th('tipo_residuo','Resíduo')}${th('numero_vale_fisico','Nº Vale')}
+      ${th('capacidade_m3','m³')}${th('total','Valor')}${th('status','Status')}
+      <th>Observações</th><th>Fotos</th><th>Ação</th>
     </tr></thead><tbody>`;
 
   rows.forEach(v => {
@@ -5772,25 +5811,31 @@ function confRenderTable(rows) {
     const hora  = v.created_at ? new Date(v.created_at).toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'}) : '—';
     const data  = v.data_saida ? v.data_saida.split('-').reverse().join('/') : '—';
     const valor = v.total != null ? 'R$ '+Number(v.total).toLocaleString('pt-BR') : '—';
+    const obs   = v.observacoes ? `<span style="font-size:11px;color:var(--muted)">${v.observacoes}</span>` : '<span style="color:var(--muted2)">—</span>';
+    const cancelado = v.status === 'cancelado';
 
     const btnCaminhao = v.foto_caminhao_url
-      ? `<button onclick="window.open('${v.foto_caminhao_url}','_blank')" style="background:#3B82F620;border:1px solid #3B82F640;color:#3B82F6;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px;white-space:nowrap">📷 Camin.</button>`
+      ? `<button onclick="window.open('${v.foto_caminhao_url}','_blank')" style="background:#3B82F620;border:1px solid #3B82F640;color:#3B82F6;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px;white-space:nowrap">📷 Cam.</button>`
       : '<span style="color:var(--muted2);font-size:11px">—</span>';
     const btnVale = v.foto_vale_url
       ? `<button onclick="window.open('${v.foto_vale_url}','_blank')" style="background:#8B5CF620;border:1px solid #8B5CF640;color:#8B5CF6;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px;white-space:nowrap">🧾 Vale</button>`
       : '<span style="color:var(--muted2);font-size:11px">—</span>';
 
-    const btnConfirmar = v.status !== 'confirmado'
-      ? `<button onclick="confAtualizarStatus('${v.id}','confirmado')" style="background:#10B98120;border:1px solid #10B98140;color:#10B981;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px">✓</button>`
-      : '';
-    const btnContestar = v.status !== 'contestado'
-      ? `<button onclick="confAtualizarStatus('${v.id}','contestado')" style="background:#EF444420;border:1px solid #EF444440;color:#EF4444;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px">✕</button>`
-      : '';
+    const acoes = cancelado ? '' : `
+      <button onclick="confAtualizarStatus('${v.id}','confirmado')" title="Confirmar" style="background:#10B98120;border:1px solid #10B98140;color:#10B981;border-radius:6px;padding:3px 7px;cursor:pointer;font-size:12px">✓</button>
+      <button onclick="confAtualizarStatus('${v.id}','contestado')" title="Contestar" style="background:#F59E0B20;border:1px solid #F59E0B40;color:#F59E0B;border-radius:6px;padding:3px 7px;cursor:pointer;font-size:12px">⚠</button>
+      <button onclick="confAtualizarStatus('${v.id}','cancelado')" title="Cancelar O.S." style="background:#EF444420;border:1px solid #EF444440;color:#EF4444;border-radius:6px;padding:3px 7px;cursor:pointer;font-size:12px">✕</button>`;
 
-    html += `<tr>
-      <td style="font-weight:700;font-size:11px;color:var(--muted)">${v.os_numero||'—'}</td>
-      <td>${data}</td>
-      <td style="color:var(--muted)">${hora}</td>
+    const rowStyle = cancelado ? 'opacity:.5;' : '';
+    html += `<tr style="${rowStyle}">
+      <td><input type="checkbox" class="cf-chk-row" data-id="${v.id}" onchange="confUpdateBulkBar()" ${cancelado?'disabled':''} style="accent-color:var(--accent)"/></td>
+      <td style="font-weight:700;font-size:11px;color:var(--accent);white-space:nowrap">${v.os_numero||'—'}</td>
+      <td style="white-space:nowrap">
+        <input type="date" value="${v.data_saida||''}" onchange="confAtualizarData('${v.id}',this.value)"
+          style="background:transparent;border:1px solid transparent;color:var(--text);border-radius:6px;padding:2px 6px;font-size:12px;outline:none;width:110px;cursor:pointer"
+          onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='transparent'"/>
+      </td>
+      <td style="color:var(--muted);white-space:nowrap">${hora}</td>
       <td style="font-weight:600">${nome}</td>
       <td style="color:var(--muted)">${v.tipo_veiculo||'—'} ${v.capacidade_m3||''}m³</td>
       <td>${v.tipo_residuo||'—'}</td>
@@ -5798,26 +5843,69 @@ function confRenderTable(rows) {
       <td>${v.capacidade_m3||'—'}</td>
       <td style="font-weight:600">${valor}</td>
       <td>${statusBadge(v.status)}</td>
-      <td style="display:flex;gap:4px;padding:10px 12px">${btnCaminhao} ${btnVale}</td>
-      <td><div style="display:flex;gap:4px">${btnConfirmar}${btnContestar}</div></td>
+      <td style="max-width:160px">${obs}</td>
+      <td><div style="display:flex;gap:4px">${btnCaminhao} ${btnVale}</div></td>
+      <td><div style="display:flex;gap:4px">${acoes}</div></td>
     </tr>`;
   });
   html += '</tbody></table>';
   tbl.innerHTML = html;
+  confUpdateBulkBar();
+}
+
+function confToggleAll(checked) {
+  document.querySelectorAll('.cf-chk-row:not(:disabled)').forEach(c => c.checked = checked);
+  confUpdateBulkBar();
+}
+
+function confSelectAll()   { document.querySelectorAll('.cf-chk-row:not(:disabled)').forEach(c => c.checked=true);  confUpdateBulkBar(); }
+function confDeselectAll() { document.querySelectorAll('.cf-chk-row').forEach(c => c.checked=false); confUpdateBulkBar(); }
+
+function confUpdateBulkBar() {
+  const sel = [...document.querySelectorAll('.cf-chk-row:checked')];
+  const bar = document.getElementById('conf-bulk-bar');
+  bar.style.display = sel.length ? 'flex' : 'none';
+  document.getElementById('conf-sel-count').textContent = sel.length + ' selecionado' + (sel.length!==1?'s':'');
+}
+
+async function confBulkStatus(status) {
+  const ids = [...document.querySelectorAll('.cf-chk-row:checked')].map(c => c.dataset.id);
+  if(!ids.length) return;
+  const label = {confirmado:'Confirmar',contestado:'Contestar',cancelado:'Cancelar'}[status];
+  if(!confirm(`${label} ${ids.length} registro(s)?`)) return;
+  try {
+    await Promise.all(ids.map(id =>
+      fetch(`${SUPA_URL}/rest/v1/vales_destinacao?id=eq.${id}`, {
+        method:'PATCH',
+        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+_session.access_token,'Content-Type':'application/json'},
+        body: JSON.stringify({status})
+      })
+    ));
+    confLoad();
+  } catch(e) { alert('Erro ao atualizar registros.'); }
 }
 
 async function confAtualizarStatus(id, status) {
   try {
     const r = await fetch(`${SUPA_URL}/rest/v1/vales_destinacao?id=eq.${id}`, {
-      method: 'PATCH',
-      headers: {'apikey':SUPA_KEY,'Authorization':'Bearer '+_session.access_token,'Content-Type':'application/json'},
+      method:'PATCH',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+_session.access_token,'Content-Type':'application/json'},
       body: JSON.stringify({status})
     });
     if(!r.ok) throw new Error();
     confLoad();
-  } catch(e) {
-    alert('Erro ao atualizar status.');
-  }
+  } catch(e) { alert('Erro ao atualizar status.'); }
+}
+
+async function confAtualizarData(id, novaData) {
+  if(!novaData) return;
+  try {
+    await fetch(`${SUPA_URL}/rest/v1/vales_destinacao?id=eq.${id}`, {
+      method:'PATCH',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+_session.access_token,'Content-Type':'application/json'},
+      body: JSON.stringify({data_saida: novaData})
+    });
+  } catch(e) { alert('Erro ao atualizar data.'); }
 }
 
 function confClear() {
@@ -5825,8 +5913,10 @@ function confClear() {
   document.getElementById('cf-to').value   = '';
   document.getElementById('cf-freteiro').value = '';
   document.getElementById('cf-status').value   = '';
+  _confRows = [];
   document.getElementById('tbl-conferencia').innerHTML = '';
   document.getElementById('conf-count-badge').textContent = '0 registros';
+  document.getElementById('conf-bulk-bar').style.display = 'none';
 }
 
 if(window.lucide&&window.lucide.createIcons){window.lucide.createIcons();}
