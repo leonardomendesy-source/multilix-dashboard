@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Multilix Dashboard v7</title>
+<title>Multilix Dashboard</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
 
 // ═══════════════════════════════════════════════════════════════
@@ -785,6 +785,136 @@ body.menu-open{overflow:hidden}
 .prop-item-row input,.prop-item-row select{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;width:100%}
 .prop-hist-row{display:grid;grid-template-columns:auto 1fr 1fr auto auto;gap:12px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);font-size:12px}
 .prop-hist-row:hover{background:var(--surface2)}
+
+/* ═══════════════════════════════════════════════════════════
+   REDESIGN v26 — Identidade Multilix + correções impeccable
+   ═══════════════════════════════════════════════════════════ */
+
+/* 1. Variáveis de acento de marca (âmbar/laranja Multilix) */
+:root {
+  --accent: #F59E0B;
+  --accent-dark: #D97706;
+  --accent-dim: rgba(245,158,11,.12);
+  --accent-border: rgba(245,158,11,.30);
+  --accent-glow: rgba(245,158,11,.20);
+}
+
+/* 2. Botão primário — âmbar sólido, texto escuro (contraste 4.5:1+) */
+.btn-primary {
+  background: var(--accent) !important;
+  background-image: none !important;
+  color: #0B0D11 !important;
+  box-shadow: 0 2px 8px var(--accent-glow) !important;
+}
+.btn-primary:hover {
+  background: var(--accent-dark) !important;
+  box-shadow: 0 4px 16px var(--accent-glow) !important;
+  opacity: 1 !important;
+}
+
+/* 3. Nav ativa — âmbar, sem gradiente azul-roxo */
+.nav-item.active {
+  background: var(--accent-dim) !important;
+  color: #fff !important;
+}
+.nav-item.active::before {
+  background: var(--accent) !important;
+  box-shadow: 0 0 8px var(--accent-glow) !important;
+}
+
+/* 4. KPI cards — converter side-stripe para top-accent (2px topo) */
+.kpi::before {
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  height: 2px !important;
+  border-radius: 2px 2px 0 0 !important;
+}
+/* Corrigir ghost-card: remover box-shadow largo no hover, usar border âmbar */
+.kpi:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,.35) !important;
+  border-color: var(--accent-border) !important;
+}
+/* Remover bola decorativa de glow (filler content) */
+.kpi-glow { display: none !important; }
+
+/* 5. exec-box — remover border-left; usar borda completa sutil */
+.exec-box {
+  border-left: none !important;
+  border: 1px solid var(--accent-border) !important;
+  border-radius: 12px !important;
+}
+
+/* 6. Focus / hover states → âmbar em vez de azul */
+.fg select:focus, .fg input:focus,
+.fg input[type=text]:focus, .fg input[type=date]:focus,
+.fg input[type=month]:focus, .fg input[type=number]:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px var(--accent-dim) !important;
+  background: #1c1a14 !important;
+}
+.btn-ghost:hover {
+  border-color: var(--accent) !important;
+  color: var(--text) !important;
+  background: var(--accent-dim) !important;
+}
+.upload-zone:hover {
+  border-color: var(--accent) !important;
+  background: var(--accent-dim) !important;
+}
+tr:hover td { background: rgba(245,158,11,.04) !important; }
+
+/* 7. Tabela — sort ativo e badge de painel → âmbar */
+th.sort-asc .sort-icon, th.sort-desc .sort-icon {
+  opacity: 1 !important;
+  color: var(--accent) !important;
+}
+.panel-badge {
+  color: var(--accent) !important;
+  background: var(--accent-dim) !important;
+  border-color: var(--accent-border) !important;
+}
+
+/* 8. Calendário — dias selecionados → âmbar */
+.cal-day.sel-start, .cal-day.sel-end {
+  background: var(--accent) !important;
+  color: #0B0D11 !important;
+}
+.cal-day.in-range { background: var(--accent-dim) !important; }
+.cal-day.today { border-color: var(--accent-border) !important; color: var(--accent) !important; }
+.preset-btn:hover { border-color: var(--accent) !important; color: var(--text) !important; background: var(--accent-dim) !important; }
+.cal-nav-btn:hover { border-color: var(--accent) !important; background: var(--accent-dim) !important; }
+.cal-actions .btn-ghost:hover { border-color: var(--accent) !important; }
+.date-range-btn:hover { border-color: var(--accent) !important; }
+
+/* 9. Alert info → âmbar (informação genérica não precisa ser azul) */
+.alert-info {
+  background: var(--accent-dim) !important;
+  border-color: var(--accent-border) !important;
+  color: #fcd34d !important;
+}
+
+/* 10. Topbar badge live dot → manter verde (é status operacional) */
+
+/* 11. Inputs inline (login, modais) → foco âmbar */
+input:focus, select:focus, textarea:focus {
+  outline: none;
+}
+
+/* 12. Melhorias tipográficas — body ligeiramente maior, headings balanceados */
+body { font-size: 13.5px !important; }
+.topbar-title { font-size: 15px; text-wrap: balance; }
+.kpi-value { letter-spacing: -0.4px !important; }
+
+/* 13. Topbar sticky shadow mais refinado */
+#topbar {
+  box-shadow: 0 1px 0 var(--border), 0 4px 16px rgba(0,0,0,.2);
+}
+
+/* 14. Sidebar footer */
+.sb-footer { border-top: 1px solid var(--border); }
 </style>
 </head>
 <body>
@@ -883,7 +1013,7 @@ body.menu-open{overflow:hidden}
   <div id="login-overlay" style="display:none;position:fixed;inset:0;background:#0B0D11;z-index:9999;display:flex;align-items:center;justify-content:center">
     <div style="background:linear-gradient(165deg,var(--surface) 0%,#12161f 100%);border:1px solid var(--border);border-radius:20px;padding:40px 36px;width:340px;box-shadow:0 24px 64px rgba(0,0,0,.6)">
       <div style="text-align:center;margin-bottom:28px">
-        <div style="width:52px;height:52px;background:linear-gradient(135deg,var(--blue),var(--purple));border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#fff;margin-bottom:14px;box-shadow:0 4px 16px #3B82F640">ML</div>
+        <div style="width:52px;height:52px;background:var(--accent);border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#0B0D11;margin-bottom:14px;box-shadow:0 4px 16px var(--accent-glow)">ML</div>
         <div style="font-size:18px;font-weight:700;color:var(--text)">Multilix Dashboard</div>
         <div style="font-size:11px;color:var(--muted);margin-top:4px">Acesso restrito</div>
       </div>
@@ -893,14 +1023,14 @@ body.menu-open{overflow:hidden}
           <input type="email" id="login-email" placeholder="seu@email.com"
             style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 14px;font-size:13px;outline:none"
             onkeydown="if(event.key==='Enter')doLogin()"
-            onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'"/>
+            onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"/>
         </div>
         <div>
           <label style="font-size:10px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:6px">Senha</label>
           <input type="password" id="login-pwd" placeholder="••••••••"
             style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 14px;font-size:13px;outline:none"
             onkeydown="if(event.key==='Enter')doLogin()"
-            onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'"/>
+            onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"/>
         </div>
         <div id="login-err" style="display:none;color:var(--red);font-size:11px;text-align:center"></div>
         <button class="btn btn-primary" onclick="doLogin()" style="width:100%;padding:12px">Entrar</button>
