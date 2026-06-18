@@ -5382,15 +5382,45 @@ function _pagRowsInRange(from,to){
   });
 }
 
-function showDestPagamentoPage(){
+async function showDestPagamentoPage(){
   const alertEl=document.getElementById('pag-empty-alert'), content=document.getElementById('pag-content');
+  alertEl.innerHTML='';
+
+  // Busca vales confirmados do Supabase e mescla com planilha
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/vales_destinacao?select=*,freteiros(nome)&status=eq.confirmado&limit=1000`, {
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+(_session?.access_token||SUPA_KEY)}
+    });
+    const vales = await r.json();
+    // Mapeia para o mesmo formato de S.raw.destinacao
+    const mapped = vales.map(v => ({
+      data:       v.data_saida ? (p => new Date(+p[0],+p[1]-1,+p[2]))(v.data_saida.split('-')) : null,
+      pedido:     v.os_numero || '',
+      freteiro:   v.freteiros?.nome || '',
+      residuo:    v.tipo_residuo || '',
+      veiculo:    v.tipo_veiculo || '',
+      referencia: '',
+      viagens:    1,
+      volume:     Number(v.capacidade_m3 || 0),
+      valor:      Number(v.preco_unitario || 0),
+      total:      Number(v.preco_unitario || 0),
+      valorUnit:  Number(v.preco_unitario || 0),
+      pago: '', tipoDia: '', bloco: '',
+      tipo: 'destinacao', cliente: v.freteiros?.nome || '',
+      _fromSupabase: true
+    }));
+    // Remove duplicatas: se o pedido já existe na planilha, prioriza planilha
+    const pedidosPlanilha = new Set(S.raw.destinacao.map(r=>r.pedido).filter(Boolean));
+    const novos = mapped.filter(m => !pedidosPlanilha.has(m.pedido));
+    S.raw.destinacao = [...S.raw.destinacao, ...novos];
+  } catch(e) {}
+
   if(!S.raw.destinacao.length){
-    alertEl.innerHTML='<div class="alert alert-info">'+ic('folder-open',13)+' Carregue primeiro a planilha de Destinação de Resíduos em Fontes de Dados.</div>';
+    alertEl.innerHTML='<div class="alert alert-info">'+ic('folder-open',13)+' Nenhum dado encontrado. Carregue uma planilha ou aguarde vales confirmados.</div>';
     content.style.display='none';
     renderIcons();
     return;
   }
-  alertEl.innerHTML='';
   content.style.display='';
   updatePagFreteiroOptions();
 }
