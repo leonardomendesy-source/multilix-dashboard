@@ -6098,12 +6098,7 @@ async function destMergeSupabase() {
 
     if (!Array.isArray(vales) || !vales.length) { applyDestFilters(); return; }
 
-    // Pedidos já presentes na planilha (não sobrescrever)
-    const pedidosPlanilha = new Set(S.raw.destinacao.map(r => r.pedido).filter(Boolean));
-
-    const mapeados = vales
-      .filter(v => !pedidosPlanilha.has(v.os_numero))
-      .map(v => ({
+    const mapeados = vales.map(v => ({
         data:       v.data_saida ? (p => new Date(+p[0], +p[1]-1, +p[2]))(v.data_saida.split('-')) : null,
         pedido:     v.os_numero || '',
         freteiro:   v.freteiros?.nome || '',
