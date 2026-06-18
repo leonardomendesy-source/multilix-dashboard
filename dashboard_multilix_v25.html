@@ -2642,6 +2642,7 @@ function showPage(id,el){
   if(id==='consolidado') updateConsolidado();
   if(id==='dest-freteiros') freteiroLoadPage();
   if(id==='dest-conferencia') confInit();
+  if(id==='destinacao') destMergeSupabase();
 }
 
 // ── NAV ACCORDION ──────────────────────────────────────────────
@@ -6079,6 +6080,46 @@ async function osEditSalvar() {
     osEditClose();
     confLoad();
   } catch(e) { alert('Erro ao salvar: ' + e.message); }
+}
+
+// ── DESTINAÇÃO — MERGE COM VALES SUPABASE ─────────────────────
+let _destSupabaseMerged = false;
+
+async function destMergeSupabase() {
+  try {
+    const r = await fetch(
+      `${SUPA_URL}/rest/v1/vales_destinacao?select=*,freteiros(nome)&status=neq.cancelado&limit=1000`,
+      { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + (_session?.access_token || SUPA_KEY) } }
+    );
+    const vales = await r.json();
+    if (!Array.isArray(vales) || !vales.length) return;
+
+    // Pedidos já presentes (planilha)
+    const pedidosExistentes = new Set(S.raw.destinacao.map(r => r.pedido).filter(Boolean));
+
+    const mapeados = vales
+      .filter(v => !pedidosExistentes.has(v.os_numero))
+      .map(v => ({
+        data:       v.data_saida ? (p => new Date(+p[0], +p[1]-1, +p[2]))(v.data_saida.split('-')) : null,
+        pedido:     v.os_numero || '',
+        freteiro:   v.freteiros?.nome || '',
+        residuo:    v.tipo_residuo || '',
+        veiculo:    v.tipo_veiculo || '',
+        referencia: '',
+        viagens:    1,
+        volume:     Number(v.capacidade_m3 || 0),
+        valor:      Number(v.preco_unitario || 0),
+        total:      Number(v.preco_unitario || 0),
+        valorUnit:  Number(v.preco_unitario || 0),
+        pago: '', tipoDia: '', bloco: '',
+        tipo: 'destinacao', cliente: v.freteiros?.nome || '',
+        _fromSupabase: true
+      }));
+
+    if (!mapeados.length) return;
+    S.raw.destinacao = [...S.raw.destinacao, ...mapeados];
+    applyDestFilters();
+  } catch(e) {}
 }
 
 // ── SIDEBAR TOGGLE ─────────────────────────────────────────────
