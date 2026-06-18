@@ -6092,13 +6092,17 @@ async function destMergeSupabase() {
       { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + (_session?.access_token || SUPA_KEY) } }
     );
     const vales = await r.json();
-    if (!Array.isArray(vales) || !vales.length) return;
 
-    // Pedidos já presentes (planilha)
-    const pedidosExistentes = new Set(S.raw.destinacao.map(r => r.pedido).filter(Boolean));
+    // Remove registros anteriores do Supabase (re-fetch limpo)
+    S.raw.destinacao = S.raw.destinacao.filter(r => !r._fromSupabase);
+
+    if (!Array.isArray(vales) || !vales.length) { applyDestFilters(); return; }
+
+    // Pedidos já presentes na planilha (não sobrescrever)
+    const pedidosPlanilha = new Set(S.raw.destinacao.map(r => r.pedido).filter(Boolean));
 
     const mapeados = vales
-      .filter(v => !pedidosExistentes.has(v.os_numero))
+      .filter(v => !pedidosPlanilha.has(v.os_numero))
       .map(v => ({
         data:       v.data_saida ? (p => new Date(+p[0], +p[1]-1, +p[2]))(v.data_saida.split('-')) : null,
         pedido:     v.os_numero || '',
@@ -6116,7 +6120,6 @@ async function destMergeSupabase() {
         _fromSupabase: true
       }));
 
-    if (!mapeados.length) return;
     S.raw.destinacao = [...S.raw.destinacao, ...mapeados];
     applyDestFilters();
   } catch(e) {}
