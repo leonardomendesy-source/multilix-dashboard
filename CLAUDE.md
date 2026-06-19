@@ -11,6 +11,7 @@ Dashboard de vendas da Multilix. Arquivo principal: `index.html` (alias de `dash
 - ATT (Atendimento)
 - Locação
 - Agregados
+- E-mails Comercial (lê da tabela `emails_comercial` no Supabase, alimentada pelo workflow n8n `gZgBvKDtCjHjBYJf`)
 
 ## Git
 - Branch principal: `main`

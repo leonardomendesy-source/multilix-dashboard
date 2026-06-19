@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Multilix Dashboard v7</title>
+<title>Multilix Dashboard</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
 
 // ═══════════════════════════════════════════════════════════════
@@ -712,6 +712,7 @@ body.menu-open{overflow:hidden}
   #sidebar{transform:translateX(-105%);-webkit-transform:translateX(-105%);transition:transform .25s cubic-bezier(.4,0,.2,1);-webkit-transition:-webkit-transform .25s cubic-bezier(.4,0,.2,1);width:82vw;min-width:0;max-width:320px;box-shadow:18px 0 50px #000b;z-index:300;will-change:transform;overflow-y:auto;-webkit-overflow-scrolling:touch}
   #sidebar.open{transform:translateX(0);-webkit-transform:translateX(0)}
   .mobile-menu-btn{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+  #sb-toggle-btn{display:none!important}
   #main{margin-left:0;width:100%;min-height:100dvh}
   #topbar{height:auto;min-height:62px;padding:10px 14px;gap:10px;position:sticky;top:0}
   .topbar-title{font-size:15px;line-height:1.2}
@@ -785,6 +786,136 @@ body.menu-open{overflow:hidden}
 .prop-item-row input,.prop-item-row select{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;width:100%}
 .prop-hist-row{display:grid;grid-template-columns:auto 1fr 1fr auto auto;gap:12px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);font-size:12px}
 .prop-hist-row:hover{background:var(--surface2)}
+
+/* ═══════════════════════════════════════════════════════════
+   REDESIGN v26 — Identidade Multilix + correções impeccable
+   ═══════════════════════════════════════════════════════════ */
+
+/* 1. Variáveis de acento de marca (âmbar/laranja Multilix) */
+:root {
+  --accent: #F59E0B;
+  --accent-dark: #D97706;
+  --accent-dim: rgba(245,158,11,.12);
+  --accent-border: rgba(245,158,11,.30);
+  --accent-glow: rgba(245,158,11,.20);
+}
+
+/* 2. Botão primário — âmbar sólido, texto escuro (contraste 4.5:1+) */
+.btn-primary {
+  background: var(--accent) !important;
+  background-image: none !important;
+  color: #0B0D11 !important;
+  box-shadow: 0 2px 8px var(--accent-glow) !important;
+}
+.btn-primary:hover {
+  background: var(--accent-dark) !important;
+  box-shadow: 0 4px 16px var(--accent-glow) !important;
+  opacity: 1 !important;
+}
+
+/* 3. Nav ativa — âmbar, sem gradiente azul-roxo */
+.nav-item.active {
+  background: var(--accent-dim) !important;
+  color: #fff !important;
+}
+.nav-item.active::before {
+  background: var(--accent) !important;
+  box-shadow: 0 0 8px var(--accent-glow) !important;
+}
+
+/* 4. KPI cards — converter side-stripe para top-accent (2px topo) */
+.kpi::before {
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  height: 2px !important;
+  border-radius: 2px 2px 0 0 !important;
+}
+/* Corrigir ghost-card: remover box-shadow largo no hover, usar border âmbar */
+.kpi:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,.35) !important;
+  border-color: var(--accent-border) !important;
+}
+/* Remover bola decorativa de glow (filler content) */
+.kpi-glow { display: none !important; }
+
+/* 5. exec-box — remover border-left; usar borda completa sutil */
+.exec-box {
+  border-left: none !important;
+  border: 1px solid var(--accent-border) !important;
+  border-radius: 12px !important;
+}
+
+/* 6. Focus / hover states → âmbar em vez de azul */
+.fg select:focus, .fg input:focus,
+.fg input[type=text]:focus, .fg input[type=date]:focus,
+.fg input[type=month]:focus, .fg input[type=number]:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px var(--accent-dim) !important;
+  background: #1c1a14 !important;
+}
+.btn-ghost:hover {
+  border-color: var(--accent) !important;
+  color: var(--text) !important;
+  background: var(--accent-dim) !important;
+}
+.upload-zone:hover {
+  border-color: var(--accent) !important;
+  background: var(--accent-dim) !important;
+}
+tr:hover td { background: rgba(245,158,11,.04) !important; }
+
+/* 7. Tabela — sort ativo e badge de painel → âmbar */
+th.sort-asc .sort-icon, th.sort-desc .sort-icon {
+  opacity: 1 !important;
+  color: var(--accent) !important;
+}
+.panel-badge {
+  color: var(--accent) !important;
+  background: var(--accent-dim) !important;
+  border-color: var(--accent-border) !important;
+}
+
+/* 8. Calendário — dias selecionados → âmbar */
+.cal-day.sel-start, .cal-day.sel-end {
+  background: var(--accent) !important;
+  color: #0B0D11 !important;
+}
+.cal-day.in-range { background: var(--accent-dim) !important; }
+.cal-day.today { border-color: var(--accent-border) !important; color: var(--accent) !important; }
+.preset-btn:hover { border-color: var(--accent) !important; color: var(--text) !important; background: var(--accent-dim) !important; }
+.cal-nav-btn:hover { border-color: var(--accent) !important; background: var(--accent-dim) !important; }
+.cal-actions .btn-ghost:hover { border-color: var(--accent) !important; }
+.date-range-btn:hover { border-color: var(--accent) !important; }
+
+/* 9. Alert info → âmbar (informação genérica não precisa ser azul) */
+.alert-info {
+  background: var(--accent-dim) !important;
+  border-color: var(--accent-border) !important;
+  color: #fcd34d !important;
+}
+
+/* 10. Topbar badge live dot → manter verde (é status operacional) */
+
+/* 11. Inputs inline (login, modais) → foco âmbar */
+input:focus, select:focus, textarea:focus {
+  outline: none;
+}
+
+/* 12. Melhorias tipográficas — body ligeiramente maior, headings balanceados */
+body { font-size: 13.5px !important; }
+.topbar-title { font-size: 15px; text-wrap: balance; }
+.kpi-value { letter-spacing: -0.4px !important; }
+
+/* 13. Topbar sticky shadow mais refinado */
+#topbar {
+  box-shadow: 0 1px 0 var(--border), 0 4px 16px rgba(0,0,0,.2);
+}
+
+/* 14. Sidebar footer */
+.sb-footer { border-top: 1px solid var(--border); }
 </style>
 </head>
 <body>
@@ -855,6 +986,7 @@ body.menu-open{overflow:hidden}
           </div></div>
         </div>
         <button class="nav-item" onclick="showPage('contratos',this)"><span class="icon" data-lucide="file-text"></span>Contratos</button>
+        <button class="nav-item" onclick="showPage('emails-comercial',this)"><span class="icon" data-lucide="mail"></span>E-mails Comercial</button>
       </div></div>
     </div>
 
@@ -883,7 +1015,7 @@ body.menu-open{overflow:hidden}
   <div id="login-overlay" style="display:none;position:fixed;inset:0;background:#0B0D11;z-index:9999;display:flex;align-items:center;justify-content:center">
     <div style="background:linear-gradient(165deg,var(--surface) 0%,#12161f 100%);border:1px solid var(--border);border-radius:20px;padding:40px 36px;width:340px;box-shadow:0 24px 64px rgba(0,0,0,.6)">
       <div style="text-align:center;margin-bottom:28px">
-        <div style="width:52px;height:52px;background:linear-gradient(135deg,var(--blue),var(--purple));border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#fff;margin-bottom:14px;box-shadow:0 4px 16px #3B82F640">ML</div>
+        <div style="width:52px;height:52px;background:var(--accent);border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#0B0D11;margin-bottom:14px;box-shadow:0 4px 16px var(--accent-glow)">ML</div>
         <div style="font-size:18px;font-weight:700;color:var(--text)">Multilix Dashboard</div>
         <div style="font-size:11px;color:var(--muted);margin-top:4px">Acesso restrito</div>
       </div>
@@ -893,14 +1025,14 @@ body.menu-open{overflow:hidden}
           <input type="email" id="login-email" placeholder="seu@email.com"
             style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 14px;font-size:13px;outline:none"
             onkeydown="if(event.key==='Enter')doLogin()"
-            onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'"/>
+            onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"/>
         </div>
         <div>
           <label style="font-size:10px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:6px">Senha</label>
           <input type="password" id="login-pwd" placeholder="••••••••"
             style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 14px;font-size:13px;outline:none"
             onkeydown="if(event.key==='Enter')doLogin()"
-            onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'"/>
+            onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"/>
         </div>
         <div id="login-err" style="display:none;color:var(--red);font-size:11px;text-align:center"></div>
         <button class="btn btn-primary" onclick="doLogin()" style="width:100%;padding:12px">Entrar</button>
@@ -927,8 +1059,6 @@ body.menu-open{overflow:hidden}
     <div class="page active" id="page-overview">
       <div class="filterbar">
         <div class="fg"><label>Mês</label><select id="f-mes" onchange="applyFilters()"><option value="">Todos</option></select></div>
-        <div class="fg"><label>Cliente</label><select id="f-cliente" onchange="applyFilters()"><option value="">Todos</option></select></div>
-        <div class="fg"><label>PF / PJ</label><select id="f-pfpj" onchange="applyFilters()"><option value="">Todos</option><option value="PF">PF</option><option value="PJ">PJ</option><option value="NÃO CLASSIFICADO">Não Classificado</option></select></div>
         <button class="btn btn-ghost btn-sm" onclick="clearFilters()"><i data-lucide="rotate-ccw" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Limpar</button>
       </div>
       <div id="alerts-ov"></div>
@@ -936,8 +1066,8 @@ body.menu-open{overflow:hidden}
       <div class="kpi-grid" id="kpi-ov"></div>
       <div class="g12">
         <div class="panel">
-          <div class="panel-head"><span class="panel-title">Evolução Diária — Volume m³</span><span class="panel-badge">ATT</span></div>
-          <div class="chart-wrap" data-chart-id="cDiario"><canvas id="cDiario"></canvas></div>
+          <div class="panel-head"><span class="panel-title">Faturamento Mensal — Evolução do Ano</span><span class="panel-badge" id="badge-fat-anual"></span></div>
+          <div class="chart-wrap" data-chart-id="cFatAnual"><canvas id="cFatAnual"></canvas></div>
         </div>
         <div class="panel">
           <div class="panel-head"><span class="panel-title">Faturamento por Operação</span></div>
@@ -1155,6 +1285,17 @@ body.menu-open{overflow:hidden}
         </div>
       </div>
 
+      <!-- EVOLUÇÃO MENSAL ATT -->
+      <div class="sec orange" style="margin-top:24px"><i data-lucide="trending-up" style="width:13px;height:13px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Evolução Mensal — Recebimento de Terceiros</div>
+      <div class="g2" style="margin-bottom:18px">
+        <div class="panel"><div class="panel-head"><span class="panel-title">Caçambas Recebidas por Mês</span></div><div class="chart-wrap-tall" data-chart-id="cAttMesCac"><canvas id="cAttMesCac"></canvas></div></div>
+        <div class="panel"><div class="panel-head"><span class="panel-title">Volume m³ por Mês</span></div><div class="chart-wrap-tall" data-chart-id="cAttMesM3"><canvas id="cAttMesM3"></canvas></div></div>
+      </div>
+      <div class="g2" style="margin-bottom:18px">
+        <div class="panel"><div class="panel-head"><span class="panel-title">Faturamento por Mês</span></div><div class="chart-wrap-tall" data-chart-id="cAttMesFat"><canvas id="cAttMesFat"></canvas></div></div>
+        <div class="panel" style="display:flex;flex-direction:column;justify-content:center"><div id="att-evol-info" style="padding:20px;color:var(--muted);font-size:12px"></div></div>
+      </div>
+
       <!-- TOP 10 CLIENTES -->
       <div class="sec"><i data-lucide="trophy" style="width:13px;height:13px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Top 10 Clientes ATT</div>
       <div class="panel">
@@ -1283,6 +1424,13 @@ body.menu-open{overflow:hidden}
         <div class="panel-head"><span class="panel-title"><i data-lucide="target" style="width:13px;height:13px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Comparação com Metas</span></div>
         <div id="meta-loc"></div>
       </div>
+
+      <!-- EVOLUÇÃO MENSAL LOCAÇÃO -->
+      <div class="sec green" style="margin-top:8px"><i data-lucide="trending-up" style="width:13px;height:13px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Evolução Mensal — Locação</div>
+      <div class="g2" style="margin-bottom:18px">
+        <div class="panel"><div class="panel-head"><span class="panel-title">Caçambas Locadas por Mês</span></div><div class="chart-wrap-tall" data-chart-id="cLocMesCac"><canvas id="cLocMesCac"></canvas></div></div>
+        <div class="panel"><div class="panel-head"><span class="panel-title">Faturamento por Mês</span></div><div class="chart-wrap-tall" data-chart-id="cLocMesFat"><canvas id="cLocMesFat"></canvas></div></div>
+      </div>
     </div>
 
     <!-- AGREGADOS -->
@@ -1387,6 +1535,12 @@ body.menu-open{overflow:hidden}
         <div id="meta-agr"></div>
       </div>
 
+      <!-- SEÇÃO 8: EVOLUÇÃO MENSAL AGREGADOS -->
+      <div class="sec orange" style="margin-top:8px"><i data-lucide="trending-up" style="width:13px;height:13px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Evolução Mensal — Agregados Reciclados</div>
+      <div class="g2" style="margin-bottom:18px">
+        <div class="panel"><div class="panel-head"><span class="panel-title">m³ Vendidos por Mês</span></div><div class="chart-wrap-tall" data-chart-id="cAgrMesM3"><canvas id="cAgrMesM3"></canvas></div></div>
+        <div class="panel"><div class="panel-head"><span class="panel-title">Faturamento por Mês</span></div><div class="chart-wrap-tall" data-chart-id="cAgrMesFat"><canvas id="cAgrMesFat"></canvas></div></div>
+      </div>
     </div>
 
     <!-- DESTINAÇÃO -->
@@ -1435,6 +1589,13 @@ body.menu-open{overflow:hidden}
       <div class="g2" style="margin-bottom:18px">
         <div class="panel"><div class="panel-head"><span class="panel-title">Evolução Diária — Rachão m³</span></div><div class="chart-wrap-tall" data-chart-id="cDestDiaRach"><canvas id="cDestDiaRach"></canvas></div></div>
         <div class="panel"><div class="panel-head"><span class="panel-title">Ranking por Freteiro — Rachão</span></div><div class="chart-wrap-tall" data-chart-id="cDestFreteiroRach"><canvas id="cDestFreteiroRach"></canvas></div></div>
+      </div>
+
+      <!-- SEÇÃO 4: EVOLUÇÃO MENSAL DESTINAÇÃO -->
+      <div class="sec blue" style="margin-top:8px"><i data-lucide="trending-up" style="width:13px;height:13px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Evolução Mensal — Destinação</div>
+      <div class="g2" style="margin-bottom:18px">
+        <div class="panel"><div class="panel-head"><span class="panel-title">Volume m³ por Mês</span></div><div class="chart-wrap-tall" data-chart-id="cDestMesVol"><canvas id="cDestMesVol"></canvas></div></div>
+        <div class="panel"><div class="panel-head"><span class="panel-title">Custo Total por Mês</span></div><div class="chart-wrap-tall" data-chart-id="cDestMesFat"><canvas id="cDestMesFat"></canvas></div></div>
       </div>
 
       <!-- LANÇAMENTOS -->
@@ -1859,6 +2020,70 @@ body.menu-open{overflow:hidden}
     </div>
 
     <!-- USUÁRIOS -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- PÁGINA E-MAILS COMERCIAL                               -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div class="page" id="page-emails-comercial">
+      <!-- Filtros -->
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:22px">
+        <div class="fg">
+          <label>De</label>
+          <input type="date" id="email-dt-ini" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"/>
+        </div>
+        <div class="fg">
+          <label>Até</label>
+          <input type="date" id="email-dt-fim" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"/>
+        </div>
+        <div class="fg">
+          <label>Categoria</label>
+          <select id="email-cat" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none">
+            <option value="">Todas</option>
+            <option value="orcamento">Orçamento</option>
+            <option value="reclamacao">Reclamação</option>
+            <option value="documentacao">Documentação</option>
+            <option value="fornecedor">Fornecedor</option>
+            <option value="outros">Outros</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Status</label>
+          <select id="email-status" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none">
+            <option value="">Todos</option>
+            <option value="false">Pendentes</option>
+            <option value="true">Respondidos</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="emailsBuscar()">Filtrar</button>
+        <button class="btn" onclick="emailsLimparFiltros()" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted)">Limpar</button>
+        <span id="email-count" style="font-size:11px;color:var(--muted);align-self:center;margin-left:4px"></span>
+      </div>
+
+      <!-- KPIs rápidos -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:22px" id="email-kpis"></div>
+
+      <!-- Tabela -->
+      <div class="tbl-wrap">
+        <table id="tbl-emails">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Remetente</th>
+              <th>Assunto</th>
+              <th>Categoria</th>
+              <th>Prioridade</th>
+              <th>Resumo</th>
+              <th>Status</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-emails">
+            <tr><td colspan="8" style="color:var(--muted);text-align:center;padding:32px">Carregando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="email-msg" style="font-size:12px;margin-top:10px;color:var(--muted)"></div>
+    </div>
+
     <div class="page" id="page-usuarios">
       <div class="sec">Novo Usuário</div>
       <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:22px;align-items:flex-end">
@@ -2602,17 +2827,21 @@ function groupBy(rows,key,val){
 }
 function statusMeta(pct){
   if(pct>=100)return{cls:'kb-green',lbl:ic('check',11)+' Acima',col:'var(--green)'};
-  if(pct>=80)return{cls:'kb-blue',lbl:ic('minus',11)+' Esperado',col:'var(--blue)'};
-  if(pct>=60)return{cls:'kb-yellow',lbl:ic('alert-triangle',11)+' Atenção',col:'var(--yellow)'};
+  if(pct>=80)return{cls:'kb-yellow',lbl:ic('minus',11)+' Próximo',col:'var(--yellow)'};
+  if(pct>=60)return{cls:'kb-orange',lbl:ic('alert-triangle',11)+' Atenção',col:'var(--orange)'};
   return{cls:'kb-red',lbl:ic('alert-circle',11)+' Crítico',col:'var(--red)'};
 }
 function mbar(label,real,meta,un='',isMon=false,pr=null){
   const pct=meta>0?Math.min((real/meta)*100,150):0;
   if(pr===null)pr=real;
   const pctPr=meta>0?Math.min((pr/meta)*100,150):0;
-  const{cls,lbl,col}=statusMeta(pct);
+  // Badge usa projeção (não o realizado) para mostrar status correto
+  const{cls,lbl,col}=statusMeta(meta>0?pctPr:pct);
   const fmt=isMon?fM:v=>fN(v,1)+(un?' '+un:'');
-  return`<div class="mbar"><div class="mbar-head"><span class="mbar-label">${label}</span><span class="kpi-badge ${cls}">${lbl}</span></div><div class="mbar-nums">Real: <b>${fmt(real)}</b> &nbsp;|&nbsp; Meta: <b>${fmt(meta)}</b> &nbsp;|&nbsp; Proj: <b style="color:var(--green)">${fmt(pr)}</b></div><div class="mbar-bg"><div class="mbar-fill" style="width:${pct}%;background:${col}"></div></div><div class="mbar-proj">Realizado: ${pct.toFixed(1)}% &nbsp;|&nbsp; Projeção: ${pctPr.toFixed(1)}%</div></div>`;
+  // Cor da projeção: verde ≥ 100%, amarelo ≥ 80%, vermelho < 80%
+  const projCol=pctPr>=100?'var(--green)':pctPr>=80?'var(--yellow)':'var(--red)';
+  const fillPct=Math.min(pct,100);
+  return`<div class="mbar"><div class="mbar-head"><span class="mbar-label">${label}</span><span class="kpi-badge ${cls}">${lbl}</span></div><div class="mbar-nums">Real: <b>${fmt(real)}</b> &nbsp;|&nbsp; Meta: <b>${fmt(meta)}</b> &nbsp;|&nbsp; Proj: <b style="color:${projCol}">${fmt(pr)}</b></div><div class="mbar-bg"><div class="mbar-fill" style="width:${fillPct}%;background:${col}"></div></div><div class="mbar-proj">Realizado: ${pct.toFixed(1)}% &nbsp;|&nbsp; Projeção: ${pctPr.toFixed(1)}%</div></div>`;
 }
 const KC=['green','blue','purple','orange','red','yellow'];
 function kpi(label,value,sub='',badge='',bclass='kb-blue',col='blue'){
@@ -2625,7 +2854,7 @@ function rankTbl(data,l1,l2,top=10){
 }
 
 // ── NAV ────────────────────────────────────────────────────────
-const TITLES={overview:'Dashboard Executivo',data:'Fontes de Dados',consolidado:'Consolidado — Entrada de Resíduos',att:'Recebimento de Terceiros',locacao:'Locação de Caçambas',agregados:'Agregados Reciclados',destinacao:'Destinação de Resíduos','dest-pagamentos':'Pagamentos de Freteiros','dest-freteiros':'Cadastro de Freteiros','dest-conferencia':'Conferência de Vales',cdf:'Certificado de Destinação Final',crm:'CRM',propostas:'Propostas Comerciais','prop-locacao':'Propostas — Locação','prop-att':'Propostas — Recebimento ATT','prop-agregados':'Propostas — Agregados',contratos:'Contratos',inconsistencias:'Inconsistências',resumo:'Resumo Executivo',config:'Metas & Configurações',usuarios:'Gerenciar Usuários'};
+const TITLES={overview:'Dashboard Executivo',data:'Fontes de Dados',consolidado:'Consolidado — Entrada de Resíduos',att:'Recebimento de Terceiros',locacao:'Locação de Caçambas',agregados:'Agregados Reciclados',destinacao:'Destinação de Resíduos','dest-pagamentos':'Pagamentos de Freteiros','dest-freteiros':'Cadastro de Freteiros','dest-conferencia':'Conferência de Vales',cdf:'Certificado de Destinação Final',crm:'CRM',propostas:'Propostas Comerciais','prop-locacao':'Propostas — Locação','prop-att':'Propostas — Recebimento ATT','prop-agregados':'Propostas — Agregados',contratos:'Contratos',inconsistencias:'Inconsistências',resumo:'Resumo Executivo',config:'Metas & Configurações',usuarios:'Gerenciar Usuários','emails-comercial':'E-mails Comercial'};
 function showPage(id,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -2643,6 +2872,154 @@ function showPage(id,el){
   if(id==='dest-freteiros') freteiroLoadPage();
   if(id==='dest-conferencia') confInit();
   if(id==='destinacao') destMergeSupabase();
+  if(id==='emails-comercial') emailsInit();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MÓDULO E-MAILS COMERCIAL
+// ═══════════════════════════════════════════════════════════════
+const SUPABASE_URL = 'https://nbotdfkeiwqwgbesgkve.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ib3RkZmtlaXdxd2diZXNna3ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NDYyMDksImV4cCI6MjA5NjEyMjIwOX0.GmobP5xGzZtxUPwNrZIhMaevJdLz5Db2zEL_o6YtSqg';
+
+const EMAIL_CAT_LABEL = {orcamento:'Orçamento',reclamacao:'Reclamação',documentacao:'Documentação',fornecedor:'Fornecedor',outros:'Outros'};
+const EMAIL_CAT_COLOR = {orcamento:'#22c55e',reclamacao:'#ef4444',documentacao:'#3b82f6',fornecedor:'#f59e0b',outros:'#6b7280'};
+const EMAIL_PRI_COLOR = {alta:'#ef4444',media:'#f59e0b',baixa:'#6b7280'};
+
+let _emailsData = [];
+
+function emailsInit() {
+  const hoje = new Date();
+  const ini = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  if (!document.getElementById('email-dt-ini').value) {
+    document.getElementById('email-dt-ini').value = ini.toISOString().slice(0,10);
+    document.getElementById('email-dt-fim').value = hoje.toISOString().slice(0,10);
+  }
+  emailsBuscar();
+}
+
+async function emailsBuscar() {
+  const tbody = document.getElementById('tbody-emails');
+  tbody.innerHTML = '<tr><td colspan="8" style="color:var(--muted);text-align:center;padding:32px">Carregando…</td></tr>';
+  document.getElementById('email-msg').textContent = '';
+
+  const dtIni = document.getElementById('email-dt-ini').value;
+  const dtFim = document.getElementById('email-dt-fim').value;
+  const cat   = document.getElementById('email-cat').value;
+  const status = document.getElementById('email-status').value;
+
+  let url = `${SUPABASE_URL}/rest/v1/emails_comercial?select=*&order=data_recebimento.desc`;
+  if (dtIni) url += `&data_recebimento=gte.${dtIni}T00:00:00`;
+  if (dtFim) url += `&data_recebimento=lte.${dtFim}T23:59:59`;
+  if (cat)   url += `&categoria=eq.${cat}`;
+  if (status !== '') url += `&respondido=eq.${status}`;
+
+  try {
+    const res = await fetch(url, {
+      headers: {'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`}
+    });
+    if (!res.ok) throw new Error(await res.text());
+    _emailsData = await res.json();
+    emailsRenderKpis(_emailsData);
+    emailsRenderTabela(_emailsData);
+    document.getElementById('email-count').textContent = `${_emailsData.length} e-mail(s)`;
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="8" style="color:#ef4444;text-align:center;padding:32px">Erro ao carregar: ${e.message}</td></tr>`;
+    document.getElementById('email-count').textContent = '';
+  }
+}
+
+function emailsRenderKpis(data) {
+  const total = data.length;
+  const pendentes = data.filter(r=>!r.respondido).length;
+  const alta = data.filter(r=>r.prioridade==='alta'&&!r.respondido).length;
+  const cats = {};
+  data.forEach(r=>{cats[r.categoria]=(cats[r.categoria]||0)+1;});
+  const topCat = Object.entries(cats).sort((a,b)=>b[1]-a[1])[0];
+
+  const kpis = [
+    {label:'Total',valor:total,color:'var(--accent)'},
+    {label:'Pendentes',valor:pendentes,color:'#f59e0b'},
+    {label:'Alta Prioridade',valor:alta,color:'#ef4444'},
+    {label:'Mais frequente',valor:topCat?`${EMAIL_CAT_LABEL[topCat[0]]||topCat[0]} (${topCat[1]})`:'—',color:'#3b82f6'},
+  ];
+  document.getElementById('email-kpis').innerHTML = kpis.map(k=>`
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px">
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">${k.label}</div>
+      <div style="font-size:22px;font-weight:700;color:${k.color}">${k.valor}</div>
+    </div>`).join('');
+}
+
+function emailsRenderTabela(data) {
+  const tbody = document.getElementById('tbody-emails');
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="color:var(--muted);text-align:center;padding:32px">Nenhum e-mail encontrado.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(r => {
+    const dt = new Date(r.data_recebimento).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    const catColor = EMAIL_CAT_COLOR[r.categoria]||'#6b7280';
+    const priColor = EMAIL_PRI_COLOR[r.prioridade]||'#6b7280';
+    const catLabel = EMAIL_CAT_LABEL[r.categoria]||r.categoria;
+    const respondidoBadge = r.respondido
+      ? `<span style="background:#22c55e20;color:#22c55e;border:1px solid #22c55e40;border-radius:5px;padding:2px 8px;font-size:10px;font-weight:600">Respondido</span>`
+      : `<span style="background:#f59e0b20;color:#f59e0b;border:1px solid #f59e0b40;border-radius:5px;padding:2px 8px;font-size:10px;font-weight:600">Pendente</span>`;
+    const btnAcao = r.respondido
+      ? `<button onclick="emailsMarcarPendente('${r.id}')" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:10px;cursor:pointer">↩ Reabrir</button>`
+      : `<button onclick="emailsMarcarRespondido('${r.id}')" style="background:#22c55e20;border:1px solid #22c55e40;color:#22c55e;border-radius:6px;padding:4px 10px;font-size:10px;cursor:pointer;font-weight:600">✓ Respondido</button>`;
+    return `<tr>
+      <td style="white-space:nowrap;color:var(--muted);font-size:11px">${dt}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.remetente}">${r.remetente||'—'}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.assunto||''}">${r.assunto||'—'}</td>
+      <td><span style="background:${catColor}20;color:${catColor};border:1px solid ${catColor}40;border-radius:5px;padding:2px 8px;font-size:10px;font-weight:600;white-space:nowrap">${catLabel}</span></td>
+      <td><span style="background:${priColor}20;color:${priColor};border:1px solid ${priColor}40;border-radius:5px;padding:2px 8px;font-size:10px;font-weight:600;white-space:nowrap">${r.prioridade}</span></td>
+      <td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:11px" title="${r.resumo||''}">${r.resumo||'—'}</td>
+      <td>${respondidoBadge}</td>
+      <td>${btnAcao}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function emailsMarcarRespondido(id) {
+  await emailsPatch(id, {respondido: true, data_resposta: new Date().toISOString()});
+}
+
+async function emailsMarcarPendente(id) {
+  await emailsPatch(id, {respondido: false, data_resposta: null});
+}
+
+async function emailsPatch(id, body) {
+  const msg = document.getElementById('email-msg');
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/emails_comercial?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': SUPABASE_ANON,
+        'Authorization': `Bearer ${SUPABASE_ANON}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const idx = _emailsData.findIndex(r=>r.id===id);
+    if (idx>=0) Object.assign(_emailsData[idx], body);
+    emailsRenderTabela(_emailsData);
+    emailsRenderKpis(_emailsData);
+    msg.style.color='#22c55e';
+    msg.textContent='Atualizado com sucesso.';
+    setTimeout(()=>msg.textContent='', 3000);
+  } catch(e) {
+    msg.style.color='#ef4444';
+    msg.textContent=`Erro: ${e.message}`;
+  }
+}
+
+function emailsLimparFiltros() {
+  document.getElementById('email-dt-ini').value='';
+  document.getElementById('email-dt-fim').value='';
+  document.getElementById('email-cat').value='';
+  document.getElementById('email-status').value='';
+  emailsBuscar();
 }
 
 // ── NAV ACCORDION ──────────────────────────────────────────────
@@ -2826,8 +3203,8 @@ function calApply(key){
 }
 
 // ── FILTERS ────────────────────────────────────────────────────
-function applyFilters(){S.filters.mes=document.getElementById('f-mes').value;S.filters.cliente=document.getElementById('f-cliente').value;S.filters.pfpj=document.getElementById('f-pfpj').value;updateAll();}
-function clearFilters(){['f-mes','f-cliente','f-pfpj'].forEach(id=>document.getElementById(id).value='');S.filters={mes:'',cliente:'',pfpj:''};updateAll();}
+function applyFilters(){S.filters.mes=(document.getElementById('f-mes')||{}).value||'';S.filters.cliente=(document.getElementById('f-cliente')||{}).value||'';S.filters.pfpj=(document.getElementById('f-pfpj')||{}).value||'';updateAll();}
+function clearFilters(){['f-mes','f-cliente','f-pfpj'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});S.filters={mes:'',cliente:'',pfpj:''};updateAll();}
 function applyATTFilters(){
   S.attF.mes=document.getElementById('f-mes-att').value;
   S.attF.cli=document.getElementById('f-cli-att').value;
@@ -3001,24 +3378,42 @@ function updateDestFreteiroOptions(){
 
 function updateFilterOptions(){
   const all=[...S.raw.att,...S.raw.locacao,...S.raw.agregados,...S.raw.destinacao];
-  const meses=[...new Set(all.filter(r=>r.data).map(r=>r.data.getFullYear()+'-'+String(r.data.getMonth()+1).padStart(2,'0')))].sort();
+  // Sort months newest-first
+  const sortDesc=arr=>[...arr].sort().reverse();
+  // Pick current or previous month that exists in the list
+  function _bestMonth(list){
+    if(!list.length)return'';
+    const now=new Date();
+    const cur=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+    const prev=(()=>{const d=new Date(now.getFullYear(),now.getMonth()-1,1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');})();
+    if(list.includes(cur))return cur;
+    if(list.includes(prev))return prev;
+    return list[0];
+  }
+  // Set options; if no current value, auto-select best month and update state
+  const setMesOpts=(id,opts,stateObj,stateKey)=>{
+    const el=document.getElementById(id);if(!el)return;
+    const cur=el.value;
+    el.innerHTML='<option value="">Todos</option>'+opts.map(o=>`<option value="${o}"${o===cur?' selected':''}>${o}</option>`).join('');
+    if(!el.value&&opts.length){const best=_bestMonth(opts);el.value=best;if(stateObj)stateObj[stateKey]=best;}
+  };
   const setOpts=(id,opts)=>{const el=document.getElementById(id);if(!el)return;const cur=el.value;el.innerHTML='<option value="">Todos</option>'+opts.map(o=>`<option value="${o}"${o===cur?' selected':''}>${o}</option>`).join('');};
-  setOpts('f-mes',meses);
-  setOpts('f-mes-att',[...new Set(S.raw.att.filter(r=>r.data).map(r=>r.data.getFullYear()+'-'+String(r.data.getMonth()+1).padStart(2,'0')))].sort());
+  const meses=sortDesc([...new Set(all.filter(r=>r.data).map(r=>r.data.getFullYear()+'-'+String(r.data.getMonth()+1).padStart(2,'0')))]);
+  setMesOpts('f-mes',meses,S.filters,'mes');
+  setMesOpts('f-mes-att',sortDesc([...new Set(S.raw.att.filter(r=>r.data).map(r=>r.data.getFullYear()+'-'+String(r.data.getMonth()+1).padStart(2,'0')))]),S.attF,'mes');
   const clis=[...new Set(all.map(r=>r.cliente).filter(Boolean))].sort();
   setOpts('f-cliente',clis);
   setOpts('f-cli-att',[...new Set(S.raw.att.map(r=>r.cliente).filter(Boolean))].sort());
   setOpts('f-cli-loc',[...new Set(S.raw.locacao.map(r=>r.cliente).filter(Boolean))].sort());
-  setOpts('f-mes-loc',[...new Set(S.raw.locacao.filter(r=>r.data).map(r=>r.data.getFullYear()+'-'+String(r.data.getMonth()+1).padStart(2,'0')))].sort());
-  // AGR filters
-  setOpts('f-mes-agr',[...new Set(S.raw.agregados.filter(r=>r.data).map(r=>r.data.getFullYear()+'-'+String(r.data.getMonth()+1).padStart(2,'0')))].sort());
+  setMesOpts('f-mes-loc',sortDesc([...new Set(S.raw.locacao.filter(r=>r.data).map(r=>r.data.getFullYear()+'-'+String(r.data.getMonth()+1).padStart(2,'0')))]),S.locF,'mes');
+  setMesOpts('f-mes-agr',sortDesc([...new Set(S.raw.agregados.filter(r=>r.data).map(r=>r.data.getFullYear()+'-'+String(r.data.getMonth()+1).padStart(2,'0')))]),S.agrF,'mes');
   setOpts('f-cli-agr',[...new Set(S.raw.agregados.map(r=>r.cliente).filter(Boolean))].sort());
   setOpts('f-prod-agr',[...new Set(S.raw.agregados.map(r=>r.produto).filter(Boolean))].sort());
-  setOpts('f-mes-dest',[...new Set(S.raw.destinacao.filter(r=>r.data).map(r=>r.data.getFullYear()+'-'+String(r.data.getMonth()+1).padStart(2,'0')))].sort());
+  setMesOpts('f-mes-dest',sortDesc([...new Set(S.raw.destinacao.filter(r=>r.data).map(r=>r.data.getFullYear()+'-'+String(r.data.getMonth()+1).padStart(2,'0')))]),S.destF,'mes');
   updateDestResiduoOptions();
   updateDestFreteiroOptions();
   setOpts('f-veic-dest',[...new Set(S.raw.destinacao.map(r=>r.veiculo).filter(Boolean))].sort());
-  setOpts('f-mes-cons',meses);
+  setMesOpts('f-mes-cons',meses,S.consF,'mes');
 }
 
 // ── CHART ──────────────────────────────────────────────────────
@@ -3486,11 +3881,15 @@ function updateOverview(){
   const tkAtt=tCac>0?fAtt/tCac:0,tkLoc=tLoc>0?fLoc/tLoc:0;
   const total=S.raw.att.length+S.raw.locacao.length+S.raw.agregados.length+S.raw.destinacao.length;
   document.getElementById('alerts-ov').innerHTML=!total?'<div class="alert alert-info">'+ic('folder-open',13)+' Nenhuma planilha carregada. Acesse <b>Fontes de Dados</b> para importar.</div>':'';
+  // Row 1: faturamento (total + por fonte)
+  // Row 2: quantidades de caçamba + tickets
   document.getElementById('kpi-ov').innerHTML=[
     kpi('Faturamento Total',fM(fatTotal),'ATT + Locação + Agregados','▲ Consolidado','kb-green','green'),
+    kpi('Faturamento ATT',fM(fAtt),fN(tCac,0)+' caçambas','ATT','kb-blue','blue'),
+    kpi('Faturamento Locação',fM(fLoc),fN(tLoc,0)+' caçambas','Locação','kb-purple','purple'),
+    kpi('Faturamento Agregados',fM(fAgr),fN(tAgrM3,1)+' m³','Venda','kb-orange','orange'),
     kpi('Caçambas ATT',fN(tCac,0),fN(tM3,1)+' m³','ATT','kb-blue','blue'),
     kpi('Caçambas Locadas',fN(tLoc,0),fM(fLoc),'Locação','kb-purple','purple'),
-    kpi('Agregados Vendidos',fN(tAgrM3,1)+' m³',fM(fAgr),'Venda','kb-orange','orange'),
     kpi('Ticket Médio ATT',tkAtt>0?fM(tkAtt):'—','por caçamba','','kb-blue','blue'),
     kpi('Ticket Médio Locação',tkLoc>0?fM(tkLoc):'—','por caçamba','','kb-blue','blue'),
   ].join('');
@@ -3499,9 +3898,105 @@ function updateOverview(){
   const prLoc=calcularProjecaoLocacao(loc,r=>r.qtdCacamba).projecao;
   const prAgrM3=calcularProjecaoAgregados(agr,r=>r.volume).projecao;
   document.getElementById('meta-ov').innerHTML=mbar('Caçambas ATT',tCac,gM('att-cacamba'),'cac',false,prCac)+mbar('m³ ATT',tM3,gM('att-m3'),'m³',false,prM3)+mbar('Caçambas Locação',tLoc,gM('loc-cacamba'),'cac',false,prLoc)+mbar('m³ Agregados',tAgrM3,gM('agr-m3'),'m³',false,prAgrM3);
-  mkBar('cDiario','ovDiario',att,'volume','#3B82F6','m³/dia');
+  mkFaturamentoAnual('cFatAnual','ovFatAnual');
   const ctx=document.getElementById('cOp');if(ctx){if(S.charts.op)S.charts.op.destroy();const _opTotal=fAtt+fLoc+fAgr;S.charts.op=new Chart(ctx,{type:'doughnut',data:{labels:['ATT','Locação','Agregados'],datasets:[{data:[fAtt,fLoc,fAgr],backgroundColor:['#3B82F6','#10B981','#F59E0B'],borderWidth:0,hoverOffset:8,spacing:2}]},options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{position:'bottom',labels:{color:'#8a93ab',font:{size:11},padding:12,usePointStyle:true,pointStyle:'circle'}},tooltip:{backgroundColor:'#1a1f2e',titleColor:'#eef0ff',bodyColor:'#aab2cc',borderColor:'#2e3850',borderWidth:1,cornerRadius:10,padding:10,displayColors:false}}},plugins:[{id:'opLbl',afterDraw(chart){const{ctx:c,chartArea:{width,height,left,top}}=chart;const cx=left+width/2,cy=top+height/2-10;c.save();c.textAlign='center';c.textBaseline='middle';c.font='700 14px Inter,sans-serif';c.fillStyle='#eef0ff';c.fillText(fM(_opTotal),cx,cy);c.font='500 10px Inter,sans-serif';c.fillStyle='#8a93ab';c.fillText('faturamento',cx,cy+16);c.restore();}}]});}
   document.getElementById('rk-cli-ov').innerHTML=rankTbl(groupBy(att,'cliente','volume'),'Cliente','m³');
+}
+
+function mkFaturamentoAnual(id,key){
+  const ctx=getCanvas(id);if(!ctx)return;
+  if(S.charts[key]){try{S.charts[key].destroy();}catch(e){}S.charts[key]=null;}
+  const allRows=[...S.raw.att,...S.raw.locacao,...S.raw.agregados].filter(r=>r.data instanceof Date&&!isNaN(r.data));
+  if(!allRows.length){ctx.parentElement.innerHTML=`<canvas id="${id}" style="display:none"></canvas><div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:12px">Sem dados carregados</div>`;return;}
+  const maxTs=Math.max(...allRows.map(r=>r.data.getTime()));
+  const ultimaData=new Date(maxTs);
+  const ano=ultimaData.getFullYear();
+  const hoje=new Date();
+  const anoAtual=hoje.getFullYear();
+  const mesAtualIdx=ano===anoAtual?hoje.getMonth():11;
+  const badge=document.getElementById('badge-fat-anual');if(badge)badge.textContent=String(ano);
+  const nomeMeses=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  // Faturamento real por mês no ano
+  const fatMes=new Array(12).fill(0);
+  allRows.filter(r=>r.data.getFullYear()===ano).forEach(r=>{fatMes[r.data.getMonth()]+=(r.valor||0);});
+  // Projeção para o mês atual (somente se ano corrente e mês incompleto)
+  let projExtra=0;
+  if(ano===anoAtual){
+    const rowsMesAtual=[...S.raw.att,...S.raw.locacao,...S.raw.agregados].filter(r=>r.data instanceof Date&&!isNaN(r.data)&&r.data.getFullYear()===ano&&r.data.getMonth()===mesAtualIdx);
+    const projObj=calcularProjecaoSegmentada(rowsMesAtual,r=>r.valor||0);
+    projExtra=Math.max(0,projObj.projecao-projObj.realizado);
+  }
+  // Dados: meses futuros = null, mês atual = real + projeção, passados = real
+  const dataReal=nomeMeses.map((_,i)=>{
+    if(ano===anoAtual&&i>mesAtualIdx)return null;
+    return fatMes[i]||null;
+  });
+  const dataProj=nomeMeses.map((_,i)=>(i===mesAtualIdx&&ano===anoAtual&&projExtra>0)?projExtra:null);
+  const opts=JSON.parse(JSON.stringify(CHART_OPT));
+  opts.plugins.tooltip={...opts.plugins.tooltip,callbacks:{label:c=>fM(c.raw||0),title:ts=>nomeMeses[ts[0].dataIndex]+'/'+ano}};
+  opts.scales.y={...opts.scales.y,stacked:true,ticks:{...opts.scales.y.ticks,callback:v=>v>=1e6?'R$'+(v/1e6).toFixed(1)+'M':v>=1e3?'R$'+(v/1e3).toFixed(0)+'k':'R$'+v}};
+  opts.scales.x={...opts.scales.x,stacked:true};
+  const _fatAnualPlugin={id:'fatAnualLbl',afterDraw(chart){
+    const{ctx:c,data:d}=chart;
+    c.save();c.font='700 10px Inter,sans-serif';c.fillStyle='rgba(238,240,255,.9)';c.textAlign='center';c.textBaseline='bottom';
+    d.labels.forEach((_,i)=>{
+      const real=d.datasets[0].data[i]||0;const proj=(d.datasets[1]&&d.datasets[1].data[i])||0;const total=real+proj;if(!total)return;
+      let topY=null;
+      d.datasets.forEach((ds,di)=>{if(!(ds.data[i]>0))return;const bar=chart.getDatasetMeta(di).data[i];if(bar)topY=topY===null?bar.y:Math.min(topY,bar.y);});
+      if(topY!==null){const bx=chart.getDatasetMeta(0).data[i].x;c.fillText(total>=1e6?'R$'+fN(total/1e6,1)+'M':total>=1e3?'R$'+fN(total/1e3,0)+'k':fM(total),bx,topY-4);}
+    });
+    c.restore();
+  }};
+  S.charts[key]=new Chart(ctx,{type:'bar',data:{labels:nomeMeses,datasets:[
+    {label:'Faturamento Real',data:dataReal,backgroundColor:'#3B82F633',borderColor:'#3B82F6',borderWidth:1.5,borderRadius:6,borderSkipped:false,maxBarThickness:36,stack:'fat'},
+    {label:'Projeção',data:dataProj,backgroundColor:'#F59E0B22',borderColor:'#F59E0B',borderWidth:1.5,borderRadius:6,borderSkipped:false,maxBarThickness:36,stack:'fat'}
+  ]},options:{...opts,plugins:{...opts.plugins,legend:{display:projExtra>0,labels:{color:'#8a93ab',font:{size:11},boxWidth:10,padding:14,usePointStyle:true,pointStyle:'circle'}}}},plugins:[_fatAnualPlugin]});
+}
+
+// ── Gráfico mensal com projeção para o mês corrente (reutilizável) ──
+function mkMensalComProj(id,key,allRows,vKey,color,label,isMon){
+  const ctx=getCanvas(id);if(!ctx)return;
+  if(S.charts[key]){try{S.charts[key].destroy();}catch(e){}S.charts[key]=null;}
+  const rows=allRows.filter(r=>r.data instanceof Date&&!isNaN(r.data));
+  if(!rows.length){ctx.parentElement.innerHTML=`<canvas id="${id}" style="display:none"></canvas><div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:12px">Sem dados</div>`;return;}
+  const byMonth={};
+  rows.forEach(r=>{const k=r.data.getFullYear()+'-'+String(r.data.getMonth()+1).padStart(2,'0');byMonth[k]=(byMonth[k]||0)+(parseFloat(r[vKey])||0);});
+  const months=Object.keys(byMonth).sort();
+  const mLabels=months.map(k=>{const[y,m]=k.split('-');return MNAMES[Number(m)-1].slice(0,3)+'/'+y.slice(2);});
+  const dataReal=months.map(k=>byMonth[k]);
+  let projExtra=0,projIdx=-1;
+  const hoje=new Date();
+  const mesHoje=hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0');
+  const lastMonth=months[months.length-1];
+  if(lastMonth===mesHoje){
+    projIdx=months.length-1;
+    const rowsMes=rows.filter(r=>r.data.getFullYear()+'-'+String(r.data.getMonth()+1).padStart(2,'0')===lastMonth);
+    const projObj=calcularProjecaoSegmentada(rowsMes,r=>parseFloat(r[vKey])||0);
+    projExtra=Math.max(0,projObj.projecao-projObj.realizado);
+  }
+  const dataProj=months.map((_,i)=>i===projIdx&&projExtra>0?projExtra:null);
+  const opts=JSON.parse(JSON.stringify(CHART_OPT));
+  if(isMon){opts.scales.y={...opts.scales.y,ticks:{...opts.scales.y.ticks,callback:v=>v>=1e6?'R$'+fN(v/1e6,1)+'M':v>=1e3?'R$'+fN(v/1e3,0)+'k':'R$'+v}};}
+  opts.scales.x={...opts.scales.x,stacked:true};opts.scales.y={...opts.scales.y||{},stacked:true};
+  const fmtLbl=isMon?v=>v>=1e6?'R$'+fN(v/1e6,1)+'M':v>=1e3?'R$'+fN(v/1e3,0)+'k':fM(v):v=>fN(v,0);
+  S.charts[key]=new Chart(ctx,{
+    type:'bar',
+    data:{labels:mLabels,datasets:[
+      {label,data:dataReal,backgroundColor:color+'2e',borderColor:color,borderWidth:1.5,borderRadius:6,borderSkipped:false,maxBarThickness:36,stack:'m'},
+      {label:'Projeção',data:dataProj,backgroundColor:'#F59E0B22',borderColor:'#F59E0B',borderWidth:1.5,borderRadius:6,borderSkipped:false,maxBarThickness:36,stack:'m'}
+    ]},
+    options:{...opts,plugins:{...opts.plugins,legend:{display:projExtra>0,labels:{color:'#8a93ab',font:{size:11},boxWidth:10,padding:14,usePointStyle:true,pointStyle:'circle'}}}},
+    plugins:[{id:'mensalLbl_'+key,afterDraw(chart){
+      const{ctx:c,data:d}=chart;
+      c.save();c.font='700 10px Inter,sans-serif';c.fillStyle='rgba(238,240,255,.85)';c.textAlign='center';c.textBaseline='bottom';
+      mLabels.forEach((_,i)=>{
+        const real=dataReal[i]||0;const proj=dataProj[i]||0;const total=real+proj;if(!total)return;
+        let topY=null;d.datasets.forEach((ds,di)=>{if(!(ds.data[i]>0))return;const bar=chart.getDatasetMeta(di).data[i];if(bar)topY=topY===null?bar.y:Math.min(topY,bar.y);});
+        if(topY!==null)c.fillText(fmtLbl(total),chart.getDatasetMeta(0).data[i].x,topY-3);
+      });
+      c.restore();
+    }}]
+  });
 }
 
 // ── ATT ───────────────────────────────────────────────────────
@@ -3726,6 +4221,11 @@ function updateATT(){
 
   // ── Top 10 clientes ───────────────────────────────────────
   buildTop10(rows,'att');
+
+  // ── Evolução mensal ────────────────────────────────────────
+  mkMensalComProj('cAttMesCac','attMesCac',S.raw.att,'qtdCacamba','#3B82F6','Caçambas',false);
+  mkMensalComProj('cAttMesM3','attMesM3',S.raw.att,'volume','#10B981','m³',false);
+  mkMensalComProj('cAttMesFat','attMesFat',S.raw.att,'valor','#8B5CF6','Faturamento',true);
 }
 
 // Gráfico de barras com labels no topo das colunas
@@ -3968,6 +4468,11 @@ function updateLocacao(){
     mbar('Caçambas Locadas',tCac,gM('loc-cacamba'),'cac',false,prCacLoc)+
     mbar('Faturamento',tFat,gM('loc-fat'),'',true,prFatLoc)+
     mbar('Ticket Médio',tk,gM('loc-ticket'),'',true,projTkLoc);
+
+  // ── Evolução mensal ────────────────────────────────────────
+  const locFatRows=S.raw.locacao.filter(r=>r.tipoServico==='Coleta'||r.tipoServico==='Retirada');
+  mkMensalComProj('cLocMesCac','locMesCac',S.raw.locacao,'qtdCacamba','#10B981','Caçambas',false);
+  mkMensalComProj('cLocMesFat','locMesFat',locFatRows,'valor','#3B82F6','Faturamento',true);
 }
 
 // Gráfico de barras diário para locação com labels no topo
@@ -4197,16 +4702,39 @@ function updateConsolidado(){
   const pctLocSerie=months.map(k=>{const t=byMonth[k].loc.m3+byMonth[k].att.m3;return t>0?byMonth[k].loc.m3/t*100:0;});
   const pctAttSerie=months.map(k=>{const t=byMonth[k].loc.m3+byMonth[k].att.m3;return t>0?byMonth[k].att.m3/t*100:0;});
 
+  // Projeção para o mês atual no consolidado
+  const hoje=new Date();
+  const mesHojeKey=hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0');
+  const lastConsMonth=months[months.length-1]||'';
+  let consProjCac=0,consProjM3=0,consProjIdx=-1;
+  if(lastConsMonth===mesHojeKey){
+    consProjIdx=months.length-1;
+    const rowsConsAtt=attAll.filter(r=>r.data instanceof Date&&!isNaN(r.data)&&r.data.getFullYear()+'-'+String(r.data.getMonth()+1).padStart(2,'0')===lastConsMonth);
+    const rowsConsLoc=locAll.filter(r=>r.data instanceof Date&&!isNaN(r.data)&&r.data.getFullYear()+'-'+String(r.data.getMonth()+1).padStart(2,'0')===lastConsMonth);
+    const pAttCac=calcularProjecaoSegmentada(rowsConsAtt,r=>r.qtdCacamba||1);
+    const pLocCac=calcularProjecaoLocacao(rowsConsLoc,r=>1);
+    const pAttM3=calcularProjecaoSegmentada(rowsConsAtt,r=>r.volume||0);
+    const pLocM3=calcularProjecaoLocacao(rowsConsLoc,r=>r.volume||0);
+    consProjCac=Math.max(0,(pAttCac.projecao-pAttCac.realizado)+(pLocCac.projecao-pLocCac.realizado));
+    consProjM3=Math.max(0,(pAttM3.projecao-pAttM3.realizado)+(pLocM3.projecao-pLocM3.realizado));
+  }
+  const cacProjArr=months.map((_,i)=>i===consProjIdx&&consProjCac>0?consProjCac:null);
+  const m3ProjArr=months.map((_,i)=>i===consProjIdx&&consProjM3>0?consProjM3:null);
+
   const ctxMesCac=getCanvas('cConsMesCac');
   if(ctxMesCac){
     if(S.charts.consMesCac){try{S.charts.consMesCac.destroy();}catch(e){}S.charts.consMesCac=null;}
     if(months.length){
       const opts=JSON.parse(JSON.stringify(CHART_OPT));
+      opts.scales.x={...opts.scales.x,stacked:true};opts.scales.y={...opts.scales.y,stacked:true};
       S.charts.consMesCac=new Chart(ctxMesCac,{
         type:'bar',
-        data:{labels:mLabels,datasets:[{label:'Caçambas',data:cacCac,backgroundColor:'#3B82F62e',borderColor:'#3B82F6',borderWidth:1.5,borderRadius:6,borderSkipped:false,maxBarThickness:36}]},
-        options:{...opts,plugins:{...opts.plugins,legend:{display:false}}},
-        plugins:[{id:'mesCacLbl',afterDatasetsDraw(chart){const{ctx:c}=chart;c.save();c.font='700 10px Inter,sans-serif';c.fillStyle='rgba(238,240,255,0.85)';c.textAlign='center';c.textBaseline='bottom';chart.data.datasets[0].data.forEach((v,i)=>{if(!v)return;const bar=chart.getDatasetMeta(0).data[i];if(bar)c.fillText(fN(v,0),bar.x,bar.y-3);});c.restore();}}]
+        data:{labels:mLabels,datasets:[
+          {label:'Caçambas',data:cacCac,backgroundColor:'#3B82F62e',borderColor:'#3B82F6',borderWidth:1.5,borderRadius:6,borderSkipped:false,maxBarThickness:36,stack:'c'},
+          {label:'Projeção',data:cacProjArr,backgroundColor:'#F59E0B22',borderColor:'#F59E0B',borderWidth:1.5,borderRadius:6,borderSkipped:false,maxBarThickness:36,stack:'c'}
+        ]},
+        options:{...opts,plugins:{...opts.plugins,legend:{display:consProjCac>0,labels:{color:'#8a93ab',font:{size:11},boxWidth:10,padding:14,usePointStyle:true,pointStyle:'circle'}}}},
+        plugins:[{id:'mesCacLbl',afterDraw(chart){const{ctx:c,data:d}=chart;c.save();c.font='700 10px Inter,sans-serif';c.fillStyle='rgba(238,240,255,0.85)';c.textAlign='center';c.textBaseline='bottom';mLabels.forEach((_,i)=>{const real=cacCac[i]||0;const proj=cacProjArr[i]||0;const tot=real+proj;if(!tot)return;let ty=null;d.datasets.forEach((ds,di)=>{if(!(ds.data[i]>0))return;const b=chart.getDatasetMeta(di).data[i];if(b)ty=ty===null?b.y:Math.min(ty,b.y);});if(ty!==null)c.fillText(fN(tot,0),chart.getDatasetMeta(0).data[i].x,ty-3);});c.restore();}}]
       });
     }else{ctxMesCac.parentElement.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:12px">Sem dados com datas válidas</div>';}
   }
@@ -4216,11 +4744,15 @@ function updateConsolidado(){
     if(S.charts.consMesM3){try{S.charts.consMesM3.destroy();}catch(e){}S.charts.consMesM3=null;}
     if(months.length){
       const opts=JSON.parse(JSON.stringify(CHART_OPT));
+      opts.scales.x={...opts.scales.x,stacked:true};opts.scales.y={...opts.scales.y,stacked:true};
       S.charts.consMesM3=new Chart(ctxMesM3,{
         type:'bar',
-        data:{labels:mLabels,datasets:[{label:'m³',data:m3Total,backgroundColor:'#10B9812e',borderColor:'#10B981',borderWidth:1.5,borderRadius:6,borderSkipped:false,maxBarThickness:36}]},
-        options:{...opts,plugins:{...opts.plugins,legend:{display:false}}},
-        plugins:[{id:'mesM3Lbl',afterDatasetsDraw(chart){const{ctx:c}=chart;c.save();c.font='700 10px Inter,sans-serif';c.fillStyle='rgba(238,240,255,0.85)';c.textAlign='center';c.textBaseline='bottom';chart.data.datasets[0].data.forEach((v,i)=>{if(!v)return;const bar=chart.getDatasetMeta(0).data[i];if(bar)c.fillText(fN(v,0),bar.x,bar.y-3);});c.restore();}}]
+        data:{labels:mLabels,datasets:[
+          {label:'m³',data:m3Total,backgroundColor:'#10B9812e',borderColor:'#10B981',borderWidth:1.5,borderRadius:6,borderSkipped:false,maxBarThickness:36,stack:'m'},
+          {label:'Projeção',data:m3ProjArr,backgroundColor:'#F59E0B22',borderColor:'#F59E0B',borderWidth:1.5,borderRadius:6,borderSkipped:false,maxBarThickness:36,stack:'m'}
+        ]},
+        options:{...opts,plugins:{...opts.plugins,legend:{display:consProjM3>0,labels:{color:'#8a93ab',font:{size:11},boxWidth:10,padding:14,usePointStyle:true,pointStyle:'circle'}}}},
+        plugins:[{id:'mesM3Lbl',afterDraw(chart){const{ctx:c,data:d}=chart;c.save();c.font='700 10px Inter,sans-serif';c.fillStyle='rgba(238,240,255,0.85)';c.textAlign='center';c.textBaseline='bottom';mLabels.forEach((_,i)=>{const real=m3Total[i]||0;const proj=m3ProjArr[i]||0;const tot=real+proj;if(!tot)return;let ty=null;d.datasets.forEach((ds,di)=>{if(!(ds.data[i]>0))return;const b=chart.getDatasetMeta(di).data[i];if(b)ty=ty===null?b.y:Math.min(ty,b.y);});if(ty!==null)c.fillText(fN(tot,0),chart.getDatasetMeta(0).data[i].x,ty-3);});c.restore();}}]
       });
     }else{ctxMesM3.parentElement.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:12px">Sem dados com datas válidas</div>';}
   }
@@ -4668,6 +5200,10 @@ function updateAgregados(){
   document.getElementById('meta-agr').innerHTML=
     mbar('m³ Vendidos',tM3,gM('agr-m3'),'m³',false,prM3Agr)+
     mbar('Faturamento',tFat,gM('agr-fat'),'R$',false,prFatAgr);
+
+  // ── Evolução mensal ────────────────────────────────────────
+  mkMensalComProj('cAgrMesM3','agrMesM3',S.raw.agregados,'volume','#F59E0B','m³',false);
+  mkMensalComProj('cAgrMesFat','agrMesFat',S.raw.agregados,'valor','#10B981','Faturamento',true);
 }
 
 function buildTop10Agr(rows){
@@ -4866,6 +5402,10 @@ function updateDestinacao(){
       <td style="text-align:right">${fM(r.valor)}</td>
     </tr>`).join('')}</tbody></table>`:
     `<div class="empty"><div class="empty-icon">${ic('recycle',32)}</div><p>Carregue a planilha de lançamentos de frete para ver a destinação.</p></div>`;
+
+  // ── Evolução mensal ────────────────────────────────────────
+  mkMensalComProj('cDestMesVol','destMesVol',S.raw.destinacao,'volume','#3B82F6','m³',false);
+  mkMensalComProj('cDestMesFat','destMesFat',S.raw.destinacao,'valor','#F59E0B','Custo R$',true);
 }
 
 // ── INCONSISTÊNCIAS ───────────────────────────────────────────
@@ -6098,12 +6638,7 @@ async function destMergeSupabase() {
 
     if (!Array.isArray(vales) || !vales.length) { applyDestFilters(); return; }
 
-    // Pedidos já presentes na planilha (não sobrescrever)
-    const pedidosPlanilha = new Set(S.raw.destinacao.map(r => r.pedido).filter(Boolean));
-
-    const mapeados = vales
-      .filter(v => !pedidosPlanilha.has(v.os_numero))
-      .map(v => ({
+    const mapeados = vales.map(v => ({
         data:       v.data_saida ? (p => new Date(+p[0], +p[1]-1, +p[2]))(v.data_saida.split('-')) : null,
         pedido:     v.os_numero || '',
         freteiro:   v.freteiros?.nome || '',
