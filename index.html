@@ -4888,6 +4888,40 @@ function loadFile(e,type){
         saveStorage();updateAll();return;
       }
       if(type==='metas'){data.forEach(r=>{const vals=Object.values(r);if(vals[0]&&vals[1]){const el2=document.getElementById('meta-'+clean(String(vals[0])));if(el2)el2.value=parseNum(vals[1]);}});el.innerHTML=ic('check-circle-2',12)+' '+file.name;el.className='ds-file-info';updateAll();return;}
+
+      // ── VALIDAÇÃO DE TIPO DE CSV ────────────────────────────────────
+      // Detecta tipo pelo conteúdo (colunas idênticas no TCI — só dados diferem)
+      if(type==='att'||type==='locacao'){
+        const amostra=data.slice(0,Math.min(10,data.length));
+        // Assinatura ATT: Tipo="Coleta" + Motorista preenchido + Placa com padrão de placa
+        const temPlacaVeiculo=amostra.some(r=>{
+          const p=clean(String(r['Placa']||r['placa']||''));
+          return p.length>=5&&/[A-Z]{2,3}[-\s]?[0-9A-Z]/i.test(p)&&p!=='TESTE';
+        });
+        const temMotoristaNome=amostra.some(r=>clean(String(r['Motorista']||r['motorista']||'')).split(' ').length>=2);
+        const tiposCSV=[...new Set(amostra.map(r=>clean(String(r['Tipo']||r['tipo']||'')).toLowerCase()).filter(Boolean))];
+        const temColeta=tiposCSV.some(t=>t.includes('coleta'));
+        const temLocacao=tiposCSV.some(t=>t.includes('loca')||t.includes('alug'));
+
+        let tipoDetectado=null;
+        if(temColeta&&temMotoristaNome&&temPlacaVeiculo) tipoDetectado='att';
+        else if(temLocacao) tipoDetectado='locacao';
+
+        if(tipoDetectado&&tipoDetectado!==type){
+          const nomes={att:'ATT — Atendimento (Coleta)',locacao:'Locação'};
+          const aviso=`⚠️ ATENÇÃO: Arquivo incompatível!\n\nO arquivo "${file.name}" parece ser um CSV de ${nomes[tipoDetectado]||tipoDetectado}.\nVocê está enviando para a zona de ${nomes[type]||type}.\n\nSe continuar, os dados serão processados incorretamente.\n\nCancelar o envio?`;
+          if(confirm(aviso)){
+            el.innerHTML=ic('x-circle',12)+' <b style="color:#EF4444">Upload cancelado</b> — arquivo de '+( nomes[tipoDetectado]||tipoDetectado)+' enviado para zona '+( nomes[type]||type);
+            el.className='ds-file-info';
+            e.target.value='';
+            return;
+          }
+          // Usuário escolheu continuar mesmo assim — registra aviso
+          el.innerHTML=ic('alert-triangle',12)+' <b style="color:#F59E0B">Aviso: tipo diferente do esperado</b> — processando mesmo assim…';
+        }
+      }
+      // ───────────────────────────────────────────────────────────────
+
       processData(data,type,file.name);
     }catch(err){el.innerHTML=ic('x-circle',12)+' Erro ao ler: '+err.message;el.className='ds-file-info';console.error('[Multilix loadFile]',err);}
   };
