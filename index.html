@@ -717,6 +717,9 @@ let _agEditIdx = -1;
 function showPropAgregado(editIdx) {
   _agEditIdx = (editIdx !== undefined) ? editIdx : -1;
   document.getElementById('prop-agreg-overlay').style.display = 'block';
+  // Atualiza label do imposto com % configurado
+  const _ioEl = document.getElementById('ag-imposto-opt-com');
+  if(_ioEl) _ioEl.textContent = 'Com imposto ('+(_agCad?.imposto||3)+'%)';
   const pgEl = document.getElementById('ag-pgto');
   if(pgEl) pgEl.innerHTML = '<option value="">Selecione...</option>' + _propCad.pgto.map(v=>'<option>'+v+'</option>').join('');
   const rEl = document.getElementById('ag-resp');
@@ -782,11 +785,12 @@ function _collectAgData() {
   const entregaTipo=_g('ag-entrega');
   const imposto=_g('ag-imposto');
   const fretePorM3=(entregaTipo==='entrega'&&frete>0&&carga>0)?frete/carga:0;
+  const impostoPct=_agCad?.imposto||3;
   const prodsPriced=prods.map(p=>{
     if(p.precoFinalField>0) return{...p,precoFinal:p.precoFinalField};
     const base=p.preco||35;
     const comFrete=base+fretePorM3;
-    const final=imposto==='com'?comFrete*1.03:comFrete;
+    const final=imposto==='com'?comFrete*(1+impostoPct/100):comFrete;
     return{...p,precoFinal:Math.round(final*100)/100};
   });
   const pgto=_g('ag-pgto-custom')||_g('ag-pgto')||'A combinar';
@@ -795,7 +799,7 @@ function _collectAgData() {
   return{
     tipo:'agregado',empresa:_g('ag-razao')||'Cliente',contato:_g('ag-contato'),
     tel:_g('ag-tel'),email:_g('ag-email'),endereco:_g('ag-endereco'),
-    entregaTipo,frete,carga,imposto,pgto,pgtoCustom:_g('ag-pgto-custom'),
+    entregaTipo,frete,carga,imposto,impostoPct,pgto,pgtoCustom:_g('ag-pgto-custom'),
     obs:_g('ag-obs'),responsavel:resp,produtos:prods,prodsPriced,
     data:_dataBR()
   };
@@ -818,7 +822,8 @@ function _calcAgPreview(forceAll) {
   document.querySelectorAll('.ag-prod-row').forEach(row=>{
     const base = parseFloat(row.querySelector('.ag-preco')?row.querySelector('.ag-preco').value:0) || 0;
     const comFrete = base + fretePorM3;
-    const final = imposto==='com' ? comFrete*1.03 : comFrete;
+    const _ipct = (_agCad?.imposto||3)/100;
+    const final = imposto==='com' ? comFrete*(1+_ipct) : comFrete;
     const el = row.querySelector('.ag-preco-final');
     if (!el) return;
     if (!forceAll && el.dataset.manual === '1') return; // não sobrescreve override
@@ -837,10 +842,12 @@ function _calcAgPreview(forceAll) {
   if (sumEl) {
     if (entregaTipo==='entrega' && frete>0 && carga>0) {
       const fpm = frete/carga;
-      sumEl.innerHTML = '📦 Frete/m³: <b>R$ '+fpm.toFixed(2)+'</b>'+(imposto==='com'?' &nbsp;|&nbsp; Imposto 3%: incluído':'&nbsp;|&nbsp; Imposto: não incluído');
+      const _ilab=(_agCad?.imposto||3)+'%';
+      sumEl.innerHTML = '📦 Frete/m³: <b>R$ '+fpm.toFixed(2)+'</b>'+(imposto==='com'?' &nbsp;|&nbsp; Imposto '+_ilab+': incluído':'&nbsp;|&nbsp; Imposto: não incluído');
       sumEl.style.display = 'block';
     } else if (entregaTipo==='retira') {
-      sumEl.innerHTML = '🏭 Modalidade: Retirada — frete não incluso'+(imposto==='com'?' &nbsp;|&nbsp; Imposto 3%: incluído':'');
+      const _ilab=(_agCad?.imposto||3)+'%';
+      sumEl.innerHTML = '🏭 Modalidade: Retirada — frete não incluso'+(imposto==='com'?' &nbsp;|&nbsp; Imposto '+_ilab+': incluído':'');
       sumEl.style.display = 'block';
     } else { sumEl.style.display = 'none'; }
   }
@@ -865,7 +872,7 @@ function gerarPDFAgregado(dataOverride) {
     const fretePorM3=(d.entregaTipo==='entrega'&&d.frete>0&&d.carga>0)?d.frete/d.carga:0;
     prodsPriced=d.produtos.map(p=>{
       const base=p.preco||35;const comFrete=base+fretePorM3;
-      const final=d.imposto==='com'?comFrete*1.03:comFrete;
+      const final=d.imposto==='com'?comFrete*(1+(d.impostoPct||3)/100):comFrete;
       return{...p,precoFinal:Math.round(final*100)/100};
     });
   }
@@ -910,9 +917,10 @@ function gerarPDFAgregado(dataOverride) {
 
   // Tabela
   ck(16+prodsPriced.length*10);
+  const _valHdr = d.imposto==='com' ? 'VALOR (c/ '+( d.impostoPct||3)+'% imp.)' : 'VALOR (s/ imposto)';
   doc.setFillColor(1,110,24);doc.rect(mg,y,tw,8,'F');
   doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(255,255,255);
-  doc.text('AGREGADO',mg+3,y+5.5);doc.text('UNIDADE',mg+80,y+5.5);doc.text('VALOR',mg+130,y+5.5);
+  doc.text('AGREGADO',mg+3,y+5.5);doc.text('UNIDADE',mg+80,y+5.5);doc.text(_valHdr,mg+120,y+5.5);
   y+=8;
 
   prodsPriced.forEach((p,i)=>{
@@ -3079,7 +3087,7 @@ body { font-size: 13.5px !important; }
             <input id="ag-cad-imposto" type="number" value="3" min="0" max="30" step="0.5" style="width:64px;background:#151922;border:1px solid #4ade8060;border-radius:8px;padding:6px 9px;color:#4ade80;font-size:13px;font-weight:700;outline:none;text-align:center"/>
             <span style="font-size:12px;color:var(--muted)">%</span>
           </div>
-          <p style="font-size:11px;color:var(--muted);margin-bottom:14px">O % de imposto é informativo — o cálculo usa o seletor "Com/Sem imposto" na proposta.</p>
+          <p style="font-size:11px;color:var(--muted);margin-bottom:14px">Este % é aplicado no Preço Final quando "Com imposto" for selecionado na proposta.</p>
           <div style="display:flex;justify-content:flex-end;gap:10px">
             <button onclick="resetAgConfig()" style="background:#EF444415;border:1px solid #EF444440;color:#EF4444;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:12px">Restaurar Padrão</button>
             <button onclick="saveAgConfig();closeAgConfig()" style="background:linear-gradient(135deg,#7c5c1e,#5c3d12);color:#fff;border:none;border-radius:9px;padding:9px 22px;cursor:pointer;font-weight:700;font-size:13px">💾 Salvar</button>
@@ -3137,7 +3145,7 @@ body { font-size: 13.5px !important; }
               <div class="fi"><label>Tamanho da Carga (m³)</label><input type="number" id="ag-carga" value="17" oninput="_calcAgPreview()"/></div>
             </div>
             <div class="fi"><label>Incluir impostos no preço?</label>
-              <select id="ag-imposto" onchange="_calcAgPreview()"><option value="com">Com imposto (3%)</option><option value="sem">Sem imposto</option></select>
+              <select id="ag-imposto" onchange="_calcAgPreview()"><option value="com" id="ag-imposto-opt-com">Com imposto (3%)</option><option value="sem">Sem imposto</option></select>
             </div>
             <div class="fi"><label>Condição de Pagamento</label>
               <select id="ag-pgto"><option value="">Selecione...</option></select>
