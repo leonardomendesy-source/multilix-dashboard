@@ -729,7 +729,8 @@ function showPropAgregado(editIdx) {
     document.getElementById('ag-imposto').value='com';
     // Reset products to 1 empty row
     const pc=document.getElementById('ag-produtos');
-    if(pc) pc.innerHTML='<div class="ag-prod-row" style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;margin-bottom:6px;align-items:end"><div class="fi"><label>Material 1</label><select class="ag-mat"><option value="">Selecione...</option><option>Areia Reciclada</option><option>Brita Reciclada</option><option>BGS Reciclada</option><option>Rachão Reciclado</option><option>Bica Corrida Reciclada</option><option>Solo Reciclado</option><option>Terra para Aterro</option><option>Pó de Pedra Reciclado</option></select></div><div class="fi"><label>Qtde (m³)</label><input type="number" class="ag-qtd" placeholder="0"/></div><div class="fi"><label>Preço/m³ (R$)</label><input type="number" class="ag-preco" placeholder="35" step="0.01"/></div><span></span></div>';
+    if(pc) pc.innerHTML='<div class="ag-prod-row" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:8px;margin-bottom:6px;align-items:end"><div class="fi"><label>Material 1</label><select class="ag-mat"><option value="">Selecione...</option><option>Areia Reciclada</option><option>Brita Reciclada</option><option>BGS Reciclada</option><option>Rachão Reciclado</option><option>Bica Corrida Reciclada</option><option>Solo Reciclado</option><option>Terra para Aterro</option><option>Pó de Pedra Reciclado</option></select></div><div class="fi"><label>Qtde (m³)</label><input type="number" class="ag-qtd" placeholder="0"/></div><div class="fi"><label>Preço Base (R$)</label><input type="number" class="ag-preco" placeholder="35" step="0.01" oninput="_calcAgPreview()"/></div><div class="fi"><label>Preço Final (R$)</label><input type="number" class="ag-preco-final" readonly placeholder="—" style="background:rgba(1,110,24,0.12);border-color:#016e18;color:#4ade80;font-weight:700;cursor:default"/></div><span></span></div>';
+    _calcAgPreview();
   } else {
     _fillAgForm(_propHistorico[_agEditIdx]);
   }
@@ -749,14 +750,15 @@ function _fillAgForm(p) {
   pc.innerHTML='';
   (p.produtos||[]).forEach((pr,i)=>{
     const d=document.createElement('div');d.className='ag-prod-row';
-    d.style.cssText='display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;margin-bottom:6px;align-items:end';
+    d.style.cssText='display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:8px;margin-bottom:6px;align-items:end';
     const opts='<option value="">Selecione...</option><option>Areia Reciclada</option><option>Brita Reciclada</option><option>BGS Reciclada</option><option>Rachão Reciclado</option><option>Bica Corrida Reciclada</option><option>Solo Reciclado</option><option>Terra para Aterro</option><option>Pó de Pedra Reciclado</option>';
-    d.innerHTML='<div class="fi"><label>Material '+(i+1)+'</label><select class="ag-mat">'+opts+'</select></div><div class="fi"><label>Qtde (m³)</label><input type="number" class="ag-qtd" value="'+(pr.qtd||'')+'" placeholder="0"/></div><div class="fi"><label>Preço/m³ (R$)</label><input type="number" class="ag-preco" value="'+(pr.preco||'')+'" step="0.01"/></div>'+(i>0?'<button onclick="this.closest(\'.ag-prod-row\').remove()" style="background:#EF444415;border:1px solid #EF444440;color:#EF4444;border-radius:6px;padding:4px 8px;cursor:pointer;margin-bottom:5px">✕</button>':'<span></span>');
+    d.innerHTML='<div class="fi"><label>Material '+(i+1)+'</label><select class="ag-mat">'+opts+'</select></div><div class="fi"><label>Qtde (m³)</label><input type="number" class="ag-qtd" value="'+(pr.qtd||'')+'" placeholder="0"/></div><div class="fi"><label>Preço Base (R$)</label><input type="number" class="ag-preco" value="'+(pr.preco||'')+'" step="0.01" oninput="_calcAgPreview()"/></div><div class="fi"><label>Preço Final (R$)</label><input type="number" class="ag-preco-final" readonly placeholder="—" style="background:rgba(1,110,24,0.12);border-color:#016e18;color:#4ade80;font-weight:700;cursor:default"/></div>'+(i>0?'<button onclick="this.closest(\'.ag-prod-row\').remove();_calcAgPreview()" style="background:#EF444415;border:1px solid #EF444440;color:#EF4444;border-radius:6px;padding:4px 8px;cursor:pointer;margin-bottom:5px">✕</button>':'<span></span>');
     pc.appendChild(d);
     // Set select value
     const sel=d.querySelector('.ag-mat');
     if(sel&&pr.mat){for(let o of sel.options){if(o.value===pr.mat){o.selected=true;break;}}}
   });
+  _calcAgPreview();
 }
 
 function _addAgProdRow() {
@@ -764,9 +766,10 @@ function _addAgProdRow() {
   const n=c.querySelectorAll('.ag-prod-row').length+1;
   if(n>4){alert('Máximo 4 materiais.');return;}
   const d=document.createElement('div');d.className='ag-prod-row';
-  d.style.cssText='display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;margin-bottom:6px;align-items:end';
-  d.innerHTML='<div class="fi"><label>Material '+n+'</label><select class="ag-mat"><option value="">Selecione...</option><option>Areia Reciclada</option><option>Brita Reciclada</option><option>BGS Reciclada</option><option>Rachão Reciclado</option><option>Bica Corrida Reciclada</option><option>Solo Reciclado</option><option>Terra para Aterro</option><option>Pó de Pedra Reciclado</option></select></div><div class="fi"><label>Qtde (m³)</label><input type="number" class="ag-qtd" placeholder="0"/></div><div class="fi"><label>Preço/m³ (R$)</label><input type="number" class="ag-preco" placeholder="35" step="0.01"/></div><button onclick="this.closest(\'.ag-prod-row\').remove()" style="background:#EF444415;border:1px solid #EF444440;color:#EF4444;border-radius:6px;padding:4px 8px;cursor:pointer;margin-bottom:5px">✕</button>';
+  d.style.cssText='display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:8px;margin-bottom:6px;align-items:end';
+  d.innerHTML='<div class="fi"><label>Material '+n+'</label><select class="ag-mat"><option value="">Selecione...</option><option>Areia Reciclada</option><option>Brita Reciclada</option><option>BGS Reciclada</option><option>Rachão Reciclado</option><option>Bica Corrida Reciclada</option><option>Solo Reciclado</option><option>Terra para Aterro</option><option>Pó de Pedra Reciclado</option></select></div><div class="fi"><label>Qtde (m³)</label><input type="number" class="ag-qtd" placeholder="0"/></div><div class="fi"><label>Preço Base (R$)</label><input type="number" class="ag-preco" placeholder="35" step="0.01" oninput="_calcAgPreview()"/></div><div class="fi"><label>Preço Final (R$)</label><input type="number" class="ag-preco-final" readonly placeholder="—" style="background:rgba(1,110,24,0.12);border-color:#016e18;color:#4ade80;font-weight:700;cursor:default"/></div><button onclick="this.closest(\'.ag-prod-row\').remove();_calcAgPreview()" style="background:#EF444415;border:1px solid #EF444440;color:#EF4444;border-radius:6px;padding:4px 8px;cursor:pointer;margin-bottom:5px">✕</button>';
   c.appendChild(d);
+  _calcAgPreview();
 }
 
 function _collectAgData() {
@@ -794,8 +797,52 @@ function _collectAgData() {
     tel:_g('ag-tel'),email:_g('ag-email'),endereco:_g('ag-endereco'),
     entregaTipo,frete,carga,imposto,pgto,pgtoCustom:_g('ag-pgto-custom'),
     obs:_g('ag-obs'),responsavel:resp,produtos:prods,prodsPriced,
-    data:new Date().toLocaleDateString('pt-BR')
+    data:_dataBR()
   };
+}
+
+function _calcAgPreview() {
+  const frete = parseFloat(document.getElementById('ag-frete')?document.getElementById('ag-frete').value:0) || 0;
+  const carga = parseFloat(document.getElementById('ag-carga')?document.getElementById('ag-carga').value:17) || 17;
+  const entregaTipo = document.getElementById('ag-entrega')?document.getElementById('ag-entrega').value:'entrega';
+  const imposto = document.getElementById('ag-imposto')?document.getElementById('ag-imposto').value:'com';
+  const fretePorM3 = (entregaTipo==='entrega' && frete>0 && carga>0) ? frete/carga : 0;
+
+  // Mostrar/ocultar campos de frete
+  const freArea = document.getElementById('ag-frete-area');
+  if (freArea) freArea.style.display = entregaTipo==='entrega' ? '' : 'none';
+
+  // Atualizar preço final de cada linha de produto
+  document.querySelectorAll('.ag-prod-row').forEach(row=>{
+    const base = parseFloat(row.querySelector('.ag-preco')?row.querySelector('.ag-preco').value:0) || 0;
+    const comFrete = base + fretePorM3;
+    const final = imposto==='com' ? comFrete*1.03 : comFrete;
+    const el = row.querySelector('.ag-preco-final');
+    if (el) {
+      if (base > 0) {
+        el.value = final.toFixed(2);
+        el.style.color = '#4ade80';
+      } else {
+        el.value = '';
+        el.placeholder = '—';
+      }
+    }
+  });
+
+  // Atualizar label de resumo
+  const sumEl = document.getElementById('ag-calc-summary');
+  if (sumEl) {
+    if (entregaTipo==='entrega' && frete>0 && carga>0) {
+      const fpm = frete/carga;
+      sumEl.innerHTML = '📦 Frete/m³: <b>R$ '+fpm.toFixed(2)+'</b>'+(imposto==='com'?' &nbsp;|&nbsp; Imposto 3%: incluído':'&nbsp;|&nbsp; Imposto: não incluído');
+      sumEl.style.display = 'block';
+    } else if (entregaTipo==='retira') {
+      sumEl.innerHTML = '🏭 Modalidade: Retirada — frete não incluso'+(imposto==='com'?' &nbsp;|&nbsp; Imposto 3%: incluído':'');
+      sumEl.style.display = 'block';
+    } else {
+      sumEl.style.display = 'none';
+    }
+  }
 }
 
 function gerarPDFAgregado(dataOverride) {
@@ -2969,12 +3016,13 @@ body { font-size: 13.5px !important; }
 
           <div style="font-size:10px;font-weight:700;color:#5b6478;text-transform:uppercase;letter-spacing:.8px;margin:16px 0 8px">Produtos (até 4 materiais)</div>
           <div id="ag-produtos">
-            <div class="ag-prod-row" style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;margin-bottom:6px;align-items:end">
+            <div class="ag-prod-row" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:8px;margin-bottom:6px;align-items:end">
               <div class="fi"><label>Material 1</label>
                 <select class="ag-mat"><option value="">Selecione...</option><option>Areia Reciclada</option><option>Brita Reciclada</option><option>BGS Reciclada</option><option>Rachão Reciclado</option><option>Bica Corrida Reciclada</option><option>Solo Reciclado</option><option>Terra para Aterro</option><option>Pó de Pedra Reciclado</option></select>
               </div>
               <div class="fi"><label>Qtde (m³)</label><input type="number" class="ag-qtd" placeholder="0"/></div>
-              <div class="fi"><label>Preço/m³ (R$)</label><input type="number" class="ag-preco" placeholder="35" step="0.01"/></div>
+              <div class="fi"><label>Preço Base (R$)</label><input type="number" class="ag-preco" placeholder="35" step="0.01" oninput="_calcAgPreview()"/></div>
+              <div class="fi"><label>Preço Final (R$)</label><input type="number" class="ag-preco-final" readonly placeholder="—" style="background:rgba(1,110,24,0.12);border-color:#016e18;color:#4ade80;font-weight:700;cursor:default"/></div>
               <span></span>
             </div>
           </div>
@@ -2982,13 +3030,18 @@ body { font-size: 13.5px !important; }
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
             <div class="fi"><label>Entrega ou Retirada</label>
-              <select id="ag-entrega"><option value="entrega">Entrega (com frete)</option><option value="retira">Retirada (sem frete)</option></select>
+              <select id="ag-entrega" onchange="_calcAgPreview()"><option value="entrega">Entrega (com frete)</option><option value="retira">Retirada (sem frete)</option></select>
             </div>
             <div class="fi"><label>Acesso a caminhão?</label>
               <select id="ag-acesso"><option value="s">Sim</option><option value="n">Não</option></select>
             </div>
-            <div class="fi"><label>Valor do Frete (R$)</label><input type="number" id="ag-frete" placeholder="Ex: 180" step="0.01"/></div>
-            <div class="fi"><label>Tamanho da Carga (m³)</label><input type="number" id="ag-carga" value="17"/></div>
+            <div id="ag-frete-area" style="display:contents">
+              <div class="fi"><label>Valor do Frete (R$)</label><input type="number" id="ag-frete" placeholder="Ex: 180" step="0.01" oninput="_calcAgPreview()"/></div>
+              <div class="fi"><label>Tamanho da Carga (m³)</label><input type="number" id="ag-carga" value="17" oninput="_calcAgPreview()"/></div>
+            </div>
+            <div class="fi"><label>Incluir impostos no preço?</label>
+              <select id="ag-imposto" onchange="_calcAgPreview()"><option value="com">Com imposto (3%)</option><option value="sem">Sem imposto</option></select>
+            </div>
             <div class="fi"><label>Condição de Pagamento</label>
               <select id="ag-pgto"><option value="">Selecione...</option></select>
             </div>
@@ -2996,9 +3049,7 @@ body { font-size: 13.5px !important; }
             <div class="fi"><label>Responsável pelo Envio</label>
               <select id="ag-resp"></select>
             </div>
-            <div class="fi"><label>Incluir impostos no preço?</label>
-              <select id="ag-imposto"><option value="com">Com imposto</option><option value="sem">Sem imposto</option></select>
-            </div>
+            <div id="ag-calc-summary" style="display:none;grid-column:1/-1;background:rgba(1,110,24,0.12);border:1px solid #016e18;border-radius:8px;padding:8px 14px;font-size:12px;color:#4ade80"></div>
             <div class="fi" style="grid-column:1/-1"><label>Observações</label>
               <textarea id="ag-obs" rows="2" placeholder="Informações adicionais..."></textarea>
             </div>
