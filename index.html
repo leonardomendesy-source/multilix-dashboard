@@ -8130,7 +8130,7 @@ initNavGroups();
     const plac    = (document.getElementById('fat-placa')?.value||'').toLowerCase();
 
     _relFiltered = _relData.filter(row=>{
-      const dt = row.data_hora ? row.data_hora.slice(0,10) : '';
+      const dt = row.data_hora ? new Date(row.data_hora).toLocaleDateString('en-CA') : '';
       if(from && dt < from) return false;
       if(to   && dt > to)   return false;
       if(cli  && !(row.parceiro_nome_snapshot||'').toLowerCase().includes(cli)) return false;
