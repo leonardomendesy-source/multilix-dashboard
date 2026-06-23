@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<title>Multilix — Vale de Descarga</title>
+<style>
+:root{
+  --bg:#0B0D11;--surface:#151922;--surface2:#1c212d;--border:#262D3D;
+  --text:#eef0ff;--muted:#8a93ab;--muted2:#5b6478;
+  --accent:#10B981;--accent2:#059669;
+  --yellow:#F59E0B;--red:#EF4444;--blue:#3B82F6;
+  --radius:12px;--font:'Inter',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;min-height:100dvh;display:flex;flex-direction:column}
+
+/* HEADER */
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10}
+.header-logo{width:36px;height:36px;flex-shrink:0}
+.header-logo img{width:36px;height:36px;object-fit:contain}
+.header-logo-fallback{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:#fff}
+.header-info{flex:1;min-width:0}
+.header-title{font-size:15px;font-weight:700}
+.header-sub{font-size:11px;color:var(--muted);margin-top:1px}
+.header-datetime{font-size:11px;color:var(--accent);font-weight:600;text-align:right;flex-shrink:0}
+
+/* CONTENT */
+.content{flex:1;padding:16px;max-width:600px;width:100%;margin:0 auto}
+
+/* FIELDS */
+.field{margin-bottom:14px}
+label{display:block;font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px}
+label .req{color:var(--red)}
+select,input[type=text],input[type=number],textarea{
+  width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);
+  border-radius:var(--radius);padding:13px 14px;font-size:15px;outline:none;
+  transition:border-color .15s;-webkit-appearance:none;appearance:none;font-family:var(--font)
+}
+select:focus,input:focus,textarea:focus{border-color:var(--accent)}
+select option{background:var(--surface2)}
+textarea{resize:none;height:80px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* AUTOCOMPLETE */
+.ac-wrap{position:relative}
+.ac-list{position:absolute;top:100%;left:0;right:0;background:var(--surface2);border:1px solid var(--accent);border-top:none;border-radius:0 0 var(--radius) var(--radius);z-index:50;max-height:220px;overflow-y:auto;display:none}
+.ac-item{padding:11px 14px;cursor:pointer;border-bottom:1px solid var(--border)}
+.ac-item:last-child{border-bottom:none}
+.ac-item:hover,.ac-item.focused{background:var(--surface)}
+.ac-name{font-size:14px;font-weight:600;color:var(--text)}
+.ac-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.ac-empty{padding:12px 14px;color:var(--muted);font-size:13px;text-align:center}
+
+/* SECTION TITLE */
+.sec-title{font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.8px;margin:20px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px}
+
+/* CARD ITEM */
+.item-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;position:relative}
+.item-card-header{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px}
+.item-card-num{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.5px}
+.item-card-body{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.item-pill{background:var(--surface2);border-radius:6px;padding:5px 8px;font-size:12px}
+.item-pill-label{color:var(--muted2);font-size:10px;text-transform:uppercase;letter-spacing:.4px}
+.item-pill-value{color:var(--text);font-weight:600;margin-top:1px}
+.item-actions{display:flex;gap:6px}
+.btn-icon{background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;transition:all .15s}
+.btn-icon:hover{border-color:var(--accent);color:var(--accent)}
+.btn-icon.danger:hover{border-color:var(--red);color:var(--red)}
+
+/* FORM DE ITEM */
+.item-form{background:var(--surface);border:1px solid var(--accent);border-radius:var(--radius);padding:14px;margin-bottom:14px}
+.item-form-title{font-size:12px;font-weight:700;color:var(--accent);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px}
+
+/* RESUMO */
+.resumo-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:16px;display:flex;gap:16px;flex-wrap:wrap}
+.resumo-item{text-align:center;flex:1;min-width:80px}
+.resumo-num{font-size:22px;font-weight:800;color:var(--accent)}
+.resumo-label{font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+
+/* BOTÕES */
+.btn{border:none;border-radius:var(--radius);cursor:pointer;font-family:var(--font);font-weight:700;transition:opacity .15s;text-align:center}
+.btn:active{opacity:.8}
+.btn-primary{width:100%;padding:16px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:16px;letter-spacing:-.2px;margin-top:6px}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed}
+.btn-secondary{padding:12px 16px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:14px}
+.btn-add{width:100%;padding:13px;background:transparent;border:2px dashed var(--border);color:var(--muted);font-size:14px;font-weight:600;border-radius:var(--radius);cursor:pointer;transition:all .15s}
+.btn-add:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ALERT */
+.alert{background:#EF444415;border:1px solid #EF444440;border-radius:var(--radius);padding:12px 14px;font-size:13px;color:var(--red);margin-bottom:14px;display:none}
+.alert-success{background:#10B98115;border:1px solid #10B98140;color:var(--accent)}
+
+/* LOADING */
+#loading-overlay{display:none;position:fixed;inset:0;background:rgba(11,13,17,.88);z-index:100;align-items:center;justify-content:center;flex-direction:column;gap:16px}
+.spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:13px;color:var(--muted)}
+
+/* TELA SUCESSO */
+#tela-sucesso{display:none;flex-direction:column;align-items:center;padding:30px 20px;min-height:60dvh;text-align:center}
+.sucesso-icon{font-size:60px;margin-bottom:12px}
+.sucesso-vale{font-size:30px;font-weight:900;color:var(--accent);letter-spacing:-.5px;margin-bottom:4px}
+.sucesso-label{font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:20px}
+.sucesso-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;width:100%;max-width:400px;text-align:left;margin-bottom:16px}
+.sucesso-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)}
+.sucesso-row:last-child{border-bottom:none}
+.sucesso-row-label{font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.4px}
+.sucesso-row-value{font-size:13px;font-weight:700;text-align:right;max-width:60%}
+.sucesso-actions{display:flex;flex-direction:column;gap:10px;width:100%;max-width:400px}
+
+/* COMPROVANTE (hidden, for print) */
+#comprovante-print{display:none}
+@media print{
+  body > *{display:none!important}
+  #comprovante-print{display:block!important;font-family:Arial,sans-serif;color:#000;font-size:11pt;padding:10mm}
+  .cp-header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:8px;border-bottom:2px solid #000;margin-bottom:8px}
+  .cp-logo-area{display:flex;align-items:center;gap:12px}
+  .cp-logo-box{width:48px;height:48px;background:#10B981;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:18px}
+  .cp-title-block .cp-title{font-size:16pt;font-weight:900;color:#10B981;line-height:1}
+  .cp-title-block .cp-subtitle{font-size:8pt;color:#555;margin-top:2px}
+  .cp-company{text-align:right;font-size:8pt;color:#444;line-height:1.4}
+  .cp-company strong{font-size:9pt;color:#000}
+  .cp-vale-badge{text-align:right;margin-top:4px}
+  .cp-vale-num{font-size:13pt;font-weight:900;color:#000}
+  .cp-section{margin:8px 0 4px;font-weight:700;font-size:9pt;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #ccc;padding-bottom:2px;color:#333}
+  .cp-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 16px;margin-bottom:6px}
+  .cp-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px 16px;margin-bottom:6px}
+  .cp-field label{font-size:7.5pt;color:#777;text-transform:uppercase}
+  .cp-field p{font-size:9.5pt;font-weight:600}
+  table{width:100%;border-collapse:collapse;font-size:8.5pt;margin:6px 0}
+  th{background:#f0f0f0;font-weight:700;padding:4px 6px;border:1px solid #ccc;text-align:left}
+  td{padding:4px 6px;border:1px solid #ccc}
+  .cp-totais{margin:6px 0;padding:8px;background:#f9f9f9;border-radius:4px;font-size:9pt}
+  .cp-totais strong{font-size:10pt}
+  .cp-obs{margin:6px 0;padding:6px;background:#fffbeb;border:1px solid #f0e68c;border-radius:4px;font-size:8.5pt}
+  .cp-assinaturas{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:16px}
+  .cp-ass-box{border-top:1px solid #000;padding-top:4px;font-size:8pt;text-align:center}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-logo">
+    <div class="header-logo-fallback">M</div>
+  </div>
+  <div class="header-info">
+    <div class="header-title">Vale de Descarga</div>
+    <div class="header-sub">ATT Multilix — Entrada de Terceiros</div>
+  </div>
+  <div class="header-datetime" id="header-dt">—</div>
+</div>
+
+<!-- FORMULÁRIO PRINCIPAL -->
+<div class="content" id="tela-form">
+
+  <div id="alert-msg" class="alert"></div>
+
+  <!-- 1. CLIENTE -->
+  <div class="sec-title">📋 Cliente / Parceiro</div>
+
+  <div class="field">
+    <label>Cliente / Parceiro <span class="req">*</span></label>
+    <div class="ac-wrap">
+      <input type="text" id="v-cliente-input" placeholder="Digite o nome do cliente..." autocomplete="off"
+             oninput="onClienteInput(this.value)" onfocus="onClienteInput(this.value)"
+             onblur="scheduleAcClose()" onkeydown="onClienteKey(event)"/>
+      <div class="ac-list" id="ac-list"></div>
+    </div>
+    <input type="hidden" id="v-cliente-id"/>
+    <input type="hidden" id="v-cliente-razao"/>
+    <input type="hidden" id="v-cliente-doc"/>
+  </div>
+
+  <!-- 2. DADOS OPCIONAIS -->
+  <div class="sec-title">🚛 Dados do Veículo (opcional)</div>
+
+  <div class="row2">
+    <div class="field">
+      <label>Placa</label>
+      <input type="text" id="v-placa" placeholder="ABC1D23" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"/>
+    </div>
+    <div class="field">
+      <label>Motorista</label>
+      <input type="text" id="v-motorista" placeholder="Nome do motorista"/>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Observações gerais da O.S.</label>
+    <textarea id="v-obs-geral" placeholder="Divergência de volume, autorização especial, etc."></textarea>
+  </div>
+
+  <!-- 3. ITENS DE DESCARGA -->
+  <div class="sec-title">📦 Itens de Descarga</div>
+
+  <div id="lista-itens"></div>
+
+  <!-- Resumo automático -->
+  <div class="resumo-bar" id="resumo-bar" style="display:none">
+    <div class="resumo-item">
+      <div class="resumo-num" id="res-qtd">0</div>
+      <div class="resumo-label">Descargas</div>
+    </div>
+    <div class="resumo-item">
+      <div class="resumo-num" id="res-vol">0</div>
+      <div class="resumo-label">m³ Total</div>
+    </div>
+  </div>
+
+  <!-- Form de novo item -->
+  <div class="item-form" id="item-form">
+    <div class="item-form-title">+ Nova Descarga</div>
+
+    <div class="row2">
+      <div class="field">
+        <label>Nº CTR ou MTR</label>
+        <input type="text" id="if-ctr" placeholder="Ex: 12345"/>
+      </div>
+      <div class="field">
+        <label>Nº da Caçamba</label>
+        <input type="text" id="if-cacamba" placeholder="Ex: 908"/>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Equipamento / Volume <span class="req">*</span></label>
+      <select id="if-equipamento" onchange="onEquipamentoChange()">
+        <option value="">Carregando...</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Volume recebido (m³) <span class="req">*</span></label>
+      <input type="number" id="if-volume" placeholder="Ex: 4" step="0.01" min="0" inputmode="decimal"/>
+    </div>
+
+    <div class="field">
+      <label>Tipo de Resíduo <span class="req">*</span></label>
+      <select id="if-residuo">
+        <option value="">Carregando...</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Observações do item</label>
+      <input type="text" id="if-obs" placeholder="Observação específica desta descarga"/>
+    </div>
+
+    <button class="btn btn-primary" onclick="adicionarItem()" style="font-size:14px;padding:13px">✓ Adicionar Descarga</button>
+  </div>
+
+  <!-- Botão de adicionar mais (após ter itens) -->
+  <button class="btn-add" id="btn-mais" style="display:none;margin-bottom:14px" onclick="mostrarItemForm()">+ Adicionar outra descarga</button>
+
+  <!-- 4. FINALIZAR -->
+  <div class="sec-title">✅ Finalização</div>
+
+  <button class="btn btn-primary" id="btn-finalizar" onclick="finalizarVale()" disabled>
+    Finalizar Vale de Descarga
+  </button>
+  <div style="height:30px"></div>
+
+</div><!-- /tela-form -->
+
+<!-- TELA SUCESSO -->
+<div id="tela-sucesso">
+  <div class="sucesso-icon">✅</div>
+  <div class="sucesso-vale" id="sc-vale">—</div>
+  <div class="sucesso-label">Vale de Descarga registrado</div>
+  <div class="sucesso-card">
+    <div class="sucesso-row"><span class="sucesso-row-label">Cliente</span><span class="sucesso-row-value" id="sc-cliente">—</span></div>
+    <div class="sucesso-row"><span class="sucesso-row-label">Data / Hora</span><span class="sucesso-row-value" id="sc-data">—</span></div>
+    <div class="sucesso-row"><span class="sucesso-row-label">Descargas</span><span class="sucesso-row-value" id="sc-itens">—</span></div>
+    <div class="sucesso-row"><span class="sucesso-row-label">Volume Total</span><span class="sucesso-row-value" id="sc-vol">—</span></div>
+    <div class="sucesso-row" id="sc-placa-row" style="display:none"><span class="sucesso-row-label">Placa</span><span class="sucesso-row-value" id="sc-placa">—</span></div>
+  </div>
+  <div class="sucesso-actions">
+    <button class="btn btn-primary" onclick="imprimirComprovante()">🖨️ Imprimir Comprovante</button>
+    <button class="btn btn-secondary" onclick="novoVale()">+ Novo Vale</button>
+  </div>
+</div>
+
+<!-- COMPROVANTE PARA IMPRESSÃO -->
+<div id="comprovante-print"></div>
+
+<!-- LOADING -->
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loading-text">Salvando...</div>
+</div>
+
+<script>
+const SUPA_URL = 'https://nbotdfkeiwqwgbesgkve.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ib3RkZmtlaXdxd2diZXNna3ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NDYyMDksImV4cCI6MjA5NjEyMjIwOX0.GmobP5xGzZtxUPwNrZIhMaevJdLz5Db2zEL_o6YtSqg';
+const HDR = {'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=representation'};
+
+let _parceiros = [];
+let _residuos = [];
+let _equipamentos = [];
+let _itens = [];
+let _acFocused = -1;
+let _acClose = null;
+let _valeData = null; // dados do vale finalizado
+
+// ── CLOCK ────────────────────────────────────────────────────────
+function updateClock(){
+  const now = new Date();
+  const dt = now.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})
+            + ' ' + now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('header-dt').textContent = dt;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── INIT ─────────────────────────────────────────────────────────
+async function init(){
+  try {
+    const [rP, rR, rE] = await Promise.all([
+      fetch(`${SUPA_URL}/rest/v1/parceiros_att?select=id,nome_fantasia,razao_social,documento&status=eq.ativo&order=nome_fantasia.asc&limit=500`,{headers:HDR}),
+      fetch(`${SUPA_URL}/rest/v1/tipos_residuo_att?select=id,nome&ativo=eq.true&order=ordem.asc`,{headers:HDR}),
+      fetch(`${SUPA_URL}/rest/v1/equipamentos_att?select=id,nome,tipo,volume_m3_padrao&ativo=eq.true&order=ordem.asc`,{headers:HDR}),
+    ]);
+    _parceiros = await rP.json();
+    _residuos = await rR.json();
+    _equipamentos = await rE.json();
+
+    const selR = document.getElementById('if-residuo');
+    selR.innerHTML = '<option value="">Selecione o resíduo...</option>';
+    _residuos.forEach(r => { const o=document.createElement('option'); o.value=r.id; o.textContent=r.nome; selR.appendChild(o); });
+
+    const selE = document.getElementById('if-equipamento');
+    selE.innerHTML = '<option value="">Selecione o equipamento...</option>';
+    _equipamentos.forEach(e => { const o=document.createElement('option'); o.value=e.id; o.dataset.vol=e.volume_m3_padrao||''; o.dataset.tipo=e.tipo||''; o.textContent=e.nome; selE.appendChild(o); });
+  } catch(err){
+    showAlert('Erro ao carregar dados. Verifique a conexão.');
+  }
+}
+
+// ── AUTOCOMPLETE CLIENTES ────────────────────────────────────────
+function onClienteInput(q){
+  _acFocused = -1;
+  const list = document.getElementById('ac-list');
+  if(!q || q.length < 1){ list.style.display='none'; return; }
+  const lower = q.toLowerCase();
+  const matches = _parceiros.filter(p =>
+    (p.nome_fantasia||'').toLowerCase().includes(lower) ||
+    (p.razao_social||'').toLowerCase().includes(lower) ||
+    (p.documento||'').includes(q)
+  ).slice(0,8);
+
+  if(!matches.length){
+    list.innerHTML = '<div class="ac-empty">Nenhum parceiro encontrado</div>';
+    list.style.display='block'; return;
+  }
+  list.innerHTML = matches.map((p,i) => `
+    <div class="ac-item" data-idx="${i}" data-id="${p.id}" data-nome="${esc(p.nome_fantasia)}" data-razao="${esc(p.razao_social||'')}" data-doc="${esc(p.documento||'')}"
+         onmousedown="selecionarParceiro(this)">
+      <div class="ac-name">${esc(p.nome_fantasia)}</div>
+      ${p.razao_social ? `<div class="ac-sub">${esc(p.razao_social)}${p.documento?' · '+esc(p.documento):''}</div>`:
+        p.documento ? `<div class="ac-sub">${esc(p.documento)}</div>`:''}
+    </div>`).join('');
+  list.style.display='block';
+}
+
+function selecionarParceiro(el){
+  document.getElementById('v-cliente-input').value = el.dataset.nome;
+  document.getElementById('v-cliente-id').value = el.dataset.id;
+  document.getElementById('v-cliente-razao').value = el.dataset.razao;
+  document.getElementById('v-cliente-doc').value = el.dataset.doc;
+  document.getElementById('ac-list').style.display='none';
+  atualizarFinalizar();
+}
+
+function onClienteKey(e){
+  const items = document.querySelectorAll('.ac-item');
+  if(!items.length) return;
+  if(e.key==='ArrowDown'){e.preventDefault();_acFocused=Math.min(_acFocused+1,items.length-1);}
+  else if(e.key==='ArrowUp'){e.preventDefault();_acFocused=Math.max(_acFocused-1,0);}
+  else if(e.key==='Enter' && _acFocused>=0){e.preventDefault();selecionarParceiro(items[_acFocused]);return;}
+  else if(e.key==='Escape'){document.getElementById('ac-list').style.display='none';return;}
+  items.forEach((it,i)=>it.classList.toggle('focused',i===_acFocused));
+}
+
+function scheduleAcClose(){
+  _acClose = setTimeout(()=>{ document.getElementById('ac-list').style.display='none'; }, 200);
+}
+
+// ── EQUIPAMENTO → VOLUME ─────────────────────────────────────────
+function onEquipamentoChange(){
+  const sel = document.getElementById('if-equipamento');
+  const opt = sel.options[sel.selectedIndex];
+  const vol = opt ? opt.dataset.vol : '';
+  const tipo = opt ? opt.dataset.tipo : '';
+  const inp = document.getElementById('if-volume');
+  if(tipo === 'avulso' || !vol){
+    inp.value = '';
+    inp.placeholder = 'Digite o volume em m³';
+    inp.readOnly = false;
+    inp.style.borderColor = 'var(--yellow)';
+  } else {
+    inp.value = vol;
+    inp.placeholder = '';
+    inp.readOnly = false;
+    inp.style.borderColor = '';
+  }
+}
+
+// ── ITENS ────────────────────────────────────────────────────────
+function adicionarItem(){
+  const equipId = document.getElementById('if-equipamento').value;
+  const equip = _equipamentos.find(e=>e.id===equipId);
+  const residuoId = document.getElementById('if-residuo').value;
+  const residuo = _residuos.find(r=>r.id===residuoId);
+  const volStr = document.getElementById('if-volume').value.replace(',','.');
+  const vol = parseFloat(volStr);
+
+  if(!equipId){ showAlert('Selecione o equipamento/volume.'); return; }
+  if(!residuoId){ showAlert('Selecione o tipo de resíduo.'); return; }
+  if(!vol || vol<=0){ showAlert('Informe o volume recebido em m³.'); return; }
+
+  const item = {
+    ctr_mtr: document.getElementById('if-ctr').value.trim()||null,
+    numero_cacamba: document.getElementById('if-cacamba').value.trim()||null,
+    equipamento_id: equipId,
+    equipamento_nome_snapshot: equip ? equip.nome : '',
+    volume_m3: vol,
+    residuo_id: residuoId,
+    residuo_nome_snapshot: residuo ? residuo.nome : '',
+    observacoes: document.getElementById('if-obs').value.trim()||null,
+  };
+  _itens.push(item);
+  limparItemForm();
+  renderItens();
+  hideAlert();
+}
+
+function removerItem(idx){
+  _itens.splice(idx,1);
+  renderItens();
+}
+
+function renderItens(){
+  const list = document.getElementById('lista-itens');
+  if(!_itens.length){
+    list.innerHTML='';
+    document.getElementById('resumo-bar').style.display='none';
+    document.getElementById('item-form').style.display='block';
+    document.getElementById('btn-mais').style.display='none';
+    atualizarFinalizar();
+    return;
+  }
+  list.innerHTML = _itens.map((it,i)=>`
+    <div class="item-card">
+      <div class="item-card-header">
+        <span class="item-card-num">Descarga ${i+1}</span>
+        <div class="item-actions">
+          <button class="btn-icon danger" onclick="removerItem(${i})">✕</button>
+        </div>
+      </div>
+      <div class="item-card-body">
+        <div class="item-pill"><div class="item-pill-label">Equipamento</div><div class="item-pill-value">${esc(it.equipamento_nome_snapshot)}</div></div>
+        <div class="item-pill"><div class="item-pill-label">Volume</div><div class="item-pill-value">${formatVol(it.volume_m3)} m³</div></div>
+        <div class="item-pill"><div class="item-pill-label">Resíduo</div><div class="item-pill-value">${esc(it.residuo_nome_snapshot)}</div></div>
+        ${it.ctr_mtr?`<div class="item-pill"><div class="item-pill-label">CTR/MTR</div><div class="item-pill-value">${esc(it.ctr_mtr)}</div></div>`:''}
+        ${it.numero_cacamba?`<div class="item-pill"><div class="item-pill-label">Nº Caçamba</div><div class="item-pill-value">${esc(it.numero_cacamba)}</div></div>`:''}
+        ${it.observacoes?`<div class="item-pill" style="grid-column:1/-1"><div class="item-pill-label">Obs</div><div class="item-pill-value">${esc(it.observacoes)}</div></div>`:''}
+      </div>
+    </div>`).join('');
+
+  const totalVol = _itens.reduce((a,it)=>a+it.volume_m3,0);
+  document.getElementById('res-qtd').textContent = _itens.length;
+  document.getElementById('res-vol').textContent = formatVol(totalVol);
+  document.getElementById('resumo-bar').style.display='flex';
+  document.getElementById('item-form').style.display='none';
+  document.getElementById('btn-mais').style.display='block';
+  atualizarFinalizar();
+}
+
+function mostrarItemForm(){
+  document.getElementById('item-form').style.display='block';
+  document.getElementById('btn-mais').style.display='none';
+  document.getElementById('if-ctr').focus();
+}
+
+function limparItemForm(){
+  ['if-ctr','if-cacamba','if-volume','if-obs'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('if-equipamento').selectedIndex=0;
+  document.getElementById('if-residuo').selectedIndex=0;
+  document.getElementById('if-volume').style.borderColor='';
+}
+
+function atualizarFinalizar(){
+  const temCliente = document.getElementById('v-cliente-id').value;
+  const temItens = _itens.length > 0;
+  document.getElementById('btn-finalizar').disabled = !(temCliente && temItens);
+}
+
+// ── FINALIZAR ────────────────────────────────────────────────────
+async function finalizarVale(){
+  const clienteId = document.getElementById('v-cliente-id').value;
+  const clienteNome = document.getElementById('v-cliente-input').value.trim();
+  const clienteDoc = document.getElementById('v-cliente-doc').value.trim();
+
+  if(!clienteId){ showAlert('Selecione o cliente/parceiro.'); return; }
+  if(!_itens.length){ showAlert('Adicione pelo menos uma descarga.'); return; }
+
+  showLoading('Registrando vale...');
+  try {
+    const totalVol = _itens.reduce((a,it)=>a+it.volume_m3,0);
+    const valePayload = {
+      parceiro_id: clienteId,
+      parceiro_nome_snapshot: clienteNome,
+      parceiro_doc_snapshot: clienteDoc||null,
+      placa: document.getElementById('v-placa').value.trim().toUpperCase()||null,
+      motorista: document.getElementById('v-motorista').value.trim()||null,
+      observacoes_gerais: document.getElementById('v-obs-geral').value.trim()||null,
+      status: 'finalizado',
+      total_itens: _itens.length,
+      volume_total_m3: totalVol,
+      usuario_lancamento: 'apontador',
+    };
+
+    const rVale = await fetch(`${SUPA_URL}/rest/v1/vales_descarga`,{
+      method:'POST', headers:HDR, body:JSON.stringify(valePayload)
+    });
+    if(!rVale.ok) throw new Error(await rVale.text());
+    const [vale] = await rVale.json();
+
+    // Inserir itens
+    const itensPayload = _itens.map(it=>({...it, vale_descarga_id: vale.id}));
+    const rItens = await fetch(`${SUPA_URL}/rest/v1/vale_descarga_itens`,{
+      method:'POST', headers:HDR, body:JSON.stringify(itensPayload)
+    });
+    if(!rItens.ok) throw new Error(await rItens.text());
+
+    _valeData = { vale, itens: await rItens.json(), clienteNome, clienteDoc,
+      totalVol, placa: valePayload.placa, motorista: valePayload.motorista,
+      obsGeral: valePayload.observacoes_gerais };
+
+    hideLoading();
+    mostrarSucesso(_valeData);
+  } catch(err){
+    hideLoading();
+    showAlert('Erro ao salvar: ' + err.message);
+  }
+}
+
+function mostrarSucesso(d){
+  document.getElementById('tela-form').style.display='none';
+  const sc = document.getElementById('tela-sucesso');
+  sc.style.display='flex';
+  document.getElementById('sc-vale').textContent = d.vale.numero_vale;
+  document.getElementById('sc-cliente').textContent = d.clienteNome;
+  document.getElementById('sc-data').textContent = new Date(d.vale.data_hora).toLocaleString('pt-BR');
+  document.getElementById('sc-itens').textContent = d.itens.length + ' descarga(s)';
+  document.getElementById('sc-vol').textContent = formatVol(d.totalVol) + ' m³';
+  if(d.placa){
+    document.getElementById('sc-placa-row').style.display='flex';
+    document.getElementById('sc-placa').textContent = d.placa;
+  }
+  construirComprovante(d);
+}
+
+function novoVale(){
+  _itens = [];
+  _valeData = null;
+  ['v-cliente-input','v-cliente-id','v-cliente-razao','v-cliente-doc','v-placa','v-motorista','v-obs-geral'].forEach(id=>document.getElementById(id).value='');
+  limparItemForm();
+  document.getElementById('lista-itens').innerHTML='';
+  document.getElementById('resumo-bar').style.display='none';
+  document.getElementById('item-form').style.display='block';
+  document.getElementById('btn-mais').style.display='none';
+  document.getElementById('btn-finalizar').disabled=true;
+  hideAlert();
+  document.getElementById('tela-sucesso').style.display='none';
+  document.getElementById('tela-form').style.display='block';
+  window.scrollTo(0,0);
+}
+
+// ── COMPROVANTE ──────────────────────────────────────────────────
+function construirComprovante(d){
+  const now = new Date(d.vale.data_hora).toLocaleString('pt-BR',{dateStyle:'long',timeStyle:'short'});
+  const rows = d.itens.map((it,i)=>`<tr>
+    <td>${i+1}</td>
+    <td>${esc(it.ctr_mtr||'—')}</td>
+    <td>${esc(it.numero_cacamba||'—')}</td>
+    <td>${esc(it.equipamento_nome_snapshot||'—')}</td>
+    <td style="text-align:center">${formatVol(it.volume_m3)}</td>
+    <td>${esc(it.residuo_nome_snapshot||'—')}</td>
+    <td>${esc(it.observacoes||'')}</td>
+  </tr>`).join('');
+
+  document.getElementById('comprovante-print').innerHTML = `
+<div class="cp-header">
+  <div class="cp-logo-area">
+    <div class="cp-logo-box">M</div>
+    <div class="cp-title-block">
+      <div class="cp-title">VALE DE DESCARGA</div>
+      <div class="cp-subtitle">Resíduos — ATT Multilix</div>
+    </div>
+  </div>
+  <div>
+    <div class="cp-company">
+      <strong>ATT — MULTILIX</strong><br>
+      ÁREA DE TRANSBORDO E TRIAGEM<br>
+      Rodovia Fernão Dias km 88,7 — Vila Itapegica, Guarulhos/SP<br>
+      CEP: 07053-171 | Tel: (11) 2241-0006<br>
+      contato@multilix.com.br
+    </div>
+    <div class="cp-vale-badge">
+      <div class="cp-vale-num">${esc(d.vale.numero_vale)}</div>
+    </div>
+  </div>
+</div>
+
+<div class="cp-section">Dados do Atendimento</div>
+<div class="cp-grid">
+  <div class="cp-field"><label>Data / Hora</label><p>${now}</p></div>
+  <div class="cp-field"><label>Cliente / Parceiro</label><p>${esc(d.clienteNome)}</p></div>
+  ${d.vale.parceiro_doc_snapshot?`<div class="cp-field"><label>CPF/CNPJ</label><p>${esc(d.vale.parceiro_doc_snapshot)}</p></div>`:''}
+  ${d.placa?`<div class="cp-field"><label>Placa</label><p>${esc(d.placa)}</p></div>`:''}
+  ${d.motorista?`<div class="cp-field"><label>Motorista</label><p>${esc(d.motorista)}</p></div>`:''}
+</div>
+
+<div class="cp-section">Descargas Recebidas</div>
+<table>
+  <thead><tr><th>#</th><th>CTR/MTR</th><th>Nº Caçamba</th><th>Equipamento</th><th>Vol. m³</th><th>Resíduo</th><th>Obs</th></tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+
+<div class="cp-totais">
+  Total de descargas: <strong>${d.itens.length}</strong> &nbsp;|&nbsp;
+  Volume total recebido: <strong>${formatVol(d.totalVol)} m³</strong>
+</div>
+
+${d.obsGeral?`<div class="cp-obs"><strong>Observações gerais:</strong> ${esc(d.obsGeral)}</div>`:''}
+
+<div class="cp-assinaturas">
+  <div class="cp-ass-box">Assinatura do Cliente</div>
+  <div class="cp-ass-box">Assinatura Resp. Multilix</div>
+</div>`;
+}
+
+function imprimirComprovante(){
+  window.print();
+}
+
+// ── HELPERS ──────────────────────────────────────────────────────
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function formatVol(v){ return Number(v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2}); }
+function showAlert(msg, cls=''){
+  const el = document.getElementById('alert-msg');
+  el.textContent = msg; el.className='alert '+(cls||''); el.style.display='block';
+  el.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function hideAlert(){ document.getElementById('alert-msg').style.display='none'; }
+function showLoading(txt='Salvando...'){
+  document.getElementById('loading-text').textContent=txt;
+  document.getElementById('loading-overlay').style.display='flex';
+}
+function hideLoading(){ document.getElementById('loading-overlay').style.display='none'; }
+
+init();
+</script>
+</body>
+</html>

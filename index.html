@@ -198,7 +198,7 @@ function _collectCompleta() {
 
 function gerarProposta() {
   const d = _propTipo === 'simples' ? _collectSimples() : _collectCompleta();
-  d.data = _dataBR();
+  d.data = new Date().toLocaleDateString('pt-BR');
   if (_propEditIdx >= 0) {
     // Editing — ask if new or update
     if (confirm('Atualizar esta proposta existente?\n\nOK = Atualizar registro\nCancelar = Criar novo registro')) {
@@ -270,22 +270,6 @@ function _pdfFooter(doc, W, H) {
   // O rodapé (www.multilix.com.br + 25 anos) já vem na imagem de marca d'água — nada a fazer
 }
 
-function _dataBR() {
-  const d = new Date();
-  const m = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-  return d.getDate() + ' de ' + m[d.getMonth()] + ' de ' + d.getFullYear();
-}
-function _formatDataPDF(data) {
-  if (!data) return _dataBR();
-  if (/de /i.test(data)) return data;
-  const p = data.split('/');
-  if (p.length === 3) {
-    const m = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-    return parseInt(p[0]) + ' de ' + m[parseInt(p[1])-1] + ' de ' + p[2];
-  }
-  return data;
-}
-
 function gerarPDFLocacao(d) {
   const {jsPDF} = window.jspdf;
   const doc = new jsPDF({unit:'mm', format:'a4'});
@@ -313,7 +297,7 @@ function gerarPDFLocacao(d) {
 
   // ── DATA ──
   setN();
-  doc.text('São Paulo, '+_formatDataPDF(d.data)+'.', mg, y); nl(1.8);
+  doc.text('São Paulo, '+d.data+'.', mg, y); nl(1.8);
 
   // ── REMETENTE ──
   setB(); doc.text('AGILIX REMOÇÃO DE ENTULHO LTDA', mg, y); nl();
@@ -550,21 +534,21 @@ function gerarPDFLocacao(d) {
   const atend=d.atend||'Diurno e Noturno';
 
   setB();doc.setFontSize(11);
-  let _bw=doc.getTextWidth('Atendimento: ');
   doc.text('Atendimento: ',mg,y);
-  setN();doc.text(atend,mg+_bw,y);nl(1.2);
+  setN();doc.text(atend,mg+doc.getTextWidth('Atendimento: '),y);nl(1.2);
 
   if(pgtoFinal){
-    setB();const cpw=doc.getTextWidth('Condição de Pagamento: ');doc.text('Condição de Pagamento: ',mg,y);
+    setB();doc.text('Condição de Pagamento: ',mg,y);
     setN();
+    const cpw=doc.getTextWidth('Condição de Pagamento: ');
     const pL=doc.splitTextToSize(pgtoFinal,tw-cpw);
     doc.text(pL[0],mg+cpw,y);
     for(let i=1;i<pL.length;i++){nl();doc.text(pL[i],mg,y);}
     nl(1.2);
   }
 
-  setB();_bw=doc.getTextWidth('Validade da proposta: ');doc.text('Validade da proposta: ',mg,y);
-  setN();doc.text(d.validade||'15 dias',mg+_bw,y);nl(1.2);
+  setB();doc.text('Validade da proposta: ',mg,y);
+  setN();doc.text(d.validade||'15 dias',mg+doc.getTextWidth('Validade da proposta: '),y);nl(1.2);
 
   setB();doc.text('Prazo de entrega – ',mg,y);
   const peW=doc.getTextWidth('Prazo de entrega – ');
@@ -717,9 +701,6 @@ let _agEditIdx = -1;
 function showPropAgregado(editIdx) {
   _agEditIdx = (editIdx !== undefined) ? editIdx : -1;
   document.getElementById('prop-agreg-overlay').style.display = 'block';
-  // Atualiza label do imposto com % configurado
-  const _ioEl = document.getElementById('ag-imposto-opt-com');
-  if(_ioEl) _ioEl.textContent = 'Com imposto ('+(_agCad?.imposto||3)+'%)';
   const pgEl = document.getElementById('ag-pgto');
   if(pgEl) pgEl.innerHTML = '<option value="">Selecione...</option>' + _propCad.pgto.map(v=>'<option>'+v+'</option>').join('');
   const rEl = document.getElementById('ag-resp');
@@ -730,8 +711,9 @@ function showPropAgregado(editIdx) {
     document.getElementById('ag-carga').value='17';
     document.getElementById('ag-entrega').value='entrega';
     document.getElementById('ag-imposto').value='com';
-    // Pré-preenche produtos da tabela padrão
-    _initAgProdutos();
+    // Reset products to 1 empty row
+    const pc=document.getElementById('ag-produtos');
+    if(pc) pc.innerHTML='<div class="ag-prod-row" style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;margin-bottom:6px;align-items:end"><div class="fi"><label>Material 1</label><select class="ag-mat"><option value="">Selecione...</option><option>Areia Reciclada</option><option>Brita Reciclada</option><option>BGS Reciclada</option><option>Rachão Reciclado</option><option>Bica Corrida Reciclada</option><option>Solo Reciclado</option><option>Terra para Aterro</option><option>Pó de Pedra Reciclado</option></select></div><div class="fi"><label>Qtde (m³)</label><input type="number" class="ag-qtd" placeholder="0"/></div><div class="fi"><label>Preço/m³ (R$)</label><input type="number" class="ag-preco" placeholder="35" step="0.01"/></div><span></span></div>';
   } else {
     _fillAgForm(_propHistorico[_agEditIdx]);
   }
@@ -751,15 +733,14 @@ function _fillAgForm(p) {
   pc.innerHTML='';
   (p.produtos||[]).forEach((pr,i)=>{
     const d=document.createElement('div');d.className='ag-prod-row';
-    d.style.cssText='display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:8px;margin-bottom:6px;align-items:end';
+    d.style.cssText='display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;margin-bottom:6px;align-items:end';
     const opts='<option value="">Selecione...</option><option>Areia Reciclada</option><option>Brita Reciclada</option><option>BGS Reciclada</option><option>Rachão Reciclado</option><option>Bica Corrida Reciclada</option><option>Solo Reciclado</option><option>Terra para Aterro</option><option>Pó de Pedra Reciclado</option>';
-    d.innerHTML='<div class="fi"><label>Material '+(i+1)+'</label><select class="ag-mat">'+opts+'</select></div><div class="fi"><label>Qtde (m³)</label><input type="number" class="ag-qtd" value="'+(pr.qtd||'')+'" placeholder="0"/></div><div class="fi"><label>Preço Base (R$)</label><input type="number" class="ag-preco" value="'+(pr.preco||'')+'" step="0.01" oninput="_onPrecoBaseChange(this)"/></div><div class="fi"><label>Preço Final (R$)</label><input type="number" class="ag-preco-final" placeholder="—" step="0.01" style="background:rgba(1,110,24,0.12);border-color:#016e18;color:#4ade80;font-weight:700;" title="Ajustável — edite se quiser mudar o valor final" oninput="_onPrecoFinalChange(this)"/></div>'+(i>0?'<button onclick="this.closest(\'.ag-prod-row\').remove();_calcAgPreview()" style="background:#EF444415;border:1px solid #EF444440;color:#EF4444;border-radius:6px;padding:4px 8px;cursor:pointer;margin-bottom:5px">✕</button>':'<span></span>');
+    d.innerHTML='<div class="fi"><label>Material '+(i+1)+'</label><select class="ag-mat">'+opts+'</select></div><div class="fi"><label>Qtde (m³)</label><input type="number" class="ag-qtd" value="'+(pr.qtd||'')+'" placeholder="0"/></div><div class="fi"><label>Preço/m³ (R$)</label><input type="number" class="ag-preco" value="'+(pr.preco||'')+'" step="0.01"/></div>'+(i>0?'<button onclick="this.closest(\'.ag-prod-row\').remove()" style="background:#EF444415;border:1px solid #EF444440;color:#EF4444;border-radius:6px;padding:4px 8px;cursor:pointer;margin-bottom:5px">✕</button>':'<span></span>');
     pc.appendChild(d);
     // Set select value
     const sel=d.querySelector('.ag-mat');
     if(sel&&pr.mat){for(let o of sel.options){if(o.value===pr.mat){o.selected=true;break;}}}
   });
-  _calcAgPreview();
 }
 
 function _addAgProdRow() {
@@ -767,30 +748,26 @@ function _addAgProdRow() {
   const n=c.querySelectorAll('.ag-prod-row').length+1;
   if(n>4){alert('Máximo 4 materiais.');return;}
   const d=document.createElement('div');d.className='ag-prod-row';
-  d.style.cssText='display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:8px;margin-bottom:6px;align-items:end';
-  d.innerHTML='<div class="fi"><label>Material '+n+'</label><select class="ag-mat"><option value="">Selecione...</option><option>Areia Reciclada</option><option>Brita Reciclada</option><option>BGS Reciclada</option><option>Rachão Reciclado</option><option>Bica Corrida Reciclada</option><option>Solo Reciclado</option><option>Terra para Aterro</option><option>Pó de Pedra Reciclado</option></select></div><div class="fi"><label>Qtde (m³)</label><input type="number" class="ag-qtd" placeholder="0"/></div><div class="fi"><label>Preço Base (R$)</label><input type="number" class="ag-preco" placeholder="35" step="0.01" oninput="_onPrecoBaseChange(this)"/></div><div class="fi"><label>Preço Final (R$)</label><input type="number" class="ag-preco-final" placeholder="—" step="0.01" style="background:rgba(1,110,24,0.12);border-color:#016e18;color:#4ade80;font-weight:700;" title="Ajustável — edite se quiser mudar o valor final" oninput="_onPrecoFinalChange(this)"/></div><button onclick="this.closest(\'.ag-prod-row\').remove();_calcAgPreview()" style="background:#EF444415;border:1px solid #EF444440;color:#EF4444;border-radius:6px;padding:4px 8px;cursor:pointer;margin-bottom:5px">✕</button>';
+  d.style.cssText='display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;margin-bottom:6px;align-items:end';
+  d.innerHTML='<div class="fi"><label>Material '+n+'</label><select class="ag-mat"><option value="">Selecione...</option><option>Areia Reciclada</option><option>Brita Reciclada</option><option>BGS Reciclada</option><option>Rachão Reciclado</option><option>Bica Corrida Reciclada</option><option>Solo Reciclado</option><option>Terra para Aterro</option><option>Pó de Pedra Reciclado</option></select></div><div class="fi"><label>Qtde (m³)</label><input type="number" class="ag-qtd" placeholder="0"/></div><div class="fi"><label>Preço/m³ (R$)</label><input type="number" class="ag-preco" placeholder="35" step="0.01"/></div><button onclick="this.closest(\'.ag-prod-row\').remove()" style="background:#EF444415;border:1px solid #EF444440;color:#EF4444;border-radius:6px;padding:4px 8px;cursor:pointer;margin-bottom:5px">✕</button>';
   c.appendChild(d);
-  _calcAgPreview();
 }
 
 function _collectAgData() {
   const prods=[...document.querySelectorAll('.ag-prod-row')].map(r=>({
     mat:r.querySelector('.ag-mat').value,
     qtd:parseFloat(r.querySelector('.ag-qtd').value)||0,
-    preco:parseFloat(r.querySelector('.ag-preco').value)||0,
-    precoFinalField:parseFloat(r.querySelector('.ag-preco-final')?.value)||0
+    preco:parseFloat(r.querySelector('.ag-preco').value)||0
   })).filter(p=>p.mat);
   const frete=parseFloat(_g('ag-frete'))||0;
   const carga=parseFloat(_g('ag-carga'))||17;
   const entregaTipo=_g('ag-entrega');
   const imposto=_g('ag-imposto');
   const fretePorM3=(entregaTipo==='entrega'&&frete>0&&carga>0)?frete/carga:0;
-  const impostoPct=_agCad?.imposto||3;
   const prodsPriced=prods.map(p=>{
-    if(p.precoFinalField>0) return{...p,precoFinal:p.precoFinalField};
     const base=p.preco||35;
     const comFrete=base+fretePorM3;
-    const final=imposto==='com'?comFrete*(1+impostoPct/100):comFrete;
+    const final=imposto==='com'?comFrete*1.03:comFrete;
     return{...p,precoFinal:Math.round(final*100)/100};
   });
   const pgto=_g('ag-pgto-custom')||_g('ag-pgto')||'A combinar';
@@ -799,58 +776,10 @@ function _collectAgData() {
   return{
     tipo:'agregado',empresa:_g('ag-razao')||'Cliente',contato:_g('ag-contato'),
     tel:_g('ag-tel'),email:_g('ag-email'),endereco:_g('ag-endereco'),
-    entregaTipo,frete,carga,imposto,impostoPct,pgto,pgtoCustom:_g('ag-pgto-custom'),
+    entregaTipo,frete,carga,imposto,pgto,pgtoCustom:_g('ag-pgto-custom'),
     obs:_g('ag-obs'),responsavel:resp,produtos:prods,prodsPriced,
-    data:_dataBR()
+    data:new Date().toLocaleDateString('pt-BR')
   };
-}
-
-function _onPrecoBaseChange(el){const pf=el.closest('.ag-prod-row').querySelector('.ag-preco-final');if(pf){pf.dataset.manual='';pf.style.borderColor='#016e18';pf.style.color='#4ade80';}_calcAgPreview();}
-function _onPrecoFinalChange(el){el.dataset.manual='1';el.style.borderColor='#F59E0B';el.style.color='#FBBF24';}
-function _calcAgPreview(forceAll) {
-  const frete = parseFloat(document.getElementById('ag-frete')?document.getElementById('ag-frete').value:0) || 0;
-  const carga = parseFloat(document.getElementById('ag-carga')?document.getElementById('ag-carga').value:17) || 17;
-  const entregaTipo = document.getElementById('ag-entrega')?document.getElementById('ag-entrega').value:'entrega';
-  const imposto = document.getElementById('ag-imposto')?document.getElementById('ag-imposto').value:'com';
-  const fretePorM3 = (entregaTipo==='entrega' && frete>0 && carga>0) ? frete/carga : 0;
-
-  // Mostrar/ocultar campos de frete
-  const freArea = document.getElementById('ag-frete-area');
-  if (freArea) freArea.style.display = entregaTipo==='entrega' ? '' : 'none';
-
-  // Atualizar preço final — respeita override manual (data-manual=1)
-  document.querySelectorAll('.ag-prod-row').forEach(row=>{
-    const base = parseFloat(row.querySelector('.ag-preco')?row.querySelector('.ag-preco').value:0) || 0;
-    const comFrete = base + fretePorM3;
-    const _ipct = (_agCad?.imposto||3)/100;
-    const final = imposto==='com' ? comFrete*(1+_ipct) : comFrete;
-    const el = row.querySelector('.ag-preco-final');
-    if (!el) return;
-    if (!forceAll && el.dataset.manual === '1') return; // não sobrescreve override
-    if (base > 0) {
-      el.value = final.toFixed(2);
-      el.style.borderColor = '#016e18';
-      el.style.color = '#4ade80';
-    } else {
-      el.value = '';
-      el.placeholder = '—';
-    }
-  });
-
-  // Resumo
-  const sumEl = document.getElementById('ag-calc-summary');
-  if (sumEl) {
-    if (entregaTipo==='entrega' && frete>0 && carga>0) {
-      const fpm = frete/carga;
-      const _ilab=(_agCad?.imposto||3)+'%';
-      sumEl.innerHTML = '📦 Frete/m³: <b>R$ '+fpm.toFixed(2)+'</b>'+(imposto==='com'?' &nbsp;|&nbsp; Imposto '+_ilab+': incluído':'&nbsp;|&nbsp; Imposto: não incluído');
-      sumEl.style.display = 'block';
-    } else if (entregaTipo==='retira') {
-      const _ilab=(_agCad?.imposto||3)+'%';
-      sumEl.innerHTML = '🏭 Modalidade: Retirada — frete não incluso'+(imposto==='com'?' &nbsp;|&nbsp; Imposto '+_ilab+': incluído':'');
-      sumEl.style.display = 'block';
-    } else { sumEl.style.display = 'none'; }
-  }
 }
 
 function gerarPDFAgregado(dataOverride) {
@@ -872,55 +801,45 @@ function gerarPDFAgregado(dataOverride) {
     const fretePorM3=(d.entregaTipo==='entrega'&&d.frete>0&&d.carga>0)?d.frete/d.carga:0;
     prodsPriced=d.produtos.map(p=>{
       const base=p.preco||35;const comFrete=base+fretePorM3;
-      const final=d.imposto==='com'?comFrete*(1+(d.impostoPct||3)/100):comFrete;
+      const final=d.imposto==='com'?comFrete*1.03:comFrete;
       return{...p,precoFinal:Math.round(final*100)/100};
     });
   }
   if(!prodsPriced) prodsPriced=[];
 
-  // ── DATA ──
+  // Data (Calibri 11pt)
   doc.setFont('helvetica','normal');doc.setFontSize(11);doc.setTextColor(30,30,30);
-  doc.text('São Paulo, '+_formatDataPDF(d.data)+'.', mg, y); nl(1.8);
-
-  // ── REMETENTE ──
-  doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(30,30,30);
-  doc.text('AGILIX REMOÇÃO DE ENTULHO LTDA', mg, y); nl();
-  doc.setFont('helvetica','normal');doc.setFontSize(11);
-  doc.text('67.256.792/0001-30', mg, y); nl();
-  doc.text('Email: comercial@multilix.com.br', mg, y); nl();
-  doc.text('Fone – (11) 94559-8431 | (11) 2241-0006', mg, y); nl(2);
-
-  // ── DESTINATÁRIO ──
-  doc.setFont('times','bold');doc.setFontSize(13);doc.setTextColor(30,30,30);
-  doc.text('À', mg, y); nl(1.5);
-  doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(30,30,30);
-  doc.text((d.empresa||'').toUpperCase(), mg, y); nl();
-  doc.setFont('helvetica','normal');doc.setFontSize(11);
-  if(d.contato){doc.setTextColor(30,30,30);doc.text('A/C: '+d.contato, mg, y); nl();}
-  if(d.email){doc.setTextColor(196,89,17);doc.text('Email: '+d.email, mg, y); nl();}
-  if(d.tel){doc.setTextColor(30,30,30);doc.text('Fone – '+d.tel, mg, y); nl();}
-  doc.setTextColor(30,30,30); nl(1.5);
-
-  // ── ASSUNTO ──
-  doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(30,30,30);
-  const agrTit='Proposta Comercial — Agregados Reciclados';
-  doc.text(agrTit, mg, y);
-  doc.setDrawColor(30,30,30);doc.setLineWidth(0.4);doc.line(mg,y+1,mg+doc.getTextWidth(agrTit),y+1);
+  const hoje=new Date();
+  const meses=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  doc.text('Guarulhos, '+hoje.getDate()+' de '+meses[hoje.getMonth()]+' de '+hoje.getFullYear(), mg, y);
   nl(2);
 
-  // ── INTRO ──
-  doc.setFont('helvetica','normal');doc.setFontSize(11);doc.setTextColor(30,30,30);
-  lh=5;
-  const introTxt='        Atendendo sua solicitação, apresentamos abaixo proposta comercial para fornecimento de material reciclado'+(d.entregaTipo==='entrega'?', inclusive frete,':'')+' para obra localizada em '+(d.endereco||'[endereço]')+':';
+  // "À" (Calibri 14pt bold #002060)
+  doc.setFont('helvetica','bold');doc.setFontSize(14);doc.setTextColor(0,32,96);
+  doc.text('À',mg,y);nl(1.3);
+  doc.text(d.empresa||'',mg,y);nl(1.3);
+
+  // A/C (Calibri 14pt bold dark)
+  doc.setTextColor(30,30,30);
+  if(d.contato||d.tel){doc.text('A/C - '+(d.contato||'')+(d.tel?' - '+d.tel:''),mg,y);nl(1.3);}
+  if(d.email){doc.text(d.email,mg,y);nl(1.3);}
+  nl(0.5);
+
+  // Ref (Calibri 12pt normal)
+  doc.setFont('helvetica','normal');doc.setFontSize(12);doc.setTextColor(30,30,30);
+  doc.text('Ref.: Proposta Comercial',mg,y);nl(2);
+
+  // Intro (Calibri 10.5pt)
+  lh=4.5;doc.setFontSize(10.5);
+  const introTxt='            Atendendo sua solicitação, apresentamos abaixo proposta comercial para fornecimento de material reciclado'+(d.entregaTipo==='entrega'?', inclusive frete,':'')+' para obra localizada em '+(d.endereco||'[endereço]')+':';
   const introL=doc.splitTextToSize(introTxt,tw);
-  doc.text(introL,mg,y);y+=introL.length*lh;nl(1.5);
+  doc.text(introL,mg,y);y+=introL.length*lh;nl(2);lh=5;
 
   // Tabela
   ck(16+prodsPriced.length*10);
-  const _valHdr = d.imposto==='com' ? 'VALOR (c/ '+( d.impostoPct||3)+'% imp.)' : 'VALOR (s/ imposto)';
   doc.setFillColor(1,110,24);doc.rect(mg,y,tw,8,'F');
   doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(255,255,255);
-  doc.text('AGREGADO',mg+3,y+5.5);doc.text('UNIDADE',mg+80,y+5.5);doc.text(_valHdr,mg+120,y+5.5);
+  doc.text('AGREGADO',mg+3,y+5.5);doc.text('UNIDADE',mg+80,y+5.5);doc.text('VALOR',mg+130,y+5.5);
   y+=8;
 
   prodsPriced.forEach((p,i)=>{
@@ -935,46 +854,32 @@ function gerarPDFAgregado(dataOverride) {
   });
   nl(1.5);
 
-  // ── NOTA ──
-  doc.setFont('helvetica','normal');doc.setFontSize(11);doc.setTextColor(30,30,30);
-  doc.text('*Valor para viagens fechadas de '+(d.carga||17)+'m³',mg,y);nl(2);
+  // Nota (Calibri 10pt bold)
+  doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(30,30,30);
+  doc.text('             *Valor para viagens fechadas de '+(d.carga||17)+'m³',mg,y);nl(2.5);
 
-  // ── CONDIÇÕES COMERCIAIS ──
-  ck(30);
-  doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(30,30,30);
-  const agrCond='Condições comerciais';
-  doc.text(agrCond,mg,y);
-  doc.setDrawColor(30,30,30);doc.setLineWidth(0.4);doc.line(mg,y+1,mg+doc.getTextWidth(agrCond),y+1);
-  nl(2);
-  let _gw;
-  doc.setFont('helvetica','bold');doc.setFontSize(11);_gw=doc.getTextWidth('Condição de pagamento: ');doc.text('Condição de pagamento: ',mg,y);
-  doc.setFont('helvetica','normal');doc.text(d.pgto||'A combinar',mg+_gw,y);nl(1.3);
-  doc.setFont('helvetica','bold');_gw=doc.getTextWidth('Validade da proposta: ');doc.text('Validade da proposta: ',mg,y);
-  doc.setFont('helvetica','normal');doc.text('15 dias',mg+_gw,y);nl(1.3);
-  doc.setFont('helvetica','bold');_gw=doc.getTextWidth('Prazo de entrega: ');doc.text('Prazo de entrega: ',mg,y);
-  doc.setFont('helvetica','normal');doc.text('1 a 2 dias úteis a partir da solicitação.',mg+_gw,y);nl(2);
+  // Condições (Calibri 12pt bold)
+  ck(25);
+  doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(30,30,30);
+  doc.text('            Condições de Pagamento - '+(d.pgto||'A combinar'),mg,y);nl(1.5);
+  doc.text('            Validade da Proposta - 15 dias',mg,y);nl(1.5);
+  doc.text('            Prazo de Entrega - 1 a 2 dias úteis a partir da solicitação da entrega.',mg,y);nl(2.5);
 
-  // ── VALIDAÇÃO ──
+  // Validação (12pt bold + normal)
   ck(22);
-  doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(30,30,30);
-  const agrVal='Validação/Homologação do Produto';
-  doc.text(agrVal,mg,y);
-  doc.setDrawColor(30,30,30);doc.setLineWidth(0.4);doc.line(mg,y+1,mg+doc.getTextWidth(agrVal),y+1);
-  nl(1.8);
-  doc.setFont('helvetica','normal');lh=5;
-  const validL=doc.splitTextToSize('        Como garantia da qualidade e desempenho do produto, se aprovada esta proposta, será fornecido um carregamento de testes. Sendo gerada cobrança apenas em caso de aprovação/homologação do mesmo.',tw);
+  doc.setFont('helvetica','bold');doc.setFontSize(12);
+  doc.text('            Validação/Homologação do Produto',mg,y);nl(1.5);
+  doc.setFont('helvetica','normal');lh=5.5;
+  const validL=doc.splitTextToSize('            Como garantia da qualidade e desempenho do produto, se aprovada esta proposta, será fornecido um carregamento de testes. Sendo gerada cobrança apenas em caso de aprovação/homologação do mesmo.',tw);
   doc.text(validL,mg,y);y+=validL.length*lh;nl(1.5);
 
-  // ── SOBRE O PRODUTO ──
+  // Sobre o Produto (12pt bold + normal)
   ck(22);
-  doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(30,30,30);
-  const agrSobre='Sobre o Produto';
-  doc.text(agrSobre,mg,y);
-  doc.setDrawColor(30,30,30);doc.setLineWidth(0.4);doc.line(mg,y+1,mg+doc.getTextWidth(agrSobre),y+1);
-  nl(1.8);
+  doc.setFont('helvetica','bold');doc.setFontSize(12);
+  doc.text('            Sobre o Produto',mg,y);nl(1.5);
   doc.setFont('helvetica','normal');
-  const sobreL=doc.splitTextToSize('        Nossos agregados são obtidos através de um moderno tratamento mecanizado de RCC (Resíduos de Construção Civil) e são livres de materiais celulósicos, plásticos, metais (pregos, vergalhões, etc) e contaminantes que possam interferir na integridade dos equipamentos e das pessoas que os manusearão.',tw);
-  doc.text(sobreL,mg,y);y+=sobreL.length*lh;nl(2);
+  const sobreL=doc.splitTextToSize('           Nossos agregados são obtidos através de um moderno tratamento mecanizado de RCC (Resíduos de Construção Civil) e são livres de materiais celulósicos, plásticos, metais (pregos, vergalhões, etc) e contaminantes que possam interferir na integridade dos equipamentos e das pessoas que os manusearão.',tw);
+  doc.text(sobreL,mg,y);y+=sobreL.length*lh;nl(2);lh=5;
 
   if(d.obs){ck(10);doc.setFont('helvetica','normal');doc.setFontSize(11);doc.setTextColor(60,60,60);const ol=doc.splitTextToSize(d.obs,tw);doc.text(ol,mg,y);y+=ol.length*lh;nl(1);}
 
@@ -994,7 +899,7 @@ function gerarPDFAgregado(dataOverride) {
   // Save to history if generating from form (not from history click)
   if (!dataOverride) {
     const entry = _collectAgData();
-    entry.data = _dataBR();
+    entry.data = new Date().toLocaleDateString('pt-BR');
     if (_agEditIdx >= 0) {
       if (confirm('Atualizar proposta existente?\n\nOK = Atualizar\nCancelar = Criar novo')) {
         entry.id=_propHistorico[_agEditIdx].id;
@@ -1173,7 +1078,7 @@ function gerarPropATTPDF(dataOverride){
   _pdfBackground(doc,W,H);
 
   // ── PG1: DATA + REMETENTE + DESTINATÁRIO + INTRO ──
-  setN();doc.text('São Paulo, '+_formatDataPDF(d.data)+'.',mg,y);nl(1.8);
+  setN();doc.text('São Paulo, '+d.data+'.',mg,y);nl(1.8);
   setB();doc.text('MULTILIX - AMSTERDAM REMOÇÃO DE ENTULHO LTDA',mg,y);nl();
   setN();doc.text('CNPJ: 04.171.574/0002-64',mg,y);nl();
   doc.text('Email: comercial@multilix.com.br',mg,y);nl();
@@ -1279,10 +1184,9 @@ function gerarPropATTPDF(dataOverride){
   ck(30);
   setB();doc.text('Condições comerciais',mg,y);ul('Condições comerciais');nl(2);
 
-  let _aw;
-  setB();_aw=doc.getTextWidth('Atendimento: ');doc.text('Atendimento: ',mg,y);setN();doc.text(d.atend||'Recebimento de resíduos 24h',mg+_aw,y);nl(1.3);
-  setB();_aw=doc.getTextWidth('Condição de pagamento: ');doc.text('Condição de pagamento: ',mg,y);setN();doc.text(d.pgto||'Pagamento antecipado ou no ato do descarte',mg+_aw,y);nl(1.3);
-  setB();_aw=doc.getTextWidth('Validade da proposta: ');doc.text('Validade da proposta: ',mg,y);setN();doc.text(d.validade||'15 dias',mg+_aw,y);nl(1.3);
+  setB();doc.text('Atendimento: ',mg,y);setN();doc.text(d.atend||'Recebimento de resíduos 24h',mg+doc.getTextWidth('Atendimento: '),y);nl(1.3);
+  setB();doc.text('Condição de pagamento: ',mg,y);setN();doc.text(d.pgto||'Pagamento antecipado ou no ato do descarte',mg+doc.getTextWidth('Condição de pagamento: '),y);nl(1.3);
+  setB();doc.text('Validade da proposta: ',mg,y);setN();doc.text(d.validade||'15 dias',mg+doc.getTextWidth('Validade da proposta: '),y);nl(1.3);
   setB();doc.text('Prazo para início do atendimento: ',mg,y);
   const piW=doc.getTextWidth('Prazo para início do atendimento: ');
   setN();const piL=doc.splitTextToSize(d.prazo||'Imediato, conforme alinhamento operacional entre as partes',tw-piW);
@@ -1302,7 +1206,7 @@ function gerarPropATTPDF(dataOverride){
 
   // Save to history
   if(!dataOverride){
-    const entry=_collectATT();entry.data=_dataBR();
+    const entry=_collectATT();entry.data=new Date().toLocaleDateString('pt-BR');
     if(_attEditIdx>=0){
       if(confirm('Atualizar proposta existente?\n\nOK = Atualizar\nCancelar = Criar novo')){
         entry.id=_attHist[_attEditIdx].id;entry.numero=_attHist[_attEditIdx].numero;
@@ -1387,68 +1291,6 @@ function _renderATTCadResp(){
 }
 function saveATTConfig(){_saveAttCad();alert('Cadastros ATT salvos!');}
 function resetATTConfig(){_attCad=JSON.parse(JSON.stringify(ATT_DEFAULTS));_saveAttCad();_renderATTCadItens();alert('Padrão restaurado.');}
-
-// ── CONFIG AGREGADOS ──
-const AG_DEFAULTS = {
-  imposto: 3,
-  materiais:[
-    {mat:'Areia Reciclada',     preco:50.00},
-    {mat:'Brita Reciclada',     preco:55.00},
-    {mat:'BGS Reciclada',       preco:60.00},
-    {mat:'Rachão Reciclado',    preco:45.00},
-    {mat:'Bica Corrida Reciclada',preco:52.00},
-    {mat:'Solo Reciclado',      preco:35.00},
-    {mat:'Terra para Aterro',   preco:30.00},
-    {mat:'Pó de Pedra Reciclado',preco:48.00}
-  ]
-};
-let _agCad = JSON.parse(localStorage.getItem('mlx_ag_cad')||'null') || JSON.parse(JSON.stringify(AG_DEFAULTS));
-function _saveAgCad(){localStorage.setItem('mlx_ag_cad',JSON.stringify(_agCad));}
-
-function showAgConfig(){document.getElementById('ag-config-overlay').style.display='block';_renderAgCadItens();}
-function closeAgConfig(){document.getElementById('ag-config-overlay').style.display='none';}
-
-function _renderAgCadItens(){
-  const el=document.getElementById('ag-cad-itens');if(!el)return;
-  el.innerHTML=_agCad.materiais.map((it,i)=>`<div style="display:grid;grid-template-columns:2fr 1fr auto;gap:5px;margin-bottom:4px;align-items:center">
-    <span style="font-size:12px;color:var(--text)">${it.mat}</span>
-    <span style="font-size:12px;color:#4ade80;font-weight:600">R$ ${it.preco.toFixed(2)}/m³</span>
-    <button onclick="_agCad.materiais.splice(${i},1);_renderAgCadItens()" style="background:none;border:none;color:#EF4444;cursor:pointer;font-size:14px">✕</button>
-  </div>`).join('');
-  const impEl=document.getElementById('ag-cad-imposto');if(impEl)impEl.value=_agCad.imposto||3;
-}
-function addAgCadItem(){
-  const m=document.getElementById('ag-cad-mat').value.trim();
-  const p=parseFloat(document.getElementById('ag-cad-preco').value)||0;
-  if(!m||!p)return;
-  _agCad.materiais.push({mat:m,preco:p});
-  document.getElementById('ag-cad-mat').value='';document.getElementById('ag-cad-preco').value='';
-  _renderAgCadItens();
-}
-function saveAgConfig(){
-  const impEl=document.getElementById('ag-cad-imposto');
-  if(impEl) _agCad.imposto=parseFloat(impEl.value)||3;
-  _saveAgCad();alert('Tabela de Agregados salva!');
-}
-function resetAgConfig(){_agCad=JSON.parse(JSON.stringify(AG_DEFAULTS));_saveAgCad();_renderAgCadItens();alert('Padrão restaurado.');}
-
-function _initAgProdutos(){
-  const pc=document.getElementById('ag-produtos');if(!pc)return;
-  pc.innerHTML='';
-  const mats=_agCad.materiais;
-  if(!mats||!mats.length){_addAgProdRow();return;}
-  mats.forEach((it,i)=>{
-    const d=document.createElement('div');d.className='ag-prod-row';
-    d.style.cssText='display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:8px;margin-bottom:6px;align-items:end';
-    const opts=_agMatOpts();
-    d.innerHTML='<div class="fi"><label>Material '+(i+1)+'</label><select class="ag-mat">'+opts+'</select></div><div class="fi"><label>Qtde (m³)</label><input type="number" class="ag-qtd" placeholder="0"/></div><div class="fi"><label>Preço Base (R$)</label><input type="number" class="ag-preco" value="'+it.preco.toFixed(2)+'" step="0.01" oninput="_onPrecoBaseChange(this)"/></div><div class="fi"><label>Preço Final (R$)</label><input type="number" class="ag-preco-final" placeholder="—" step="0.01" style="background:rgba(1,110,24,0.12);border-color:#016e18;color:#4ade80;font-weight:700;" title="Ajustável — edite se quiser mudar o valor final" oninput="_onPrecoFinalChange(this)"/></div>'+(i>0?'<button onclick="this.closest(\'.ag-prod-row\').remove();_calcAgPreview()" style="background:#EF444415;border:1px solid #EF444440;color:#EF4444;border-radius:6px;padding:4px 8px;cursor:pointer;margin-bottom:5px">✕</button>':'<span></span>');
-    pc.appendChild(d);
-    const sel=d.querySelector('.ag-mat');
-    if(sel&&it.mat){for(let o of sel.options){if(o.value===it.mat){o.selected=true;break;}}}
-  });
-  _calcAgPreview();
-}
-function _agMatOpts(){return'<option value="">Selecione...</option><option>Areia Reciclada</option><option>Brita Reciclada</option><option>BGS Reciclada</option><option>Rachão Reciclado</option><option>Bica Corrida Reciclada</option><option>Solo Reciclado</option><option>Terra para Aterro</option><option>Pó de Pedra Reciclado</option>';}
 
 document.addEventListener('DOMContentLoaded', () => { renderHistoricoPropostas(); renderHistoricoAgregados(); renderATTHistorico(); _refreshRespSelects(); });
 </script>
@@ -1951,6 +1793,16 @@ body { font-size: 13.5px !important; }
         <button class="nav-item" onclick="showPage('consolidado',this)"><span class="icon" data-lucide="layout-dashboard"></span>Consolidado</button>
         <button class="nav-item" onclick="showPage('att',this)"><span class="icon" data-lucide="truck"></span>Recebimento de Terceiros</button>
         <button class="nav-item" onclick="showPage('locacao',this)"><span class="icon" data-lucide="trash-2"></span>Locação</button>
+        <div class="nav-group" data-group="att-terceiros" style="margin-left:0">
+          <button class="nav-group-toggle" onclick="toggleNavGroup('att-terceiros')" style="padding-left:34px"><span class="icon" data-lucide="package-open"></span>Entrada Terceiros<span class="chev" data-lucide="chevron-right"></span></button>
+          <div class="nav-group-children"><div>
+            <button class="nav-item" onclick="window.open('/entrada-terceiros','_blank')" style="padding-left:54px"><span class="icon" data-lucide="plus-circle"></span>Lançar Vale</button>
+            <button class="nav-item" onclick="showPage('att-relatorio',this)" style="padding-left:54px"><span class="icon" data-lucide="bar-chart-2"></span>Relatório de Descartes</button>
+            <button class="nav-item" onclick="showPage('att-parceiros',this)" style="padding-left:54px"><span class="icon" data-lucide="users"></span>Parceiros ATT</button>
+            <button class="nav-item" onclick="showPage('att-residuos',this)" style="padding-left:54px"><span class="icon" data-lucide="recycle"></span>Tipos de Resíduo</button>
+            <button class="nav-item" onclick="showPage('att-equipamentos',this)" style="padding-left:54px"><span class="icon" data-lucide="truck"></span>Equipamentos</button>
+          </div></div>
+        </div>
       </div></div>
     </div>
 
@@ -2312,6 +2164,194 @@ body { font-size: 13.5px !important; }
             </tr></thead>
             <tbody id="tbody-top10-att"></tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ ATT TERCEIROS: RELATÓRIO DE DESCARTES ══════════ -->
+    <div class="page" id="page-att-relatorio">
+      <div class="filterbar" style="flex-wrap:wrap;gap:8px">
+        <div class="fg"><label>De</label><input type="date" id="fat-from" oninput="attRelFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 10px;font-size:12px;outline:none"/></div>
+        <div class="fg"><label>Até</label><input type="date" id="fat-to" oninput="attRelFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 10px;font-size:12px;outline:none"/></div>
+        <div class="fg"><label>Cliente</label><input type="text" id="fat-cliente" placeholder="Nome fantasia..." oninput="attRelFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 10px;font-size:12px;outline:none;min-width:140px"/></div>
+        <div class="fg"><label>Vale Nº</label><input type="text" id="fat-vale" placeholder="VD-000001" oninput="attRelFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 10px;font-size:12px;outline:none;width:110px"/></div>
+        <div class="fg"><label>CTR/MTR</label><input type="text" id="fat-ctr" placeholder="Nº CTR/MTR" oninput="attRelFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 10px;font-size:12px;outline:none;width:110px"/></div>
+        <div class="fg"><label>Resíduo</label><select id="fat-residuo" onchange="attRelFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 10px;font-size:12px;outline:none"><option value="">Todos</option></select></div>
+        <div class="fg"><label>Status</label><select id="fat-status" onchange="attRelFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 10px;font-size:12px;outline:none"><option value="">Todos</option><option value="finalizado">Finalizado</option><option value="cancelado">Cancelado</option><option value="rascunho">Rascunho</option></select></div>
+        <button class="btn btn-ghost btn-sm" onclick="attRelLimpar()"><i data-lucide="rotate-ccw" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Limpar</button>
+        <button class="btn btn-sm" style="background:var(--green);color:#000;font-weight:700" onclick="attRelExportar()"><i data-lucide="download" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Exportar CSV</button>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpi-grid" id="att-rel-kpis" style="margin-bottom:16px"></div>
+
+      <!-- TABELA -->
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title"><i data-lucide="list" style="width:13px;height:13px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Vales de Descarga</span>
+          <span class="panel-badge" id="att-rel-badge">—</span>
+        </div>
+        <div class="tbl-wrap" style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:12px" id="att-rel-table">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border)">
+                <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600;white-space:nowrap">Data/Hora</th>
+                <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Vale Nº</th>
+                <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Cliente</th>
+                <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Placa</th>
+                <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">CTR/MTR</th>
+                <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Equipamento</th>
+                <th style="padding:8px 10px;text-align:right;color:var(--muted);font-weight:600">Vol. m³</th>
+                <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Resíduo</th>
+                <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Nº Caçamba</th>
+                <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Status</th>
+                <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="att-rel-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ ATT TERCEIROS: PARCEIROS ══════════ -->
+    <div class="page" id="page-att-parceiros">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-size:16px;font-weight:700">Parceiros ATT</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">Clientes que descarregam resíduos na ATT Multilix</div>
+        </div>
+        <button class="btn btn-sm" style="background:var(--green);color:#000;font-weight:700" onclick="attParcNovo()"><i data-lucide="plus" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Novo Parceiro</button>
+      </div>
+      <div class="filterbar" style="margin-bottom:16px">
+        <input type="text" id="parc-busca" placeholder="Buscar por nome, razão social ou documento..." oninput="attParcFiltrar()" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;outline:none"/>
+        <select id="parc-status-f" onchange="attParcFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 10px;font-size:12px;outline:none"><option value="">Todos</option><option value="ativo">Ativos</option><option value="inativo">Inativos</option></select>
+      </div>
+      <div class="panel">
+        <div class="tbl-wrap" style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead><tr style="border-bottom:1px solid var(--border)">
+              <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Nome Fantasia</th>
+              <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Razão Social</th>
+              <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Documento</th>
+              <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Telefone</th>
+              <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Status</th>
+              <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Ações</th>
+            </tr></thead>
+            <tbody id="parc-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <!-- MODAL PARCEIRO -->
+      <div id="parc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;padding:16px">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+            <div style="font-size:15px;font-weight:700" id="parc-modal-title">Novo Parceiro</div>
+            <button onclick="document.getElementById('parc-modal').style.display='none'" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
+          </div>
+          <div style="display:grid;gap:12px">
+            <input type="hidden" id="pm-id"/>
+            <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Nome Fantasia *</label><input type="text" id="pm-nome" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none" placeholder="Nome fantasia"/></div>
+            <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Razão Social</label><input type="text" id="pm-razao" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none" placeholder="Razão social completa"/></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Tipo Doc.</label><select id="pm-tipo-doc" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none"><option value="">—</option><option value="CNPJ">CNPJ</option><option value="CPF">CPF</option></select></div>
+              <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Documento</label><input type="text" id="pm-doc" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none" placeholder="00.000.000/0001-00"/></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Telefone</label><input type="text" id="pm-tel" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none" placeholder="(11) 99999-9999"/></div>
+              <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Status</label><select id="pm-status" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none"><option value="ativo">Ativo</option><option value="inativo">Inativo</option></select></div>
+            </div>
+            <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">E-mail</label><input type="text" id="pm-email" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none" placeholder="contato@empresa.com.br"/></div>
+            <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Observações</label><textarea id="pm-obs" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none;resize:none;height:70px;font-family:inherit" placeholder="Informações adicionais"></textarea></div>
+            <div id="pm-error" style="color:var(--red);font-size:12px;display:none"></div>
+            <button onclick="attParcSalvar()" style="width:100%;padding:13px;background:var(--green);border:none;border-radius:10px;color:#000;font-size:14px;font-weight:700;cursor:pointer">Salvar Parceiro</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ ATT TERCEIROS: TIPOS DE RESÍDUO ══════════ -->
+    <div class="page" id="page-att-residuos">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-size:16px;font-weight:700">Tipos de Resíduo</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">Resíduos disponíveis para lançamento de vale</div>
+        </div>
+        <button class="btn btn-sm" style="background:var(--green);color:#000;font-weight:700" onclick="attResNovo()"><i data-lucide="plus" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Novo Resíduo</button>
+      </div>
+      <div class="panel">
+        <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="border-bottom:1px solid var(--border)">
+            <th style="padding:10px 12px;text-align:left;color:var(--muted);font-weight:600">Nome do Resíduo</th>
+            <th style="padding:10px 12px;text-align:center;color:var(--muted);font-weight:600">Ordem</th>
+            <th style="padding:10px 12px;text-align:center;color:var(--muted);font-weight:600">Status</th>
+            <th style="padding:10px 12px;text-align:left;color:var(--muted);font-weight:600">Ações</th>
+          </tr></thead>
+          <tbody id="res-tbody"></tbody>
+        </table></div>
+      </div>
+      <div id="res-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;padding:16px">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:380px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+            <div style="font-size:15px;font-weight:700" id="res-modal-title">Novo Resíduo</div>
+            <button onclick="document.getElementById('res-modal').style.display='none'" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
+          </div>
+          <input type="hidden" id="rm-id"/>
+          <div style="display:grid;gap:12px">
+            <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Nome *</label><input type="text" id="rm-nome" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none" placeholder="Ex: Entulho limpo"/></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Ordem</label><input type="number" id="rm-ordem" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none" value="0"/></div>
+              <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Status</label><select id="rm-ativo" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none"><option value="true">Ativo</option><option value="false">Inativo</option></select></div>
+            </div>
+            <div id="rm-error" style="color:var(--red);font-size:12px;display:none"></div>
+            <button onclick="attResSalvar()" style="width:100%;padding:13px;background:var(--green);border:none;border-radius:10px;color:#000;font-size:14px;font-weight:700;cursor:pointer">Salvar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ ATT TERCEIROS: EQUIPAMENTOS ══════════ -->
+    <div class="page" id="page-att-equipamentos">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-size:16px;font-weight:700">Equipamentos / Volumes</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">Tipos de equipamento disponíveis para lançamento</div>
+        </div>
+        <button class="btn btn-sm" style="background:var(--green);color:#000;font-weight:700" onclick="attEqNovo()"><i data-lucide="plus" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Novo Equipamento</button>
+      </div>
+      <div class="panel">
+        <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="border-bottom:1px solid var(--border)">
+            <th style="padding:10px 12px;text-align:left;color:var(--muted);font-weight:600">Nome</th>
+            <th style="padding:10px 12px;text-align:left;color:var(--muted);font-weight:600">Tipo</th>
+            <th style="padding:10px 12px;text-align:right;color:var(--muted);font-weight:600">Vol. Padrão m³</th>
+            <th style="padding:10px 12px;text-align:center;color:var(--muted);font-weight:600">Ordem</th>
+            <th style="padding:10px 12px;text-align:center;color:var(--muted);font-weight:600">Status</th>
+            <th style="padding:10px 12px;text-align:left;color:var(--muted);font-weight:600">Ações</th>
+          </tr></thead>
+          <tbody id="eq-tbody"></tbody>
+        </table></div>
+      </div>
+      <div id="eq-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;padding:16px">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:400px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+            <div style="font-size:15px;font-weight:700" id="eq-modal-title">Novo Equipamento</div>
+            <button onclick="document.getElementById('eq-modal').style.display='none'" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
+          </div>
+          <input type="hidden" id="em-id"/>
+          <div style="display:grid;gap:12px">
+            <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Nome *</label><input type="text" id="em-nome" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none" placeholder="Ex: Caçamba 4 m³"/></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Tipo</label><select id="em-tipo" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none"><option value="cacamba">Caçamba</option><option value="caminhao">Caminhão</option><option value="avulso">Volume Avulso</option></select></div>
+              <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Vol. Padrão m³</label><input type="number" id="em-vol" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none" placeholder="deixe vazio p/ avulso" step="0.01"/></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Ordem</label><input type="number" id="em-ordem" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none" value="0"/></div>
+              <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Status</label><select id="em-ativo" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none"><option value="true">Ativo</option><option value="false">Inativo</option></select></div>
+            </div>
+            <div id="em-error" style="color:var(--red);font-size:12px;display:none"></div>
+            <button onclick="attEqSalvar()" style="width:100%;padding:13px;background:var(--green);border:none;border-radius:10px;color:#000;font-size:14px;font-weight:700;cursor:pointer">Salvar</button>
+          </div>
         </div>
       </div>
     </div>
@@ -3067,44 +3107,12 @@ body { font-size: 13.5px !important; }
       </div>
     </div>
 
-    <!-- ===== CONFIG AGREGADOS ===== -->
-    <div id="ag-config-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:9300;overflow-y:auto;padding:20px 12px" onclick="if(event.target===this)closeAgConfig()">
-      <div style="max-width:580px;margin:0 auto;background:#151922;border:1px solid #262D3D;border-radius:16px;padding:0 0 24px" onclick="event.stopPropagation()">
-        <div style="background:linear-gradient(90deg,#7c5c1e,#5c3d12);border-radius:16px 16px 0 0;padding:16px 24px;display:flex;align-items:center;justify-content:space-between">
-          <h2 style="font-size:16px;font-weight:700;color:#fff;margin:0">⚙️ Tabela Padrão — Agregados</h2>
-          <button onclick="closeAgConfig()" style="background:rgba(255,255,255,.15);border:none;color:#fff;cursor:pointer;font-size:18px;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center">✕</button>
-        </div>
-        <div style="padding:20px 24px">
-          <div style="font-size:10px;font-weight:700;color:#5b6478;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Materiais e Preços Padrão (pré-carregados nas propostas)</div>
-          <div id="ag-cad-itens" style="margin-bottom:8px;max-height:260px;overflow-y:auto"></div>
-          <div style="display:grid;grid-template-columns:2fr 1fr auto;gap:6px;margin-bottom:16px">
-            <input id="ag-cad-mat" placeholder="Nome do material" style="background:#1c212d;border:1px solid #262D3D;border-radius:8px;padding:7px 9px;color:#eef0ff;font-size:12px;outline:none"/>
-            <input id="ag-cad-preco" type="number" placeholder="Preço base R$" step="0.01" style="background:#1c212d;border:1px solid #262D3D;border-radius:8px;padding:7px 9px;color:#eef0ff;font-size:12px;outline:none"/>
-            <button onclick="addAgCadItem()" style="background:#F59E0B15;border:1px solid #F59E0B;color:#F59E0B;border-radius:8px;padding:7px 10px;cursor:pointer;font-size:12px">+</button>
-          </div>
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding:10px 12px;background:#1c212d;border-radius:10px;border:1px solid #262D3D">
-            <span style="font-size:12px;color:var(--muted);flex:1">% de Imposto aplicado no Preço Final:</span>
-            <input id="ag-cad-imposto" type="number" value="3" min="0" max="30" step="0.5" style="width:64px;background:#151922;border:1px solid #4ade8060;border-radius:8px;padding:6px 9px;color:#4ade80;font-size:13px;font-weight:700;outline:none;text-align:center"/>
-            <span style="font-size:12px;color:var(--muted)">%</span>
-          </div>
-          <p style="font-size:11px;color:var(--muted);margin-bottom:14px">Este % é aplicado no Preço Final quando "Com imposto" for selecionado na proposta.</p>
-          <div style="display:flex;justify-content:flex-end;gap:10px">
-            <button onclick="resetAgConfig()" style="background:#EF444415;border:1px solid #EF444440;color:#EF4444;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:12px">Restaurar Padrão</button>
-            <button onclick="saveAgConfig();closeAgConfig()" style="background:linear-gradient(135deg,#7c5c1e,#5c3d12);color:#fff;border:none;border-radius:9px;padding:9px 22px;cursor:pointer;font-weight:700;font-size:13px">💾 Salvar</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- ===== MODAL PROPOSTA AGREGADO ===== -->
     <div id="prop-agreg-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:9100;overflow-y:auto;padding:20px 12px" onclick="if(event.target===this)document.getElementById('prop-agreg-overlay').style.display='none'">
       <div style="max-width:820px;margin:0 auto;background:#151922;border:1px solid #262D3D;border-radius:16px;padding:0 0 24px" onclick="event.stopPropagation()">
         <div style="background:linear-gradient(90deg,#7c5c1e,#5c3d12);border-radius:16px 16px 0 0;padding:16px 24px;display:flex;align-items:center;justify-content:space-between">
           <h2 style="font-size:16px;font-weight:700;color:#fff;margin:0">🪨 Proposta Comercial — Agregado Reciclado</h2>
-          <div style="display:flex;gap:8px;align-items:center">
-            <button onclick="showAgConfig()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;cursor:pointer;font-size:11px;padding:4px 10px;border-radius:8px;font-weight:600">⚙️ Tabela Padrão</button>
-            <button onclick="document.getElementById('prop-agreg-overlay').style.display='none'" style="background:rgba(255,255,255,.15);border:none;color:#fff;cursor:pointer;font-size:18px;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center">✕</button>
-          </div>
+          <button onclick="document.getElementById('prop-agreg-overlay').style.display='none'" style="background:rgba(255,255,255,.15);border:none;color:#fff;cursor:pointer;font-size:18px;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center">✕</button>
         </div>
         <div style="padding:20px 24px">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -3121,13 +3129,12 @@ body { font-size: 13.5px !important; }
 
           <div style="font-size:10px;font-weight:700;color:#5b6478;text-transform:uppercase;letter-spacing:.8px;margin:16px 0 8px">Produtos (até 4 materiais)</div>
           <div id="ag-produtos">
-            <div class="ag-prod-row" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:8px;margin-bottom:6px;align-items:end">
+            <div class="ag-prod-row" style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;margin-bottom:6px;align-items:end">
               <div class="fi"><label>Material 1</label>
                 <select class="ag-mat"><option value="">Selecione...</option><option>Areia Reciclada</option><option>Brita Reciclada</option><option>BGS Reciclada</option><option>Rachão Reciclado</option><option>Bica Corrida Reciclada</option><option>Solo Reciclado</option><option>Terra para Aterro</option><option>Pó de Pedra Reciclado</option></select>
               </div>
               <div class="fi"><label>Qtde (m³)</label><input type="number" class="ag-qtd" placeholder="0"/></div>
-              <div class="fi"><label>Preço Base (R$)</label><input type="number" class="ag-preco" placeholder="35" step="0.01" oninput="_onPrecoBaseChange(this)"/></div>
-              <div class="fi"><label>Preço Final (R$)</label><input type="number" class="ag-preco-final" placeholder="—" step="0.01" style="background:rgba(1,110,24,0.12);border-color:#016e18;color:#4ade80;font-weight:700;" title="Ajustável — edite se quiser mudar o valor final" oninput="_onPrecoFinalChange(this)"/></div>
+              <div class="fi"><label>Preço/m³ (R$)</label><input type="number" class="ag-preco" placeholder="35" step="0.01"/></div>
               <span></span>
             </div>
           </div>
@@ -3135,18 +3142,13 @@ body { font-size: 13.5px !important; }
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
             <div class="fi"><label>Entrega ou Retirada</label>
-              <select id="ag-entrega" onchange="_calcAgPreview()"><option value="entrega">Entrega (com frete)</option><option value="retira">Retirada (sem frete)</option></select>
+              <select id="ag-entrega"><option value="entrega">Entrega (com frete)</option><option value="retira">Retirada (sem frete)</option></select>
             </div>
             <div class="fi"><label>Acesso a caminhão?</label>
               <select id="ag-acesso"><option value="s">Sim</option><option value="n">Não</option></select>
             </div>
-            <div id="ag-frete-area" style="display:contents">
-              <div class="fi"><label>Valor do Frete (R$)</label><input type="number" id="ag-frete" placeholder="Ex: 180" step="0.01" oninput="_onPrecoBaseChange(this)"/></div>
-              <div class="fi"><label>Tamanho da Carga (m³)</label><input type="number" id="ag-carga" value="17" oninput="_calcAgPreview()"/></div>
-            </div>
-            <div class="fi"><label>Incluir impostos no preço?</label>
-              <select id="ag-imposto" onchange="_calcAgPreview()"><option value="com" id="ag-imposto-opt-com">Com imposto (3%)</option><option value="sem">Sem imposto</option></select>
-            </div>
+            <div class="fi"><label>Valor do Frete (R$)</label><input type="number" id="ag-frete" placeholder="Ex: 180" step="0.01"/></div>
+            <div class="fi"><label>Tamanho da Carga (m³)</label><input type="number" id="ag-carga" value="17"/></div>
             <div class="fi"><label>Condição de Pagamento</label>
               <select id="ag-pgto"><option value="">Selecione...</option></select>
             </div>
@@ -3154,7 +3156,9 @@ body { font-size: 13.5px !important; }
             <div class="fi"><label>Responsável pelo Envio</label>
               <select id="ag-resp"></select>
             </div>
-            <div id="ag-calc-summary" style="display:none;grid-column:1/-1;background:rgba(1,110,24,0.12);border:1px solid #016e18;border-radius:8px;padding:8px 14px;font-size:12px;color:#4ade80"></div>
+            <div class="fi"><label>Incluir impostos no preço?</label>
+              <select id="ag-imposto"><option value="com">Com imposto</option><option value="sem">Sem imposto</option></select>
+            </div>
             <div class="fi" style="grid-column:1/-1"><label>Observações</label>
               <textarea id="ag-obs" rows="2" placeholder="Informações adicionais..."></textarea>
             </div>
@@ -4888,40 +4892,6 @@ function loadFile(e,type){
         saveStorage();updateAll();return;
       }
       if(type==='metas'){data.forEach(r=>{const vals=Object.values(r);if(vals[0]&&vals[1]){const el2=document.getElementById('meta-'+clean(String(vals[0])));if(el2)el2.value=parseNum(vals[1]);}});el.innerHTML=ic('check-circle-2',12)+' '+file.name;el.className='ds-file-info';updateAll();return;}
-
-      // ── VALIDAÇÃO DE TIPO DE CSV ────────────────────────────────────
-      // Detecta tipo pelo conteúdo (colunas idênticas no TCI — só dados diferem)
-      if(type==='att'||type==='locacao'){
-        const amostra=data.slice(0,Math.min(10,data.length));
-        // Assinatura ATT: Tipo="Coleta" + Motorista preenchido + Placa com padrão de placa
-        const temPlacaVeiculo=amostra.some(r=>{
-          const p=clean(String(r['Placa']||r['placa']||''));
-          return p.length>=5&&/[A-Z]{2,3}[-\s]?[0-9A-Z]/i.test(p)&&p!=='TESTE';
-        });
-        const temMotoristaNome=amostra.some(r=>clean(String(r['Motorista']||r['motorista']||'')).split(' ').length>=2);
-        const tiposCSV=[...new Set(amostra.map(r=>clean(String(r['Tipo']||r['tipo']||'')).toLowerCase()).filter(Boolean))];
-        const temColeta=tiposCSV.some(t=>t.includes('coleta'));
-        const temLocacao=tiposCSV.some(t=>t.includes('loca')||t.includes('alug'));
-
-        let tipoDetectado=null;
-        if(temColeta&&temMotoristaNome&&temPlacaVeiculo) tipoDetectado='att';
-        else if(temLocacao) tipoDetectado='locacao';
-
-        if(tipoDetectado&&tipoDetectado!==type){
-          const nomes={att:'ATT — Atendimento (Coleta)',locacao:'Locação'};
-          const aviso=`⚠️ ATENÇÃO: Arquivo incompatível!\n\nO arquivo "${file.name}" parece ser um CSV de ${nomes[tipoDetectado]||tipoDetectado}.\nVocê está enviando para a zona de ${nomes[type]||type}.\n\nSe continuar, os dados serão processados incorretamente.\n\nCancelar o envio?`;
-          if(confirm(aviso)){
-            el.innerHTML=ic('x-circle',12)+' <b style="color:#EF4444">Upload cancelado</b> — arquivo de '+( nomes[tipoDetectado]||tipoDetectado)+' enviado para zona '+( nomes[type]||type);
-            el.className='ds-file-info';
-            e.target.value='';
-            return;
-          }
-          // Usuário escolheu continuar mesmo assim — registra aviso
-          el.innerHTML=ic('alert-triangle',12)+' <b style="color:#F59E0B">Aviso: tipo diferente do esperado</b> — processando mesmo assim…';
-        }
-      }
-      // ───────────────────────────────────────────────────────────────
-
       processData(data,type,file.name);
     }catch(err){el.innerHTML=ic('x-circle',12)+' Erro ao ler: '+err.message;el.className='ds-file-info';console.error('[Multilix loadFile]',err);}
   };
@@ -8014,6 +7984,439 @@ initNavGroups();
       setTimeout(()=>document.getElementById('login-email')?.focus(),100);
     }
   });
+})();
+</script>
+
+<!-- ══════════ ATT TERCEIROS — SCRIPTS ══════════ -->
+<script>
+(function(){
+  const SUPA = 'https://nbotdfkeiwqwgbesgkve.supabase.co';
+  const KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ib3RkZmtlaXdxd2diZXNna3ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NDYyMDksImV4cCI6MjA5NjEyMjIwOX0.GmobP5xGzZtxUPwNrZIhMaevJdLz5Db2zEL_o6YtSqg';
+  const H    = {'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json','Prefer':'return=representation'};
+
+  async function api(path, opts){
+    const r = await fetch(SUPA+'/rest/v1/'+path, {headers:H, ...opts});
+    if(!r.ok) throw new Error(await r.text());
+    const txt = await r.text();
+    return txt ? JSON.parse(txt) : [];
+  }
+
+  function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function fmtDt(s){ if(!s) return '—'; const d=new Date(s); return d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); }
+  function fmtVol(v){ return v!=null ? Number(v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2}) : '—'; }
+  function badge(status){
+    const map={'finalizado':['#10B98120','#10B981'],'cancelado':['#EF444420','#EF4444'],'rascunho':['#F59E0B20','#F59E0B']};
+    const [bg,cl]=map[status]||['#ffffff20','#fff'];
+    return `<span style="background:${bg};color:${cl};border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600">${esc(status)}</span>`;
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // RELATÓRIO DE DESCARTES
+  // ─────────────────────────────────────────────────────────────
+  let _relData = [];
+  let _relFiltered = [];
+  let _relResidues = [];
+
+  async function attRelLoad(){
+    try {
+      // Carregar resíduos para filtro
+      _relResidues = await api('tipos_residuo_att?select=id,nome&ativo=eq.true&order=ordem.asc');
+      const sel = document.getElementById('fat-residuo');
+      if(sel){
+        sel.innerHTML = '<option value="">Todos</option>';
+        _relResidues.forEach(r=>{ const o=document.createElement('option'); o.value=r.id; o.textContent=r.nome; sel.appendChild(o); });
+      }
+      // Carregar vales com itens
+      const vales = await api('vales_descarga?select=*,vale_descarga_itens(*)&order=data_hora.desc&limit=500');
+      _relData = [];
+      vales.forEach(v=>{
+        const itens = v.vale_descarga_itens || [];
+        if(!itens.length){
+          _relData.push({...v, _item:null});
+        } else {
+          itens.forEach(it=>_relData.push({...v, _item:it}));
+        }
+      });
+      attRelFiltrar();
+    } catch(e){ console.error('attRelLoad',e); }
+  }
+
+  window.attRelFiltrar = function(){
+    const from = document.getElementById('fat-from')?.value;
+    const to   = document.getElementById('fat-to')?.value;
+    const cli  = (document.getElementById('fat-cliente')?.value||'').toLowerCase();
+    const vale = (document.getElementById('fat-vale')?.value||'').toLowerCase();
+    const ctr  = (document.getElementById('fat-ctr')?.value||'').toLowerCase();
+    const res  = document.getElementById('fat-residuo')?.value||'';
+    const sta  = document.getElementById('fat-status')?.value||'';
+
+    _relFiltered = _relData.filter(row=>{
+      const dt = row.data_hora ? row.data_hora.slice(0,10) : '';
+      if(from && dt < from) return false;
+      if(to   && dt > to)   return false;
+      if(cli && !(row.parceiro_nome_snapshot||'').toLowerCase().includes(cli)) return false;
+      if(vale && !(row.numero_vale||'').toLowerCase().includes(vale)) return false;
+      if(ctr  && row._item && !(row._item.ctr_mtr||'').toLowerCase().includes(ctr)) return false;
+      if(res  && row._item && row._item.residuo_id !== res) return false;
+      if(sta  && row.status !== sta) return false;
+      return true;
+    });
+    attRelRender();
+  };
+
+  window.attRelLimpar = function(){
+    ['fat-from','fat-to','fat-cliente','fat-vale','fat-ctr'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+    ['fat-residuo','fat-status'].forEach(id=>{ const el=document.getElementById(id); if(el) el.selectedIndex=0; });
+    _relFiltered = [..._relData];
+    attRelRender();
+  };
+
+  function attRelRender(){
+    const tbody = document.getElementById('att-rel-tbody');
+    if(!tbody) return;
+
+    // KPIs
+    const valesUnicos = new Set(_relFiltered.map(r=>r.id)).size;
+    const totalItens  = _relFiltered.filter(r=>r._item).length;
+    const totalVol    = _relFiltered.reduce((a,r)=>a+(r._item?Number(r._item.volume_m3||0):0),0);
+    const kpiEl = document.getElementById('att-rel-kpis');
+    if(kpiEl) kpiEl.innerHTML = [
+      ['Vales no período', valesUnicos, 'blue'],
+      ['Descargas', totalItens, 'green'],
+      ['Volume total (m³)', fmtVol(totalVol), 'orange'],
+    ].map(([l,v,c])=>`<div class="kpi-card"><div class="kpi-label">${esc(l)}</div><div class="kpi-value kpi-${c}">${esc(String(v))}</div></div>`).join('');
+
+    document.getElementById('att-rel-badge').textContent = _relFiltered.length+' linha(s)';
+
+    if(!_relFiltered.length){
+      tbody.innerHTML = `<tr><td colspan="11" style="padding:24px;text-align:center;color:var(--muted)">Nenhum registro encontrado</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = _relFiltered.map(row=>{
+      const it = row._item;
+      return `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:8px 10px;white-space:nowrap;font-size:11px;color:var(--muted)">${fmtDt(row.data_hora)}</td>
+        <td style="padding:8px 10px;font-weight:700;color:var(--accent);white-space:nowrap">${esc(row.numero_vale)}</td>
+        <td style="padding:8px 10px;font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(row.parceiro_nome_snapshot)}">${esc(row.parceiro_nome_snapshot||'—')}</td>
+        <td style="padding:8px 10px">${esc(row.placa||'—')}</td>
+        <td style="padding:8px 10px">${esc(it?.ctr_mtr||'—')}</td>
+        <td style="padding:8px 10px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(it?.equipamento_nome_snapshot||'—')}</td>
+        <td style="padding:8px 10px;text-align:right;font-weight:700">${it ? fmtVol(it.volume_m3) : '—'}</td>
+        <td style="padding:8px 10px">${esc(it?.residuo_nome_snapshot||'—')}</td>
+        <td style="padding:8px 10px">${esc(it?.numero_cacamba||'—')}</td>
+        <td style="padding:8px 10px">${badge(row.status)}</td>
+        <td style="padding:8px 10px;white-space:nowrap">
+          <button onclick="attRelVerVale('${row.id}')" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">Ver</button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  window.attRelVerVale = function(id){
+    const rows = _relData.filter(r=>r.id===id);
+    if(!rows.length) return;
+    const v = rows[0];
+    const itens = rows.filter(r=>r._item).map(r=>r._item);
+    const now = new Date(v.data_hora).toLocaleString('pt-BR');
+    const totalVol = itens.reduce((a,it)=>a+Number(it.volume_m3||0),0);
+    const rowsHtml = itens.map((it,i)=>`<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:6px 8px">${i+1}</td>
+      <td style="padding:6px 8px">${esc(it.ctr_mtr||'—')}</td>
+      <td style="padding:6px 8px">${esc(it.numero_cacamba||'—')}</td>
+      <td style="padding:6px 8px">${esc(it.equipamento_nome_snapshot||'—')}</td>
+      <td style="padding:6px 8px;text-align:center">${fmtVol(it.volume_m3)}</td>
+      <td style="padding:6px 8px">${esc(it.residuo_nome_snapshot||'—')}</td>
+      <td style="padding:6px 8px">${esc(it.observacoes||'')}</td>
+    </tr>`).join('');
+    const html = `<div style="padding:20px;color:var(--text);max-height:80vh;overflow-y:auto">
+      <div style="font-size:18px;font-weight:800;color:var(--accent);margin-bottom:4px">${esc(v.numero_vale)}</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:16px">${now} — ${badge(v.status)}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;font-size:13px">
+        <div><span style="color:var(--muted)">Cliente: </span><strong>${esc(v.parceiro_nome_snapshot||'—')}</strong></div>
+        <div><span style="color:var(--muted)">Placa: </span><strong>${esc(v.placa||'—')}</strong></div>
+        <div><span style="color:var(--muted)">Motorista: </span><strong>${esc(v.motorista||'—')}</strong></div>
+        <div><span style="color:var(--muted)">Itens: </span><strong>${itens.length}</strong></div>
+        <div><span style="color:var(--muted)">Vol. Total: </span><strong>${fmtVol(totalVol)} m³</strong></div>
+      </div>
+      ${v.observacoes_gerais?`<div style="background:var(--surface2);border-radius:8px;padding:10px;margin-bottom:16px;font-size:12px"><strong>Obs. gerais:</strong> ${esc(v.observacoes_gerais)}</div>`:''}
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="border-bottom:1px solid var(--border)">
+          <th style="padding:6px 8px;text-align:left;color:var(--muted)">#</th>
+          <th style="padding:6px 8px;text-align:left;color:var(--muted)">CTR/MTR</th>
+          <th style="padding:6px 8px;text-align:left;color:var(--muted)">Caçamba</th>
+          <th style="padding:6px 8px;text-align:left;color:var(--muted)">Equipamento</th>
+          <th style="padding:6px 8px;text-align:center;color:var(--muted)">m³</th>
+          <th style="padding:6px 8px;text-align:left;color:var(--muted)">Resíduo</th>
+          <th style="padding:6px 8px;text-align:left;color:var(--muted)">Obs</th>
+        </tr></thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+    </div>`;
+    // Use dashboard modal if available, else alert
+    if(window.showModal) window.showModal(v.numero_vale, html);
+    else { const w=window.open('','_blank','width=800,height=600'); w.document.write('<html><body style="background:#0B0D11;color:#eef0ff;font-family:Inter,sans-serif">'+html+'</body></html>'); }
+  };
+
+  window.attRelExportar = function(){
+    const rows = [['Data/Hora','Vale Nº','Cliente','Placa','Motorista','CTR/MTR','Nº Caçamba','Equipamento','Volume m³','Resíduo','Obs Item','Obs Geral','Status']];
+    _relFiltered.forEach(row=>{
+      const it = row._item;
+      rows.push([
+        fmtDt(row.data_hora), row.numero_vale||'', row.parceiro_nome_snapshot||'', row.placa||'', row.motorista||'',
+        it?.ctr_mtr||'', it?.numero_cacamba||'', it?.equipamento_nome_snapshot||'', it?.volume_m3||'',
+        it?.residuo_nome_snapshot||'', it?.observacoes||'', row.observacoes_gerais||'', row.status||''
+      ]);
+    });
+    const csv = rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(';')).join('\n');
+    const blob = new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download='descartes_att_'+new Date().toISOString().slice(0,10)+'.csv';
+    a.click();
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // PARCEIROS ATT
+  // ─────────────────────────────────────────────────────────────
+  let _parceiros = [];
+
+  async function attParcLoad(){
+    try {
+      _parceiros = await api('parceiros_att?select=*&order=nome_fantasia.asc&limit=500');
+      attParcFiltrar();
+    } catch(e){ console.error('attParcLoad',e); }
+  }
+
+  window.attParcFiltrar = function(){
+    const q = (document.getElementById('parc-busca')?.value||'').toLowerCase();
+    const st = document.getElementById('parc-status-f')?.value||'';
+    const list = _parceiros.filter(p=>{
+      if(st && p.status!==st) return false;
+      if(q && !(p.nome_fantasia||'').toLowerCase().includes(q) &&
+              !(p.razao_social||'').toLowerCase().includes(q) &&
+              !(p.documento||'').includes(q)) return false;
+      return true;
+    });
+    const tbody = document.getElementById('parc-tbody');
+    if(!tbody) return;
+    if(!list.length){ tbody.innerHTML=`<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--muted)">Nenhum parceiro encontrado</td></tr>`; return; }
+    tbody.innerHTML = list.map(p=>`<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:9px 10px;font-weight:600">${esc(p.nome_fantasia)}</td>
+      <td style="padding:9px 10px;color:var(--muted)">${esc(p.razao_social||'—')}</td>
+      <td style="padding:9px 10px">${esc(p.documento||'—')}</td>
+      <td style="padding:9px 10px">${esc(p.telefone||'—')}</td>
+      <td style="padding:9px 10px">${badge(p.status)}</td>
+      <td style="padding:9px 10px;white-space:nowrap">
+        <button onclick="attParcEditar('${p.id}')" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;margin-right:4px">Editar</button>
+        <button onclick="attParcToggle('${p.id}','${p.status}')" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">${p.status==='ativo'?'Inativar':'Ativar'}</button>
+      </td>
+    </tr>`).join('');
+  };
+
+  window.attParcNovo = function(){
+    ['pm-id','pm-nome','pm-razao','pm-doc','pm-tel','pm-email','pm-obs'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+    document.getElementById('pm-tipo-doc').selectedIndex=0;
+    document.getElementById('pm-status').value='ativo';
+    document.getElementById('parc-modal-title').textContent='Novo Parceiro';
+    document.getElementById('pm-error').style.display='none';
+    document.getElementById('parc-modal').style.display='flex';
+  };
+
+  window.attParcEditar = function(id){
+    const p = _parceiros.find(x=>x.id===id); if(!p) return;
+    document.getElementById('pm-id').value = p.id;
+    document.getElementById('pm-nome').value = p.nome_fantasia||'';
+    document.getElementById('pm-razao').value = p.razao_social||'';
+    document.getElementById('pm-tipo-doc').value = p.tipo_documento||'';
+    document.getElementById('pm-doc').value = p.documento||'';
+    document.getElementById('pm-tel').value = p.telefone||'';
+    document.getElementById('pm-email').value = p.email||'';
+    document.getElementById('pm-obs').value = p.observacoes||'';
+    document.getElementById('pm-status').value = p.status||'ativo';
+    document.getElementById('parc-modal-title').textContent='Editar Parceiro';
+    document.getElementById('pm-error').style.display='none';
+    document.getElementById('parc-modal').style.display='flex';
+  };
+
+  window.attParcSalvar = async function(){
+    const nome = document.getElementById('pm-nome').value.trim();
+    if(!nome){ document.getElementById('pm-error').textContent='Nome fantasia é obrigatório.'; document.getElementById('pm-error').style.display='block'; return; }
+    const id = document.getElementById('pm-id').value;
+    const payload = {
+      nome_fantasia: nome,
+      razao_social: document.getElementById('pm-razao').value.trim()||null,
+      tipo_documento: document.getElementById('pm-tipo-doc').value||null,
+      documento: document.getElementById('pm-doc').value.trim()||null,
+      documento_normalizado: document.getElementById('pm-doc').value.trim()||null,
+      telefone: document.getElementById('pm-tel').value.trim()||null,
+      email: document.getElementById('pm-email').value.trim()||null,
+      observacoes: document.getElementById('pm-obs').value.trim()||null,
+      status: document.getElementById('pm-status').value,
+    };
+    try {
+      if(id){
+        await api(`parceiros_att?id=eq.${id}`,{method:'PATCH',body:JSON.stringify(payload)});
+      } else {
+        await api('parceiros_att',{method:'POST',body:JSON.stringify(payload)});
+      }
+      document.getElementById('parc-modal').style.display='none';
+      await attParcLoad();
+    } catch(e){
+      document.getElementById('pm-error').textContent='Erro: '+e.message;
+      document.getElementById('pm-error').style.display='block';
+    }
+  };
+
+  window.attParcToggle = async function(id, status){
+    const novo = status==='ativo' ? 'inativo' : 'ativo';
+    try { await api(`parceiros_att?id=eq.${id}`,{method:'PATCH',body:JSON.stringify({status:novo})}); await attParcLoad(); }
+    catch(e){ alert('Erro: '+e.message); }
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // TIPOS DE RESÍDUO
+  // ─────────────────────────────────────────────────────────────
+  let _residuos = [];
+
+  async function attResLoad(){
+    try {
+      _residuos = await api('tipos_residuo_att?select=*&order=ordem.asc');
+      const tbody = document.getElementById('res-tbody');
+      if(!tbody) return;
+      tbody.innerHTML = _residuos.map(r=>`<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:10px 12px;font-weight:600">${esc(r.nome)}</td>
+        <td style="padding:10px 12px;text-align:center;color:var(--muted)">${r.ordem}</td>
+        <td style="padding:10px 12px;text-align:center">${r.ativo?'<span style="color:var(--green);font-weight:700">Ativo</span>':'<span style="color:var(--muted)">Inativo</span>'}</td>
+        <td style="padding:10px 12px;white-space:nowrap">
+          <button onclick="attResEditar('${r.id}')" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;margin-right:4px">Editar</button>
+          <button onclick="attResToggle('${r.id}',${r.ativo})" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">${r.ativo?'Desativar':'Ativar'}</button>
+        </td>
+      </tr>`).join('');
+    } catch(e){ console.error('attResLoad',e); }
+  }
+
+  window.attResNovo = function(){
+    document.getElementById('rm-id').value='';
+    document.getElementById('rm-nome').value='';
+    document.getElementById('rm-ordem').value='0';
+    document.getElementById('rm-ativo').value='true';
+    document.getElementById('rm-error').style.display='none';
+    document.getElementById('res-modal-title').textContent='Novo Resíduo';
+    document.getElementById('res-modal').style.display='flex';
+  };
+
+  window.attResEditar = function(id){
+    const r=_residuos.find(x=>x.id===id); if(!r) return;
+    document.getElementById('rm-id').value=r.id;
+    document.getElementById('rm-nome').value=r.nome||'';
+    document.getElementById('rm-ordem').value=r.ordem||0;
+    document.getElementById('rm-ativo').value=String(r.ativo);
+    document.getElementById('rm-error').style.display='none';
+    document.getElementById('res-modal-title').textContent='Editar Resíduo';
+    document.getElementById('res-modal').style.display='flex';
+  };
+
+  window.attResSalvar = async function(){
+    const nome=document.getElementById('rm-nome').value.trim();
+    if(!nome){ document.getElementById('rm-error').textContent='Nome é obrigatório.'; document.getElementById('rm-error').style.display='block'; return; }
+    const id=document.getElementById('rm-id').value;
+    const payload={nome, ordem:parseInt(document.getElementById('rm-ordem').value)||0, ativo:document.getElementById('rm-ativo').value==='true'};
+    try {
+      if(id) await api(`tipos_residuo_att?id=eq.${id}`,{method:'PATCH',body:JSON.stringify(payload)});
+      else    await api('tipos_residuo_att',{method:'POST',body:JSON.stringify(payload)});
+      document.getElementById('res-modal').style.display='none';
+      await attResLoad();
+    } catch(e){ document.getElementById('rm-error').textContent='Erro: '+e.message; document.getElementById('rm-error').style.display='block'; }
+  };
+
+  window.attResToggle = async function(id, ativo){
+    try { await api(`tipos_residuo_att?id=eq.${id}`,{method:'PATCH',body:JSON.stringify({ativo:!ativo})}); await attResLoad(); }
+    catch(e){ alert('Erro: '+e.message); }
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // EQUIPAMENTOS
+  // ─────────────────────────────────────────────────────────────
+  let _equipamentos = [];
+
+  async function attEqLoad(){
+    try {
+      _equipamentos = await api('equipamentos_att?select=*&order=ordem.asc');
+      const tbody = document.getElementById('eq-tbody');
+      if(!tbody) return;
+      const tipoLabel = {cacamba:'Caçamba',caminhao:'Caminhão',avulso:'Avulso'};
+      tbody.innerHTML = _equipamentos.map(e=>`<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:10px 12px;font-weight:600">${esc(e.nome)}</td>
+        <td style="padding:10px 12px;color:var(--muted)">${esc(tipoLabel[e.tipo]||e.tipo||'—')}</td>
+        <td style="padding:10px 12px;text-align:right">${e.volume_m3_padrao!=null?fmtVol(e.volume_m3_padrao)+' m³':'<span style="color:var(--muted)">avulso</span>'}</td>
+        <td style="padding:10px 12px;text-align:center;color:var(--muted)">${e.ordem}</td>
+        <td style="padding:10px 12px;text-align:center">${e.ativo?'<span style="color:var(--green);font-weight:700">Ativo</span>':'<span style="color:var(--muted)">Inativo</span>'}</td>
+        <td style="padding:10px 12px;white-space:nowrap">
+          <button onclick="attEqEditar('${e.id}')" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;margin-right:4px">Editar</button>
+          <button onclick="attEqToggle('${e.id}',${e.ativo})" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">${e.ativo?'Desativar':'Ativar'}</button>
+        </td>
+      </tr>`).join('');
+    } catch(e){ console.error('attEqLoad',e); }
+  }
+
+  window.attEqNovo = function(){
+    ['em-id','em-nome','em-vol'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+    document.getElementById('em-tipo').value='cacamba';
+    document.getElementById('em-ordem').value='0';
+    document.getElementById('em-ativo').value='true';
+    document.getElementById('em-error').style.display='none';
+    document.getElementById('eq-modal-title').textContent='Novo Equipamento';
+    document.getElementById('eq-modal').style.display='flex';
+  };
+
+  window.attEqEditar = function(id){
+    const e=_equipamentos.find(x=>x.id===id); if(!e) return;
+    document.getElementById('em-id').value=e.id;
+    document.getElementById('em-nome').value=e.nome||'';
+    document.getElementById('em-tipo').value=e.tipo||'cacamba';
+    document.getElementById('em-vol').value=e.volume_m3_padrao!=null?e.volume_m3_padrao:'';
+    document.getElementById('em-ordem').value=e.ordem||0;
+    document.getElementById('em-ativo').value=String(e.ativo);
+    document.getElementById('em-error').style.display='none';
+    document.getElementById('eq-modal-title').textContent='Editar Equipamento';
+    document.getElementById('eq-modal').style.display='flex';
+  };
+
+  window.attEqSalvar = async function(){
+    const nome=document.getElementById('em-nome').value.trim();
+    if(!nome){ document.getElementById('em-error').textContent='Nome é obrigatório.'; document.getElementById('em-error').style.display='block'; return; }
+    const id=document.getElementById('em-id').value;
+    const volStr=document.getElementById('em-vol').value.trim().replace(',','.');
+    const payload={
+      nome, tipo:document.getElementById('em-tipo').value,
+      volume_m3_padrao: volStr ? parseFloat(volStr) : null,
+      ordem: parseInt(document.getElementById('em-ordem').value)||0,
+      ativo: document.getElementById('em-ativo').value==='true'
+    };
+    try {
+      if(id) await api(`equipamentos_att?id=eq.${id}`,{method:'PATCH',body:JSON.stringify(payload)});
+      else    await api('equipamentos_att',{method:'POST',body:JSON.stringify(payload)});
+      document.getElementById('eq-modal').style.display='none';
+      await attEqLoad();
+    } catch(e){ document.getElementById('em-error').textContent='Erro: '+e.message; document.getElementById('em-error').style.display='block'; }
+  };
+
+  window.attEqToggle = async function(id, ativo){
+    try { await api(`equipamentos_att?id=eq.${id}`,{method:'PATCH',body:JSON.stringify({ativo:!ativo})}); await attEqLoad(); }
+    catch(e){ alert('Erro: '+e.message); }
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // Integração com showPage do dashboard
+  // ─────────────────────────────────────────────────────────────
+  const _origShowPage = window.showPage;
+  window.showPage = function(page, el){
+    if(_origShowPage) _origShowPage(page, el);
+    if(page==='att-relatorio') attRelLoad();
+    if(page==='att-parceiros') attParcLoad();
+    if(page==='att-residuos') attResLoad();
+    if(page==='att-equipamentos') attEqLoad();
+  };
+
 })();
 </script>
 </body>
