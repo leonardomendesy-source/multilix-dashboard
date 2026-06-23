@@ -8427,21 +8427,31 @@ initNavGroups();
       porEquip[k].qtd++; porEquip[k].vol+=Number(r._item.volume_m3||0);
     });
 
+    function relBadge(st){
+      if(st==='concluido')  return '<span style="background:#10B98120;color:#059669;border-radius:4px;padding:2px 7px;font-size:10px;font-weight:600">Concluído</span>';
+      if(st==='cancelado')  return '<span style="background:#EF444420;color:#dc2626;border-radius:4px;padding:2px 7px;font-size:10px;font-weight:600">Cancelado</span>';
+      return '<span style="background:#F59E0B20;color:#d97706;border-radius:4px;padding:2px 7px;font-size:10px;font-weight:600">Aguard. Pag.</span>';
+    }
     const rowsHtml = vales.map((v,i)=>{
       const ger = v.gerador_nome_snapshot||v._itens[0]?.gerador_nome_snapshot||'—';
-      return v._itens.length?v._itens.map((it,j)=>`
-        <tr style="border-bottom:1px solid #ddd;background:${i%2===0?'#fff':'#f9f9f9'}">
-          <td style="padding:5px 7px">${j===0?esc(v.numero_vale):''}</td>
-          <td style="padding:5px 7px">${j===0?fmtDt(v.data_hora).split(' ')[0]:''}</td>
-          <td style="padding:5px 7px">${esc(it.ctr_mtr||'—')}</td>
-          <td style="padding:5px 7px">${esc(it.equipamento_nome_snapshot||'—')}</td>
-          <td style="padding:5px 7px">${esc(ger)}</td>
-          <td style="padding:5px 7px">${esc(it.residuo_nome_snapshot||'—')}</td>
-          <td style="padding:5px 7px;text-align:right"><strong>${fmtVol(it.volume_m3)}</strong></td>
-          <td style="padding:5px 7px">${j===0?`<span style="background:${v.status==='concluido'?'#10B98120':'v.status==="cancelado"?"#EF444420":"#F59E0B20"};color:${v.status==='concluido'?'#059669':v.status==='cancelado'?'#dc2626':'#d97706'};border-radius:4px;padding:2px 7px;font-size:10px;font-weight:600">${v.status==='concluido'?'Concluído':v.status==='cancelado'?'Cancelado':'Aguard. Pag.'}</span>`:''}</td>
-          ${j===0?`<td rowspan="${v._itens.length}" style="padding:5px 7px;vertical-align:top">${esc(v.parceiro_nome_snapshot||'—')}</td>`:''}
-        </tr>`).join('')
-      :`<tr style="border-bottom:1px solid #ddd"><td style="padding:5px 7px">${esc(v.numero_vale)}</td><td>${fmtDt(v.data_hora).split(' ')[0]}</td><td colspan="7" style="text-align:center;color:#999">Sem itens</td></tr>`;
+      const bg  = i%2===0?'#fff':'#f9f9f9';
+      if(!v._itens.length){
+        return '<tr style="border-bottom:1px solid #ddd"><td style="padding:5px 7px">'+esc(v.numero_vale)+'</td><td>'+fmtDt(v.data_hora).split(' ')[0]+'</td><td colspan="7" style="text-align:center;color:#999">Sem itens</td></tr>';
+      }
+      return v._itens.map((it,j)=>{
+        const valeCell   = j===0 ? '<td style="padding:5px 7px">'+esc(v.numero_vale)+'</td>' : '<td></td>';
+        const dataCell   = j===0 ? '<td style="padding:5px 7px">'+fmtDt(v.data_hora).split(' ')[0]+'</td>' : '<td></td>';
+        const statusCell = j===0 ? '<td style="padding:5px 7px">'+relBadge(v.status)+'</td>' : '<td></td>';
+        const cliCell    = j===0 ? '<td rowspan="'+v._itens.length+'" style="padding:5px 7px;vertical-align:top">'+esc(v.parceiro_nome_snapshot||'—')+'</td>' : '';
+        return '<tr style="border-bottom:1px solid #ddd;background:'+bg+'">'+
+          valeCell+dataCell+
+          '<td style="padding:5px 7px">'+esc(it.ctr_mtr||'—')+'</td>'+
+          '<td style="padding:5px 7px">'+esc(it.equipamento_nome_snapshot||'—')+'</td>'+
+          '<td style="padding:5px 7px">'+esc(ger)+'</td>'+
+          '<td style="padding:5px 7px">'+esc(it.residuo_nome_snapshot||'—')+'</td>'+
+          '<td style="padding:5px 7px;text-align:right"><strong>'+fmtVol(it.volume_m3)+'</strong></td>'+
+          statusCell+cliCell+'</tr>';
+      }).join('');
     }).join('');
 
     const resumoResHtml = Object.entries(porResiduo).sort((a,b)=>b[1].vol-a[1].vol)
