@@ -2170,16 +2170,32 @@ body { font-size: 13.5px !important; }
 
     <!-- ══════════ ATT TERCEIROS: RELATÓRIO DE DESCARTES ══════════ -->
     <div class="page" id="page-att-relatorio">
-      <div class="filterbar" style="flex-wrap:wrap;gap:8px">
-        <div class="fg"><label>De</label><input type="date" id="fat-from" oninput="attRelFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 10px;font-size:12px;outline:none"/></div>
-        <div class="fg"><label>Até</label><input type="date" id="fat-to" oninput="attRelFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 10px;font-size:12px;outline:none"/></div>
-        <div class="fg"><label>Cliente</label><input type="text" id="fat-cliente" placeholder="Nome fantasia..." oninput="attRelFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 10px;font-size:12px;outline:none;min-width:140px"/></div>
-        <div class="fg"><label>Vale Nº</label><input type="text" id="fat-vale" placeholder="VD-000001" oninput="attRelFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 10px;font-size:12px;outline:none;width:110px"/></div>
-        <div class="fg"><label>CTR/MTR</label><input type="text" id="fat-ctr" placeholder="Nº CTR/MTR" oninput="attRelFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 10px;font-size:12px;outline:none;width:110px"/></div>
-        <div class="fg"><label>Resíduo</label><select id="fat-residuo" onchange="attRelFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 10px;font-size:12px;outline:none"><option value="">Todos</option></select></div>
-        <div class="fg"><label>Status</label><select id="fat-status" onchange="attRelFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 10px;font-size:12px;outline:none"><option value="">Todos</option><option value="finalizado">Finalizado</option><option value="cancelado">Cancelado</option><option value="rascunho">Rascunho</option></select></div>
+      <!-- FILTROS -->
+      <div class="filterbar" style="flex-wrap:wrap;gap:8px;margin-bottom:10px">
+        <div class="fg"><label>De</label><input type="date" id="fat-from" oninput="attRelFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:7px 10px;font-size:12px;outline:none"/></div>
+        <div class="fg"><label>Até</label><input type="date" id="fat-to" oninput="attRelFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:7px 10px;font-size:12px;outline:none"/></div>
+        <div class="fg"><label>Cliente</label><input type="text" id="fat-cliente" placeholder="Nome do cliente..." oninput="attRelFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:7px 10px;font-size:12px;outline:none;min-width:130px"/></div>
+        <div class="fg"><label>Gerador</label><input type="text" id="fat-gerador" placeholder="Nome do gerador..." oninput="attRelFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:7px 10px;font-size:12px;outline:none;min-width:130px"/></div>
+        <div class="fg"><label>Vale Nº</label><input type="text" id="fat-vale" placeholder="VD-000001" oninput="attRelFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:7px 10px;font-size:12px;outline:none;width:100px"/></div>
+        <div class="fg"><label>CTR/MTR</label><input type="text" id="fat-ctr" placeholder="Nº CTR" oninput="attRelFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:7px 10px;font-size:12px;outline:none;width:90px"/></div>
+        <div class="fg"><label>Caçamba</label><input type="text" id="fat-cacamba" placeholder="Nº caçamba" oninput="attRelFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:7px 10px;font-size:12px;outline:none;width:90px"/></div>
+        <div class="fg"><label>Resíduo</label><select id="fat-residuo" onchange="attRelFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:7px 10px;font-size:12px;outline:none"><option value="">Todos</option></select></div>
+        <div class="fg"><label>Status</label><select id="fat-status" onchange="attRelFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:7px 10px;font-size:12px;outline:none"><option value="">Todos</option><option value="aguardando_pagamento">Aguardando Pag.</option><option value="concluido">Concluído</option><option value="cancelado">Cancelado</option></select></div>
+        <div class="fg"><label>Placa</label><input type="text" id="fat-placa" placeholder="ABC1234" oninput="attRelFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:7px 10px;font-size:12px;outline:none;width:80px"/></div>
         <button class="btn btn-ghost btn-sm" onclick="attRelLimpar()"><i data-lucide="rotate-ccw" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Limpar</button>
-        <button class="btn btn-sm" style="background:var(--green);color:#000;font-weight:700" onclick="attRelExportar()"><i data-lucide="download" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Exportar CSV</button>
+      </div>
+
+      <!-- BARRA DE AÇÕES -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+        <div id="att-rel-bulk-bar" style="display:none;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:12px;flex-wrap:wrap">
+          <span id="att-rel-sel-count" style="color:var(--accent);font-weight:700">0 selecionados</span>
+          <button onclick="attRelBulkStatus('concluido')" style="background:#10B98120;border:1px solid #10B981;color:#10B981;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-weight:600">✓ Concluir</button>
+          <button onclick="attRelBulkStatus('aguardando_pagamento')" style="background:#F59E0B20;border:1px solid #F59E0B;color:#F59E0B;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-weight:600">⏳ Aguard. Pag.</button>
+          <button onclick="attRelBulkStatus('cancelado')" style="background:#EF444420;border:1px solid #EF4444;color:#EF4444;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-weight:600">✕ Cancelar</button>
+        </div>
+        <div style="flex:1"></div>
+        <button class="btn btn-sm" style="background:var(--surface2);border:1px solid var(--border);color:var(--text)" onclick="attRelGerarRelatorio()"><i data-lucide="file-text" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Gerar Relatório</button>
+        <button class="btn btn-sm" style="background:var(--green);color:#000;font-weight:700" onclick="attRelExportarXLSX()"><i data-lucide="download" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Exportar XLSX</button>
       </div>
 
       <!-- KPIs -->
@@ -2192,24 +2208,86 @@ body { font-size: 13.5px !important; }
           <span class="panel-badge" id="att-rel-badge">—</span>
         </div>
         <div class="tbl-wrap" style="overflow-x:auto">
-          <table style="width:100%;border-collapse:collapse;font-size:12px" id="att-rel-table">
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
             <thead>
               <tr style="border-bottom:1px solid var(--border)">
+                <th style="padding:8px 10px;width:32px"><input type="checkbox" id="att-chk-all" onchange="attRelToggleAll(this.checked)" title="Selecionar todos"/></th>
                 <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600;white-space:nowrap">Data/Hora</th>
                 <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Vale Nº</th>
                 <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Cliente</th>
+                <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Gerador</th>
                 <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Placa</th>
                 <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">CTR/MTR</th>
                 <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Equipamento</th>
                 <th style="padding:8px 10px;text-align:right;color:var(--muted);font-weight:600">Vol. m³</th>
                 <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Resíduo</th>
-                <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Nº Caçamba</th>
+                <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Caçamba</th>
                 <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Status</th>
                 <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Ações</th>
               </tr>
             </thead>
             <tbody id="att-rel-tbody"></tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- MODAL: VER O.S. -->
+      <div id="att-ver-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;align-items:center;justify-content:center;padding:16px">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:700px;max-height:90vh;overflow-y:auto">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:1">
+            <div style="font-size:15px;font-weight:800;color:var(--accent)" id="ver-modal-title">—</div>
+            <div style="display:flex;gap:8px">
+              <button id="ver-modal-edit-btn" onclick="attRelAbrirEditar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;font-weight:600">✏️ Editar</button>
+              <button onclick="document.getElementById('att-ver-modal').style.display='none'" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
+            </div>
+          </div>
+          <div id="ver-modal-body" style="padding:20px"></div>
+        </div>
+      </div>
+
+      <!-- MODAL: EDITAR O.S. -->
+      <div id="att-edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:400;align-items:center;justify-content:center;padding:16px">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:680px;max-height:92vh;overflow-y:auto">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:1">
+            <div style="font-size:15px;font-weight:800">Editar O.S.</div>
+            <button onclick="document.getElementById('att-edit-modal').style.display='none'" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
+          </div>
+          <div style="padding:20px;display:grid;gap:14px" id="att-edit-body">
+            <input type="hidden" id="em2-id"/>
+            <div style="font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;padding-bottom:6px;border-bottom:1px solid var(--border)">Dados do Cabeçalho</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Cliente</label><input type="text" id="em2-cliente" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 10px;font-size:13px;outline:none"/></div>
+              <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Gerador</label><input type="text" id="em2-gerador" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 10px;font-size:13px;outline:none"/></div>
+              <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Placa</label><input type="text" id="em2-placa" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 10px;font-size:13px;outline:none" oninput="this.value=this.value.toUpperCase()"/></div>
+              <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Motorista</label><input type="text" id="em2-motorista" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 10px;font-size:13px;outline:none"/></div>
+              <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Status</label>
+                <select id="em2-status" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 10px;font-size:13px;outline:none">
+                  <option value="aguardando_pagamento">Aguardando Pagamento</option>
+                  <option value="concluido">Concluído</option>
+                  <option value="cancelado">Cancelado</option>
+                </select>
+              </div>
+              <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Obs. Gerais</label><input type="text" id="em2-obs-geral" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 10px;font-size:13px;outline:none"/></div>
+            </div>
+            <div style="font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;padding-bottom:6px;border-bottom:1px solid var(--border);margin-top:4px">Itens da O.S.</div>
+            <div id="em2-itens-list"></div>
+            <div id="em2-error" style="color:var(--red);font-size:12px;display:none"></div>
+            <button onclick="attRelSalvarEdicao()" style="width:100%;padding:13px;background:var(--accent,#10B981);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;cursor:pointer">Salvar Alterações</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: RELATÓRIO HTML -->
+      <div id="att-rel-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:500;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto">
+        <div style="background:#fff;color:#000;border-radius:12px;width:100%;max-width:900px;margin:auto">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:#1a2f5e;border-radius:12px 12px 0 0">
+            <span style="color:#fff;font-weight:700;font-size:14px">Pré-visualização do Relatório</span>
+            <div style="display:flex;gap:8px">
+              <button onclick="attRelImprimirRelatorio()" style="background:#10B981;border:none;color:#fff;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;font-weight:700">🖨️ Imprimir</button>
+              <button onclick="document.getElementById('att-rel-modal').style.display='none'" style="background:#fff3;border:none;color:#fff;font-size:18px;cursor:pointer">✕</button>
+            </div>
+          </div>
+          <div id="att-rel-html-body" style="padding:24px"></div>
         </div>
       </div>
     </div>
@@ -8013,59 +8091,64 @@ initNavGroups();
   // ─────────────────────────────────────────────────────────────
   // RELATÓRIO DE DESCARTES
   // ─────────────────────────────────────────────────────────────
-  let _relData = [];
+  let _relData = [];       // { ...vale, _item: itemOrNull }[]  — linha por item
   let _relFiltered = [];
   let _relResidues = [];
+  let _relSelectedIds = new Set();  // IDs de vales selecionados
+  let _relViewingId = null;         // ID do vale aberto no modal Ver
 
   async function attRelLoad(){
     try {
-      // Carregar resíduos para filtro
       _relResidues = await api('tipos_residuo_att?select=id,nome&ativo=eq.true&order=ordem.asc');
       const sel = document.getElementById('fat-residuo');
       if(sel){
         sel.innerHTML = '<option value="">Todos</option>';
         _relResidues.forEach(r=>{ const o=document.createElement('option'); o.value=r.id; o.textContent=r.nome; sel.appendChild(o); });
       }
-      // Carregar vales com itens
-      const vales = await api('vales_descarga?select=*,vale_descarga_itens(*)&order=data_hora.desc&limit=500');
+      const vales = await api('vales_descarga?select=*,vale_descarga_itens(*)&order=data_hora.desc&limit=1000');
       _relData = [];
       vales.forEach(v=>{
         const itens = v.vale_descarga_itens || [];
-        if(!itens.length){
-          _relData.push({...v, _item:null});
-        } else {
-          itens.forEach(it=>_relData.push({...v, _item:it}));
-        }
+        if(!itens.length){ _relData.push({...v, _item:null}); }
+        else { itens.forEach(it=>_relData.push({...v, _item:it})); }
       });
+      _relSelectedIds = new Set();
       attRelFiltrar();
     } catch(e){ console.error('attRelLoad',e); }
   }
 
   window.attRelFiltrar = function(){
-    const from = document.getElementById('fat-from')?.value;
-    const to   = document.getElementById('fat-to')?.value;
-    const cli  = (document.getElementById('fat-cliente')?.value||'').toLowerCase();
-    const vale = (document.getElementById('fat-vale')?.value||'').toLowerCase();
-    const ctr  = (document.getElementById('fat-ctr')?.value||'').toLowerCase();
-    const res  = document.getElementById('fat-residuo')?.value||'';
-    const sta  = document.getElementById('fat-status')?.value||'';
+    const from    = document.getElementById('fat-from')?.value||'';
+    const to      = document.getElementById('fat-to')?.value||'';
+    const cli     = (document.getElementById('fat-cliente')?.value||'').toLowerCase();
+    const ger     = (document.getElementById('fat-gerador')?.value||'').toLowerCase();
+    const vale    = (document.getElementById('fat-vale')?.value||'').toLowerCase();
+    const ctr     = (document.getElementById('fat-ctr')?.value||'').toLowerCase();
+    const cac     = (document.getElementById('fat-cacamba')?.value||'').toLowerCase();
+    const res     = document.getElementById('fat-residuo')?.value||'';
+    const sta     = document.getElementById('fat-status')?.value||'';
+    const plac    = (document.getElementById('fat-placa')?.value||'').toLowerCase();
 
     _relFiltered = _relData.filter(row=>{
       const dt = row.data_hora ? row.data_hora.slice(0,10) : '';
       if(from && dt < from) return false;
       if(to   && dt > to)   return false;
-      if(cli && !(row.parceiro_nome_snapshot||'').toLowerCase().includes(cli)) return false;
+      if(cli  && !(row.parceiro_nome_snapshot||'').toLowerCase().includes(cli)) return false;
+      if(ger  && !(row.gerador_nome_snapshot||row._item?.gerador_nome_snapshot||'').toLowerCase().includes(ger)) return false;
       if(vale && !(row.numero_vale||'').toLowerCase().includes(vale)) return false;
-      if(ctr  && row._item && !(row._item.ctr_mtr||'').toLowerCase().includes(ctr)) return false;
-      if(res  && row._item && row._item.residuo_id !== res) return false;
+      if(ctr  && !(row._item?.ctr_mtr||'').toLowerCase().includes(ctr)) return false;
+      if(cac  && !(row._item?.numero_cacamba||'').toLowerCase().includes(cac)) return false;
+      if(res  && row._item?.residuo_id !== res) return false;
       if(sta  && row.status !== sta) return false;
+      if(plac && !(row.placa||'').toLowerCase().includes(plac)) return false;
       return true;
     });
     attRelRender();
   };
 
   window.attRelLimpar = function(){
-    ['fat-from','fat-to','fat-cliente','fat-vale','fat-ctr'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+    ['fat-from','fat-to','fat-cliente','fat-gerador','fat-vale','fat-ctr','fat-cacamba','fat-placa']
+      .forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
     ['fat-residuo','fat-status'].forEach(id=>{ const el=document.getElementById(id); if(el) el.selectedIndex=0; });
     _relFiltered = [..._relData];
     attRelRender();
@@ -8075,104 +8158,413 @@ initNavGroups();
     const tbody = document.getElementById('att-rel-tbody');
     if(!tbody) return;
 
-    // KPIs
-    const valesUnicos = new Set(_relFiltered.map(r=>r.id)).size;
-    const totalItens  = _relFiltered.filter(r=>r._item).length;
-    const totalVol    = _relFiltered.reduce((a,r)=>a+(r._item?Number(r._item.volume_m3||0):0),0);
+    const valesUnicos  = new Set(_relFiltered.map(r=>r.id)).size;
+    const totalItens   = _relFiltered.filter(r=>r._item).length;
+    const totalVol     = _relFiltered.reduce((a,r)=>a+(r._item?Number(r._item.volume_m3||0):0),0);
+    const aguardando   = new Set(_relFiltered.filter(r=>r.status==='aguardando_pagamento').map(r=>r.id)).size;
+
     const kpiEl = document.getElementById('att-rel-kpis');
     if(kpiEl) kpiEl.innerHTML = [
       ['Vales no período', valesUnicos, 'blue'],
       ['Descargas', totalItens, 'green'],
       ['Volume total (m³)', fmtVol(totalVol), 'orange'],
+      ['Aguardando Pagamento', aguardando, 'yellow'],
     ].map(([l,v,c])=>`<div class="kpi-card"><div class="kpi-label">${esc(l)}</div><div class="kpi-value kpi-${c}">${esc(String(v))}</div></div>`).join('');
 
     document.getElementById('att-rel-badge').textContent = _relFiltered.length+' linha(s)';
 
     if(!_relFiltered.length){
-      tbody.innerHTML = `<tr><td colspan="11" style="padding:24px;text-align:center;color:var(--muted)">Nenhum registro encontrado</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="13" style="padding:24px;text-align:center;color:var(--muted)">Nenhum registro encontrado</td></tr>`;
       return;
     }
+
     tbody.innerHTML = _relFiltered.map(row=>{
-      const it = row._item;
-      return `<tr style="border-bottom:1px solid var(--border)">
+      const it  = row._item;
+      const sel = _relSelectedIds.has(row.id);
+      const ger = it?.gerador_nome_snapshot || row.gerador_nome_snapshot || '—';
+      return `<tr style="border-bottom:1px solid var(--border);background:${sel?'var(--surface2)':'transparent'}">
+        <td style="padding:8px 10px"><input type="checkbox" data-vale-id="${row.id}" ${sel?'checked':''} onchange="attRelToggleRow(this)"/></td>
         <td style="padding:8px 10px;white-space:nowrap;font-size:11px;color:var(--muted)">${fmtDt(row.data_hora)}</td>
         <td style="padding:8px 10px;font-weight:700;color:var(--accent);white-space:nowrap">${esc(row.numero_vale)}</td>
-        <td style="padding:8px 10px;font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(row.parceiro_nome_snapshot)}">${esc(row.parceiro_nome_snapshot||'—')}</td>
+        <td style="padding:8px 10px;font-weight:600;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(row.parceiro_nome_snapshot)}">${esc(row.parceiro_nome_snapshot||'—')}</td>
+        <td style="padding:8px 10px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(ger)}">${esc(ger)}</td>
         <td style="padding:8px 10px">${esc(row.placa||'—')}</td>
         <td style="padding:8px 10px">${esc(it?.ctr_mtr||'—')}</td>
-        <td style="padding:8px 10px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(it?.equipamento_nome_snapshot||'—')}</td>
+        <td style="padding:8px 10px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(it?.equipamento_nome_snapshot||'—')}</td>
         <td style="padding:8px 10px;text-align:right;font-weight:700">${it ? fmtVol(it.volume_m3) : '—'}</td>
         <td style="padding:8px 10px">${esc(it?.residuo_nome_snapshot||'—')}</td>
         <td style="padding:8px 10px">${esc(it?.numero_cacamba||'—')}</td>
-        <td style="padding:8px 10px">${badge(row.status)}</td>
+        <td style="padding:8px 10px">${attBadge(row.status)}</td>
         <td style="padding:8px 10px;white-space:nowrap">
-          <button onclick="attRelVerVale('${row.id}')" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">Ver</button>
+          <button onclick="attRelVerVale('${row.id}')" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;margin-right:3px">Ver</button>
+          <button onclick="attRelAbrirEditarId('${row.id}')" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">Editar</button>
         </td>
       </tr>`;
     }).join('');
   }
 
+  function attBadge(status){
+    const map = {
+      'aguardando_pagamento':['#F59E0B20','#F59E0B','Aguardando Pag.'],
+      'concluido':['#10B98120','#10B981','Concluído'],
+      'cancelado':['#EF444420','#EF4444','Cancelado'],
+    };
+    const [bg,cl,label] = map[status]||['var(--surface2)','var(--muted)',status||'—'];
+    return `<span style="background:${bg};color:${cl};border:1px solid ${cl}40;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;white-space:nowrap">${label}</span>`;
+  }
+
+  // ── CHECKBOX SELECTION ────────────────────────────────────────
+  window.attRelToggleRow = function(chk){
+    const id = chk.dataset.valeId;
+    if(chk.checked) _relSelectedIds.add(id); else _relSelectedIds.delete(id);
+    attRelUpdateBulkBar();
+  };
+
+  window.attRelToggleAll = function(checked){
+    const valeIds = new Set(_relFiltered.map(r=>r.id));
+    if(checked) valeIds.forEach(id=>_relSelectedIds.add(id));
+    else valeIds.forEach(id=>_relSelectedIds.delete(id));
+    attRelRender();
+    attRelUpdateBulkBar();
+  };
+
+  function attRelUpdateBulkBar(){
+    const bar = document.getElementById('att-rel-bulk-bar');
+    const cnt = document.getElementById('att-rel-sel-count');
+    if(!bar) return;
+    if(_relSelectedIds.size > 0){
+      bar.style.display='flex'; cnt.textContent=_relSelectedIds.size+' selecionado(s)';
+    } else { bar.style.display='none'; }
+  }
+
+  window.attRelBulkStatus = async function(newStatus){
+    if(!_relSelectedIds.size) return;
+    const label = {concluido:'Concluído',aguardando_pagamento:'Aguardando Pagamento',cancelado:'Cancelado'}[newStatus]||newStatus;
+    if(!confirm(`Alterar ${_relSelectedIds.size} vale(s) para "${label}"?`)) return;
+    const ids = [..._relSelectedIds];
+    try {
+      await Promise.all(ids.map(id=>
+        api(`vales_descarga?id=eq.${id}`,{method:'PATCH',body:JSON.stringify({status:newStatus})})
+      ));
+      _relSelectedIds = new Set();
+      await attRelLoad();
+    } catch(e){ alert('Erro: '+e.message); }
+  };
+
+  // ── VER O.S. ────────────────────────────────────────────────
   window.attRelVerVale = function(id){
+    _relViewingId = id;
     const rows = _relData.filter(r=>r.id===id);
     if(!rows.length) return;
     const v = rows[0];
     const itens = rows.filter(r=>r._item).map(r=>r._item);
-    const now = new Date(v.data_hora).toLocaleString('pt-BR');
     const totalVol = itens.reduce((a,it)=>a+Number(it.volume_m3||0),0);
-    const rowsHtml = itens.map((it,i)=>`<tr style="border-bottom:1px solid var(--border)">
-      <td style="padding:6px 8px">${i+1}</td>
-      <td style="padding:6px 8px">${esc(it.ctr_mtr||'—')}</td>
-      <td style="padding:6px 8px">${esc(it.numero_cacamba||'—')}</td>
-      <td style="padding:6px 8px">${esc(it.equipamento_nome_snapshot||'—')}</td>
-      <td style="padding:6px 8px;text-align:center">${fmtVol(it.volume_m3)}</td>
-      <td style="padding:6px 8px">${esc(it.residuo_nome_snapshot||'—')}</td>
-      <td style="padding:6px 8px">${esc(it.observacoes||'')}</td>
-    </tr>`).join('');
-    const html = `<div style="padding:20px;color:var(--text);max-height:80vh;overflow-y:auto">
-      <div style="font-size:18px;font-weight:800;color:var(--accent);margin-bottom:4px">${esc(v.numero_vale)}</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:16px">${now} — ${badge(v.status)}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;font-size:13px">
-        <div><span style="color:var(--muted)">Cliente: </span><strong>${esc(v.parceiro_nome_snapshot||'—')}</strong></div>
-        <div><span style="color:var(--muted)">Placa: </span><strong>${esc(v.placa||'—')}</strong></div>
-        <div><span style="color:var(--muted)">Motorista: </span><strong>${esc(v.motorista||'—')}</strong></div>
-        <div><span style="color:var(--muted)">Itens: </span><strong>${itens.length}</strong></div>
-        <div><span style="color:var(--muted)">Vol. Total: </span><strong>${fmtVol(totalVol)} m³</strong></div>
+    const ger = v.gerador_nome_snapshot || itens[0]?.gerador_nome_snapshot || '—';
+
+    const rowsHtml = itens.map((it,i)=>`
+      <tr style="border-bottom:1px solid #333">
+        <td style="padding:6px 8px;color:#aaa">${i+1}</td>
+        <td style="padding:6px 8px">${esc(it.ctr_mtr||'—')}</td>
+        <td style="padding:6px 8px">${esc(it.numero_cacamba||'—')}</td>
+        <td style="padding:6px 8px">${esc(it.equipamento_nome_snapshot||'—')}</td>
+        <td style="padding:6px 8px;text-align:center;font-weight:700">${fmtVol(it.volume_m3)}</td>
+        <td style="padding:6px 8px">${esc(it.residuo_nome_snapshot||'—')}</td>
+        <td style="padding:6px 8px;color:#aaa;font-size:11px">${esc(it.observacoes||'')}</td>
+        <td style="padding:6px 8px">${it.imagem_url?`<a href="${it.imagem_url}" target="_blank" style="color:var(--accent)">📷 Ver</a>`:'—'}</td>
+      </tr>
+      ${it.imagem_url?`<tr style="border-bottom:1px solid #333"><td colspan="8" style="padding:4px 8px 10px 28px"><img src="${it.imagem_url}" style="max-height:140px;max-width:280px;border-radius:6px;object-fit:cover;cursor:pointer" onclick="window.open('${it.imagem_url}','_blank')"/></td></tr>`:''}`
+    ).join('');
+
+    document.getElementById('ver-modal-title').textContent = v.numero_vale;
+    document.getElementById('ver-modal-body').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;font-size:12px">
+        <div><span style="color:var(--muted);display:block;font-size:10px;text-transform:uppercase;letter-spacing:.4px">Data/Hora</span><strong>${fmtDt(v.data_hora)}</strong></div>
+        <div><span style="color:var(--muted);display:block;font-size:10px;text-transform:uppercase;letter-spacing:.4px">Status</span>${attBadge(v.status)}</div>
+        <div><span style="color:var(--muted);display:block;font-size:10px;text-transform:uppercase;letter-spacing:.4px">Vol. Total</span><strong>${fmtVol(totalVol)} m³</strong></div>
+        <div><span style="color:var(--muted);display:block;font-size:10px;text-transform:uppercase;letter-spacing:.4px">Cliente</span><strong>${esc(v.parceiro_nome_snapshot||'—')}</strong></div>
+        <div><span style="color:var(--muted);display:block;font-size:10px;text-transform:uppercase;letter-spacing:.4px">Gerador</span><strong>${esc(ger)}</strong></div>
+        <div><span style="color:var(--muted);display:block;font-size:10px;text-transform:uppercase;letter-spacing:.4px">Placa</span><strong>${esc(v.placa||'—')}</strong></div>
+        ${v.motorista?`<div><span style="color:var(--muted);display:block;font-size:10px;text-transform:uppercase;letter-spacing:.4px">Motorista</span><strong>${esc(v.motorista)}</strong></div>`:''}
       </div>
-      ${v.observacoes_gerais?`<div style="background:var(--surface2);border-radius:8px;padding:10px;margin-bottom:16px;font-size:12px"><strong>Obs. gerais:</strong> ${esc(v.observacoes_gerais)}</div>`:''}
-      <table style="width:100%;border-collapse:collapse;font-size:12px">
-        <thead><tr style="border-bottom:1px solid var(--border)">
-          <th style="padding:6px 8px;text-align:left;color:var(--muted)">#</th>
-          <th style="padding:6px 8px;text-align:left;color:var(--muted)">CTR/MTR</th>
-          <th style="padding:6px 8px;text-align:left;color:var(--muted)">Caçamba</th>
-          <th style="padding:6px 8px;text-align:left;color:var(--muted)">Equipamento</th>
-          <th style="padding:6px 8px;text-align:center;color:var(--muted)">m³</th>
-          <th style="padding:6px 8px;text-align:left;color:var(--muted)">Resíduo</th>
-          <th style="padding:6px 8px;text-align:left;color:var(--muted)">Obs</th>
-        </tr></thead>
-        <tbody>${rowsHtml}</tbody>
-      </table>
-    </div>`;
-    // Use dashboard modal if available, else alert
-    if(window.showModal) window.showModal(v.numero_vale, html);
-    else { const w=window.open('','_blank','width=800,height=600'); w.document.write('<html><body style="background:#0B0D11;color:#eef0ff;font-family:Inter,sans-serif">'+html+'</body></html>'); }
+      ${v.observacoes_gerais?`<div style="background:var(--surface2);border-radius:8px;padding:10px;margin-bottom:12px;font-size:12px;color:var(--muted)"><strong style="color:var(--text)">Obs. gerais:</strong> ${esc(v.observacoes_gerais)}</div>`:''}
+      <div style="font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Itens (${itens.length})</div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="border-bottom:1px solid var(--border)">
+            <th style="padding:6px 8px;text-align:left;color:var(--muted)">#</th>
+            <th style="padding:6px 8px;text-align:left;color:var(--muted)">CTR/MTR</th>
+            <th style="padding:6px 8px;text-align:left;color:var(--muted)">Caçamba</th>
+            <th style="padding:6px 8px;text-align:left;color:var(--muted)">Equipamento</th>
+            <th style="padding:6px 8px;text-align:center;color:var(--muted)">m³</th>
+            <th style="padding:6px 8px;text-align:left;color:var(--muted)">Resíduo</th>
+            <th style="padding:6px 8px;text-align:left;color:var(--muted)">Obs</th>
+            <th style="padding:6px 8px;text-align:left;color:var(--muted)">Foto</th>
+          </tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+        <button onclick="attRelAbrirEditar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-weight:600">✏️ Editar O.S.</button>
+        ${v.status!=='concluido'?`<button onclick="attRelMudarStatus('${id}','concluido')" style="background:#10B98120;border:1px solid #10B981;color:#10B981;border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-weight:600">✓ Concluir</button>`:''}
+        ${v.status==='cancelado'?`<button onclick="attRelMudarStatus('${id}','aguardando_pagamento')" style="background:#F59E0B20;border:1px solid #F59E0B;color:#F59E0B;border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-weight:600">↩ Reativar</button>`:`<button onclick="attRelMudarStatus('${id}','cancelado')" style="background:#EF444420;border:1px solid #EF4444;color:#EF4444;border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-weight:600">✕ Cancelar</button>`}
+      </div>`;
+    document.getElementById('att-ver-modal').style.display='flex';
   };
 
-  window.attRelExportar = function(){
-    const rows = [['Data/Hora','Vale Nº','Cliente','Placa','Motorista','CTR/MTR','Nº Caçamba','Equipamento','Volume m³','Resíduo','Obs Item','Obs Geral','Status']];
+  window.attRelMudarStatus = async function(id, newStatus){
+    const label = {concluido:'Concluído',aguardando_pagamento:'Reativar (Aguard. Pag.)',cancelado:'Cancelar'}[newStatus]||newStatus;
+    if(!confirm(`Confirmar: "${label}"?`)) return;
+    try {
+      await api(`vales_descarga?id=eq.${id}`,{method:'PATCH',body:JSON.stringify({status:newStatus})});
+      document.getElementById('att-ver-modal').style.display='none';
+      await attRelLoad();
+    } catch(e){ alert('Erro: '+e.message); }
+  };
+
+  // ── EDITAR O.S. ──────────────────────────────────────────────
+  window.attRelAbrirEditar = function(){ attRelAbrirEditarId(_relViewingId); };
+
+  window.attRelAbrirEditarId = function(id){
+    _relViewingId = id;
+    const rows = _relData.filter(r=>r.id===id);
+    if(!rows.length) return;
+    const v = rows[0];
+    const itens = rows.filter(r=>r._item).map(r=>r._item);
+    document.getElementById('em2-id').value = v.id;
+    document.getElementById('em2-cliente').value = v.parceiro_nome_snapshot||'';
+    document.getElementById('em2-gerador').value = v.gerador_nome_snapshot || itens[0]?.gerador_nome_snapshot || '';
+    document.getElementById('em2-placa').value = v.placa||'';
+    document.getElementById('em2-motorista').value = v.motorista||'';
+    document.getElementById('em2-status').value = v.status||'aguardando_pagamento';
+    document.getElementById('em2-obs-geral').value = v.observacoes_gerais||'';
+    document.getElementById('em2-error').style.display='none';
+
+    const itensList = document.getElementById('em2-itens-list');
+    itensList.innerHTML = itens.map((it,i)=>`
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px">
+        <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:8px">Item ${i+1} — ${esc(it.equipamento_nome_snapshot||'—')}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <div><label style="font-size:10px;color:var(--muted2);display:block;margin-bottom:3px">CTR/MTR</label><input type="text" value="${esc(it.ctr_mtr||'')}" id="ei-ctr-${it.id}" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 8px;font-size:12px;outline:none"/></div>
+          <div><label style="font-size:10px;color:var(--muted2);display:block;margin-bottom:3px">Nº Caçamba</label><input type="text" value="${esc(it.numero_cacamba||'')}" id="ei-cac-${it.id}" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 8px;font-size:12px;outline:none"/></div>
+          <div><label style="font-size:10px;color:var(--muted2);display:block;margin-bottom:3px">Volume m³</label><input type="number" value="${it.volume_m3||''}" id="ei-vol-${it.id}" step="0.01" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 8px;font-size:12px;outline:none"/></div>
+          <div style="grid-column:1/-1"><label style="font-size:10px;color:var(--muted2);display:block;margin-bottom:3px">Observações</label><input type="text" value="${esc(it.observacoes||'')}" id="ei-obs-${it.id}" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 8px;font-size:12px;outline:none"/></div>
+        </div>
+        ${it.imagem_url?`<div style="margin-top:8px"><img src="${it.imagem_url}" style="max-height:80px;border-radius:6px;cursor:pointer" onclick="window.open('${it.imagem_url}','_blank')"/></div>`:''}
+      </div>
+    `).join('');
+
+    document.getElementById('att-ver-modal').style.display='none';
+    document.getElementById('att-edit-modal').style.display='flex';
+    // store itens ids for save
+    document.getElementById('att-edit-modal').dataset.itens = JSON.stringify(itens.map(it=>it.id));
+  };
+
+  window.attRelSalvarEdicao = async function(){
+    const id = document.getElementById('em2-id').value;
+    const err = document.getElementById('em2-error');
+    err.style.display='none';
+    try {
+      await api(`vales_descarga?id=eq.${id}`,{method:'PATCH',body:JSON.stringify({
+        parceiro_nome_snapshot: document.getElementById('em2-cliente').value.trim(),
+        gerador_nome_snapshot:  document.getElementById('em2-gerador').value.trim()||null,
+        placa:                  document.getElementById('em2-placa').value.trim().toUpperCase()||null,
+        motorista:              document.getElementById('em2-motorista').value.trim()||null,
+        status:                 document.getElementById('em2-status').value,
+        observacoes_gerais:     document.getElementById('em2-obs-geral').value.trim()||null,
+      })});
+      const itensIds = JSON.parse(document.getElementById('att-edit-modal').dataset.itens||'[]');
+      await Promise.all(itensIds.map(iid=>
+        api(`vale_descarga_itens?id=eq.${iid}`,{method:'PATCH',body:JSON.stringify({
+          ctr_mtr:        document.getElementById('ei-ctr-'+iid)?.value.trim()||null,
+          numero_cacamba: document.getElementById('ei-cac-'+iid)?.value.trim()||null,
+          volume_m3:      parseFloat(document.getElementById('ei-vol-'+iid)?.value||'0')||0,
+          observacoes:    document.getElementById('ei-obs-'+iid)?.value.trim()||null,
+        })})
+      ));
+      document.getElementById('att-edit-modal').style.display='none';
+      await attRelLoad();
+    } catch(e){ err.textContent='Erro: '+e.message; err.style.display='block'; }
+  };
+
+  // ── GERAR RELATÓRIO HTML ──────────────────────────────────────
+  const MULTILIX_LOGO_ATT = `<svg width="40" height="40" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="rbg1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#4a9e4f"/><stop offset="100%" style="stop-color:#2d7a32"/></linearGradient><linearGradient id="rbg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#2b4a8c"/><stop offset="100%" style="stop-color:#1a2f5e"/></linearGradient></defs><circle cx="50" cy="52" r="46" fill="url(#rbg2)" opacity=".9"/><ellipse cx="50" cy="48" rx="34" ry="36" fill="url(#rbg1)"/><path d="M35 34 L50 56 L65 34 L58 34 L50 48 L42 34Z" fill="#fff" opacity=".95"/></svg>`;
+
+  window.attRelGerarRelatorio = function(){
+    if(!_relFiltered.length){ alert('Nenhum dado nos filtros atuais.'); return; }
+    const valesIds = [...new Set(_relFiltered.map(r=>r.id))];
+    const totalVol = _relFiltered.reduce((a,r)=>a+(r._item?Number(r._item.volume_m3||0):0),0);
+
+    // Agrupa por vale
+    const valesMap = {};
+    _relFiltered.forEach(row=>{
+      if(!valesMap[row.id]) valesMap[row.id]={...row,_itens:[]};
+      if(row._item) valesMap[row.id]._itens.push(row._item);
+    });
+    const vales = Object.values(valesMap);
+
+    const dataFiltro = (() => {
+      const f = document.getElementById('fat-from')?.value;
+      const t = document.getElementById('fat-to')?.value;
+      if(f&&t) return `${fmtData(f)} a ${fmtData(t)}`;
+      if(f) return `a partir de ${fmtData(f)}`;
+      if(t) return `até ${fmtData(t)}`;
+      return 'Todos os períodos';
+    })();
+
+    // Resumo por resíduo
+    const porResiduo = {};
+    _relFiltered.filter(r=>r._item).forEach(r=>{
+      const k = r._item.residuo_nome_snapshot||'—';
+      if(!porResiduo[k]) porResiduo[k]={qtd:0,vol:0};
+      porResiduo[k].qtd++; porResiduo[k].vol+=Number(r._item.volume_m3||0);
+    });
+
+    // Resumo por equipamento
+    const porEquip = {};
+    _relFiltered.filter(r=>r._item).forEach(r=>{
+      const k = r._item.equipamento_nome_snapshot||'—';
+      if(!porEquip[k]) porEquip[k]={qtd:0,vol:0};
+      porEquip[k].qtd++; porEquip[k].vol+=Number(r._item.volume_m3||0);
+    });
+
+    const rowsHtml = vales.map((v,i)=>{
+      const ger = v.gerador_nome_snapshot||v._itens[0]?.gerador_nome_snapshot||'—';
+      return v._itens.length?v._itens.map((it,j)=>`
+        <tr style="border-bottom:1px solid #ddd;background:${i%2===0?'#fff':'#f9f9f9'}">
+          <td style="padding:5px 7px">${j===0?esc(v.numero_vale):''}</td>
+          <td style="padding:5px 7px">${j===0?fmtDt(v.data_hora).split(' ')[0]:''}</td>
+          <td style="padding:5px 7px">${esc(it.ctr_mtr||'—')}</td>
+          <td style="padding:5px 7px">${esc(it.equipamento_nome_snapshot||'—')}</td>
+          <td style="padding:5px 7px">${esc(ger)}</td>
+          <td style="padding:5px 7px">${esc(it.residuo_nome_snapshot||'—')}</td>
+          <td style="padding:5px 7px;text-align:right"><strong>${fmtVol(it.volume_m3)}</strong></td>
+          <td style="padding:5px 7px">${j===0?`<span style="background:${v.status==='concluido'?'#10B98120':'v.status==="cancelado"?"#EF444420":"#F59E0B20"};color:${v.status==='concluido'?'#059669':v.status==='cancelado'?'#dc2626':'#d97706'};border-radius:4px;padding:2px 7px;font-size:10px;font-weight:600">${v.status==='concluido'?'Concluído':v.status==='cancelado'?'Cancelado':'Aguard. Pag.'}</span>`:''}</td>
+          ${j===0?`<td rowspan="${v._itens.length}" style="padding:5px 7px;vertical-align:top">${esc(v.parceiro_nome_snapshot||'—')}</td>`:''}
+        </tr>`).join('')
+      :`<tr style="border-bottom:1px solid #ddd"><td style="padding:5px 7px">${esc(v.numero_vale)}</td><td>${fmtDt(v.data_hora).split(' ')[0]}</td><td colspan="7" style="text-align:center;color:#999">Sem itens</td></tr>`;
+    }).join('');
+
+    const resumoResHtml = Object.entries(porResiduo).sort((a,b)=>b[1].vol-a[1].vol)
+      .map(([k,d])=>`<tr style="border-bottom:1px solid #eee"><td style="padding:4px 8px">${esc(k)}</td><td style="padding:4px 8px;text-align:center">${d.qtd}</td><td style="padding:4px 8px;text-align:right;font-weight:700">${fmtVol(d.vol)}</td></tr>`).join('');
+
+    const resumoEqHtml = Object.entries(porEquip).sort((a,b)=>b[1].vol-a[1].vol)
+      .map(([k,d])=>`<tr style="border-bottom:1px solid #eee"><td style="padding:4px 8px">${esc(k)}</td><td style="padding:4px 8px;text-align:center">${d.qtd}</td><td style="padding:4px 8px;text-align:right;font-weight:700">${fmtVol(d.vol)}</td></tr>`).join('');
+
+    document.getElementById('att-rel-html-body').innerHTML = `
+      <style>body{font-family:Arial,sans-serif}table{border-collapse:collapse;width:100%}th{background:#1a2f5e;color:#fff;padding:6px 7px;font-size:11px;text-align:left}td,th{font-size:11px}</style>
+      <!-- Cabeçalho -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:12px;border-bottom:2px solid #1a2f5e;margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:12px">
+          ${MULTILIX_LOGO_ATT}
+          <div>
+            <div style="font-size:18px;font-weight:900;color:#10B981;line-height:1">RELATÓRIO DE DESCARTES</div>
+            <div style="font-size:11px;color:#555;margin-top:2px">ATT Multilix — Entrada de Terceiros</div>
+            <div style="font-size:11px;color:#1a2f5e;font-weight:700;margin-top:1px">${dataFiltro}</div>
+          </div>
+        </div>
+        <div style="text-align:right;font-size:10px;color:#666;line-height:1.5">
+          <strong style="color:#000">ATT — MULTILIX</strong><br>
+          Rodovia Fernão Dias km 88,7<br>
+          Guarulhos/SP | CEP 07053-171<br>
+          Emitido em: ${new Date().toLocaleString('pt-BR')}
+        </div>
+      </div>
+      <!-- KPIs -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+        <div style="background:#f0f4ff;border:1px solid #c7d2fe;border-radius:8px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:800;color:#1a2f5e">${valesIds.length}</div><div style="font-size:10px;color:#555;text-transform:uppercase">Vales</div></div>
+        <div style="background:#f0fdf4;border:1px solid #a7f3d0;border-radius:8px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:800;color:#059669">${_relFiltered.filter(r=>r._item).length}</div><div style="font-size:10px;color:#555;text-transform:uppercase">Descargas</div></div>
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:800;color:#d97706">${fmtVol(totalVol)}</div><div style="font-size:10px;color:#555;text-transform:uppercase">m³ Total</div></div>
+        <div style="background:#fff1f2;border:1px solid #fecdd3;border-radius:8px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:800;color:#dc2626">${new Set(_relFiltered.filter(r=>r.status==='aguardando_pagamento').map(r=>r.id)).size}</div><div style="font-size:10px;color:#555;text-transform:uppercase">Aguard. Pag.</div></div>
+      </div>
+      <!-- Tabela principal -->
+      <div style="font-size:12px;font-weight:700;color:#1a2f5e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Detalhamento das O.S.</div>
+      <table style="margin-bottom:16px">
+        <thead><tr>
+          <th>Vale Nº</th><th>Data</th><th>Nº CTR</th><th>Equipamento</th><th>Gerador</th><th>Resíduo</th><th style="text-align:right">m³</th><th>Status</th><th>Cliente</th>
+        </tr></thead>
+        <tbody>${rowsHtml}</tbody>
+        <tfoot><tr style="background:#1a2f5e;color:#fff">
+          <td colspan="6" style="padding:5px 7px;font-weight:700">TOTAL</td>
+          <td style="padding:5px 7px;text-align:right;font-weight:800">${fmtVol(totalVol)}</td>
+          <td colspan="2"></td>
+        </tr></tfoot>
+      </table>
+      <!-- Resumos -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#1a2f5e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Resumo por Resíduo</div>
+          <table><thead><tr><th>Resíduo</th><th style="text-align:center">Qtde.</th><th style="text-align:right">m³</th></tr></thead><tbody>${resumoResHtml}</tbody></table>
+        </div>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#1a2f5e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Resumo por Equipamento</div>
+          <table><thead><tr><th>Equipamento</th><th style="text-align:center">Qtde.</th><th style="text-align:right">m³</th></tr></thead><tbody>${resumoEqHtml}</tbody></table>
+        </div>
+      </div>
+      <div style="margin-top:20px;padding-top:10px;border-top:1px solid #ddd;font-size:10px;color:#888;text-align:center">ATT Multilix — Documento gerado automaticamente pelo sistema. Não possui valor jurídico sem assinatura responsável.</div>`;
+
+    document.getElementById('att-rel-modal').style.display='flex';
+  };
+
+  window.attRelImprimirRelatorio = function(){
+    const body = document.getElementById('att-rel-html-body').innerHTML;
+    const w = window.open('','_blank','width=1000,height=700');
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório ATT Multilix</title><style>@media print{@page{margin:10mm}}</style></head><body style="font-family:Arial,sans-serif;color:#000;padding:10mm">${body}</body></html>`);
+    w.document.close(); w.focus(); setTimeout(()=>w.print(),800);
+  };
+
+  // ── EXPORTAR XLSX ────────────────────────────────────────────
+  window.attRelExportarXLSX = function(){
+    if(!_relFiltered.length){ alert('Nenhum dado nos filtros atuais.'); return; }
+    if(!window.XLSX){ alert('Biblioteca XLSX não disponível.'); return; }
+
+    const wb = XLSX.utils.book_new();
+
+    // Aba 1: Detalhamento
+    const det = [['Vale Nº','Data','Hora','Cliente','Gerador','Placa','Motorista','Status','CTR/MTR','Nº Caçamba','Equipamento','Volume m³','Resíduo','Obs Item','Obs Geral']];
     _relFiltered.forEach(row=>{
       const it = row._item;
-      rows.push([
-        fmtDt(row.data_hora), row.numero_vale||'', row.parceiro_nome_snapshot||'', row.placa||'', row.motorista||'',
-        it?.ctr_mtr||'', it?.numero_cacamba||'', it?.equipamento_nome_snapshot||'', it?.volume_m3||'',
-        it?.residuo_nome_snapshot||'', it?.observacoes||'', row.observacoes_gerais||'', row.status||''
+      const ger = row.gerador_nome_snapshot||it?.gerador_nome_snapshot||'';
+      det.push([
+        row.numero_vale||'',
+        row.data_hora?new Date(row.data_hora).toLocaleDateString('pt-BR'):'',
+        row.data_hora?new Date(row.data_hora).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'',
+        row.parceiro_nome_snapshot||'', ger,
+        row.placa||'', row.motorista||'', row.status||'',
+        it?.ctr_mtr||'', it?.numero_cacamba||'',
+        it?.equipamento_nome_snapshot||'', it?Number(it.volume_m3||0):'',
+        it?.residuo_nome_snapshot||'', it?.observacoes||'', row.observacoes_gerais||''
       ]);
     });
-    const csv = rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(';')).join('\n');
-    const blob = new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
-    const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-    a.download='descartes_att_'+new Date().toISOString().slice(0,10)+'.csv';
-    a.click();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(det), 'Detalhamento');
+
+    // Aba 2: Resumo por Equipamento e Resíduo
+    const porER = {};
+    _relFiltered.filter(r=>r._item).forEach(r=>{
+      const k = `${r._item.equipamento_nome_snapshot||'—'} | ${r._item.residuo_nome_snapshot||'—'}`;
+      if(!porER[k]) porER[k]={equip:r._item.equipamento_nome_snapshot,res:r._item.residuo_nome_snapshot,qtd:0,vol:0};
+      porER[k].qtd++; porER[k].vol+=Number(r._item.volume_m3||0);
+    });
+    const res2 = [['Equipamento','Resíduo','Qtde. Descargas','Volume Total m³']];
+    Object.values(porER).sort((a,b)=>b.vol-a.vol).forEach(d=>res2.push([d.equip||'—',d.res||'—',d.qtd,d.vol]));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(res2), 'Por Equip e Resíduo');
+
+    // Aba 3: Resumo por Cliente e Gerador
+    const porCG = {};
+    _relFiltered.filter(r=>r._item).forEach(r=>{
+      const cli = r.parceiro_nome_snapshot||'—';
+      const ger = r.gerador_nome_snapshot||r._item.gerador_nome_snapshot||'—';
+      const k = `${cli}|${ger}`;
+      if(!porCG[k]) porCG[k]={cli,ger,qtd_vales:new Set(),qtd:0,vol:0};
+      porCG[k].qtd_vales.add(r.id); porCG[k].qtd++; porCG[k].vol+=Number(r._item.volume_m3||0);
+    });
+    const res3 = [['Cliente','Gerador','Vales','Descargas','Volume Total m³']];
+    Object.values(porCG).sort((a,b)=>b.vol-a.vol).forEach(d=>res3.push([d.cli,d.ger,d.qtd_vales.size,d.qtd,d.vol]));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(res3), 'Por Cliente e Gerador');
+
+    XLSX.writeFile(wb, `descartes_att_${new Date().toISOString().slice(0,10)}.xlsx`);
   };
+
+  function fmtData(s){ if(!s) return ''; const [y,m,d]=s.split('-'); return `${d}/${m}/${y}`; }
 
   // ─────────────────────────────────────────────────────────────
   // PARCEIROS ATT
