@@ -71,6 +71,26 @@
   .confirm-row-label{font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px}
   .confirm-row-value{font-size:13px;font-weight:700;color:var(--text);text-align:right}
   .btn-novo{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);padding:13px 24px;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px}
+  .btn-hist{background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:var(--radius);padding:11px 20px;font-size:13px;font-weight:600;cursor:pointer;width:100%;margin-top:10px}
+  .hist-item{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px}
+  .hist-os{font-size:13px;font-weight:800;color:var(--accent);margin-bottom:4px}
+  .hist-info{font-size:12px;color:var(--muted);line-height:1.6}
+  .hist-actions{display:flex;gap:8px;margin-top:10px}
+  .hist-btn-edit{flex:1;background:var(--accent);border:none;color:#000;border-radius:8px;padding:9px;font-size:12px;font-weight:700;cursor:pointer}
+  .hist-btn-cancel{flex:1;background:var(--surface);border:1px solid var(--border);color:var(--red);border-radius:8px;padding:9px;font-size:12px;font-weight:700;cursor:pointer}
+  .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+  .badge-reg{background:#3B82F620;color:#3B82F6}
+  .badge-conf{background:#10B98120;color:#10B981}
+  .badge-canc{background:#EF444420;color:#EF4444}
+  .badge-cont{background:#F59E0B20;color:#F59E0B}
+  /* Modal de edição no vale */
+  #vale-edit-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:200;overflow-y:auto;padding:20px 16px}
+  .vale-edit-box{max-width:500px;margin:0 auto;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px}
+  .ve-field{margin-bottom:14px}
+  .ve-field label{display:block;font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px}
+  .ve-field select,.ve-field input,.ve-field textarea{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 13px;font-size:14px;outline:none;font-family:var(--font);-webkit-appearance:none}
+  .ve-field select:focus,.ve-field input:focus{border-color:var(--accent)}
+  .ve-preco-badge{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;font-size:18px;font-weight:800;color:var(--accent)}
 
   /* Loading */
   #loading-overlay{display:none;position:fixed;inset:0;background:rgba(11,13,17,.85);z-index:100;align-items:center;justify-content:center;flex-direction:column;gap:16px}
@@ -127,15 +147,9 @@
     </select>
   </div>
 
-  <div class="row2">
-    <div class="field">
-      <label>Preço Unitário</label>
-      <div class="preco-preview" id="v-preco-display">—</div>
-    </div>
-    <div class="field">
-      <label>Nº Vale Físico *</label>
-      <input type="number" id="v-vale" placeholder="0000" inputmode="numeric"/>
-    </div>
+  <div class="field">
+    <label>Nº Vale Físico *</label>
+    <input type="number" id="v-vale" placeholder="0000" inputmode="numeric"/>
   </div>
 
   <div class="sec-title">Fotografias Obrigatórias</div>
@@ -166,6 +180,7 @@
   </div>
 
   <button class="btn-registrar" id="btn-registrar" onclick="registrarSaida()">Registrar Saída</button>
+  <button class="btn-hist" onclick="abrirHistorico()">🕐 Ver Últimos Lançamentos</button>
   <div style="height:32px"></div>
 </div>
 
@@ -179,10 +194,61 @@
     <div class="confirm-row"><span class="confirm-row-label">Veículo</span><span class="confirm-row-value" id="cf-veiculo">—</span></div>
     <div class="confirm-row"><span class="confirm-row-label">Resíduo</span><span class="confirm-row-value" id="cf-residuo">—</span></div>
     <div class="confirm-row"><span class="confirm-row-label">Nº Vale</span><span class="confirm-row-value" id="cf-vale">—</span></div>
-    <div class="confirm-row"><span class="confirm-row-label">Valor</span><span class="confirm-row-value" id="cf-valor">—</span></div>
     <div class="confirm-row"><span class="confirm-row-label">Hora</span><span class="confirm-row-value" id="cf-hora">—</span></div>
   </div>
   <button class="btn-novo" onclick="novoRegistro()">+ Novo Registro</button>
+</div>
+
+<!-- HISTÓRICO -->
+<div id="tela-historico" style="display:none;flex-direction:column;min-height:80dvh">
+  <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:14px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10">
+    <button onclick="fecharHistorico()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:0 4px">←</button>
+    <div>
+      <div style="font-size:14px;font-weight:700">Últimos Lançamentos</div>
+      <div style="font-size:11px;color:var(--muted)">Hoje e ontem</div>
+    </div>
+    <button onclick="carregarHistorico()" style="margin-left:auto;background:none;border:none;color:var(--accent);font-size:18px;cursor:pointer" title="Atualizar">⟳</button>
+  </div>
+  <div style="padding:16px;max-width:500px;width:100%;margin:0 auto">
+    <div id="hist-lista"></div>
+  </div>
+</div>
+
+<!-- MODAL EDIÇÃO (vale) -->
+<div id="vale-edit-overlay" onclick="if(event.target===this)fecharEditVale()">
+  <div class="vale-edit-box" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <div>
+        <div style="font-size:15px;font-weight:700">Editar Lançamento</div>
+        <div id="ve-os-num" style="font-size:11px;color:var(--accent);font-weight:700;margin-top:2px"></div>
+      </div>
+      <button onclick="fecharEditVale()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
+    </div>
+    <input type="hidden" id="ve-id"/>
+    <div class="ve-field"><label>Freteiro *</label><select id="ve-freteiro" onchange="veAutoPreco()"><option value="">Carregando...</option></select></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="ve-field"><label>Tipo de Veículo *</label>
+        <select id="ve-veiculo" onchange="veAutoPreco()">
+          <option value="">—</option><option value="TRUCK">TRUCK</option><option value="CARRETA">CARRETA</option>
+        </select>
+      </div>
+      <div class="ve-field"><label>Capacidade (m³)</label><input type="number" id="ve-cap" step="0.5" onchange="veAutoPreco()"/></div>
+    </div>
+    <div class="ve-field"><label>Tipo de Resíduo *</label>
+      <select id="ve-residuo" onchange="veAutoPreco()">
+        <option value="">—</option><option value="MIX">MIX</option><option value="RACHÃO SUJO">RACHÃO SUJO</option>
+      </select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="ve-field"><label>Preço Unitário</label><div class="ve-preco-badge" id="ve-preco-badge">—</div></div>
+      <div class="ve-field"><label>Nº Vale Físico *</label><input type="text" id="ve-vale"/></div>
+    </div>
+    <div class="ve-field"><label>Observações</label><textarea id="ve-obs" rows="2" style="resize:none;height:70px"></textarea></div>
+    <div style="display:flex;gap:10px;margin-top:4px">
+      <button onclick="fecharEditVale()" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:12px;font-size:13px;font-weight:600;cursor:pointer">Cancelar</button>
+      <button onclick="salvarEditVale()" style="flex:2;background:var(--accent);border:none;color:#000;border-radius:10px;padding:12px;font-size:13px;font-weight:700;cursor:pointer">Salvar Alterações</button>
+    </div>
+  </div>
 </div>
 
 <!-- LOADING -->
@@ -277,7 +343,7 @@ function onResiduoChange() {
 
 function resetCapacidade(){ const s=document.getElementById('v-capacidade'); s.innerHTML='<option value="">—</option>'; }
 function resetResiduo(){ const s=document.getElementById('v-residuo'); s.innerHTML='<option value="">—</option>'; resetPreco(); }
-function resetPreco(){ _precoSelecionado=null; document.getElementById('v-preco-display').textContent='—'; }
+function resetPreco(){ _precoSelecionado=null; }
 
 // ── FOTOS ─────────────────────────────────────────────────────
 function onFoto(tipo, input) {
@@ -388,7 +454,6 @@ function mostrarConfirmacao(reg, nomeFreterio) {
   document.getElementById('cf-veiculo').textContent  = `${reg.tipo_veiculo} ${reg.capacidade_m3}m³`;
   document.getElementById('cf-residuo').textContent  = reg.tipo_residuo;
   document.getElementById('cf-vale').textContent     = reg.numero_vale_fisico;
-  document.getElementById('cf-valor').textContent    = reg.total ? 'R$ ' + Number(reg.total).toLocaleString('pt-BR') : '—';
   const hora = new Date(reg.created_at).toLocaleTimeString('pt-BR', {timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit',second:'2-digit'});
   document.getElementById('cf-hora').textContent = hora;
 
@@ -404,7 +469,6 @@ function novoRegistro() {
   document.getElementById('v-veiculo').innerHTML = '<option value="">—</option>';
   document.getElementById('v-capacidade').innerHTML = '<option value="">—</option>';
   document.getElementById('v-residuo').innerHTML = '<option value="">—</option>';
-  document.getElementById('v-preco-display').textContent = '—';
   document.getElementById('v-vale').value = '';
   document.getElementById('v-obs').value = '';
   _fotos = { caminhao: null, vale: null };
@@ -427,6 +491,150 @@ function setLoading(show, txt=''){
   ov.style.display=show?'flex':'none';
   if(txt) document.getElementById('loading-text').textContent=txt;
   document.getElementById('btn-registrar').disabled=show;
+}
+
+// ── HISTÓRICO ─────────────────────────────────────────────────
+let _histVales = [];
+
+function badgeStatus(s) {
+  const map = { registrado:'badge-reg', confirmado:'badge-conf', cancelado:'badge-canc', contestado:'badge-cont' };
+  const cls = map[s] || 'badge-reg';
+  return `<span class="badge ${cls}">${s}</span>`;
+}
+
+async function abrirHistorico() {
+  document.getElementById('tela-form').style.display = 'none';
+  document.getElementById('tela-confirmacao').style.display = 'none';
+  document.getElementById('tela-historico').style.display = 'flex';
+  await carregarHistorico();
+}
+
+function fecharHistorico() {
+  document.getElementById('tela-historico').style.display = 'none';
+  document.getElementById('tela-form').style.display = 'block';
+}
+
+async function carregarHistorico() {
+  const lista = document.getElementById('hist-lista');
+  lista.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:30px">Carregando...</div>';
+  try {
+    const hoje = new Date().toLocaleDateString('sv-SE', {timeZone:'America/Sao_Paulo'});
+    const ontem = new Date(Date.now() - 86400000).toLocaleDateString('sv-SE', {timeZone:'America/Sao_Paulo'});
+    const r = await fetch(
+      `${SUPA_URL}/rest/v1/vales_destinacao?select=*,freteiros(nome)&data_saida=gte.${ontem}&order=created_at.desc&limit=50`,
+      { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY } }
+    );
+    _histVales = await r.json();
+    if(!_histVales.length) { lista.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:30px">Nenhum lançamento encontrado.</div>'; return; }
+    lista.innerHTML = _histVales.map(v => {
+      const nome = v.freteiros?.nome || '—';
+      const hora = new Date(v.created_at).toLocaleTimeString('pt-BR', {timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'});
+      const canCancel = v.status !== 'cancelado';
+      return `<div class="hist-item">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div class="hist-os">${v.os_numero || '—'}</div>
+          ${badgeStatus(v.status)}
+        </div>
+        <div class="hist-info">
+          ${nome}<br>
+          ${v.tipo_veiculo||''} ${v.capacidade_m3||''}m³ · ${v.tipo_residuo||'—'} · Vale ${v.numero_vale_fisico||'—'}<br>
+          <span style="color:var(--muted2)">${v.data_saida||''} ${hora}</span>
+          ${v.observacoes ? `<br><span style="color:var(--muted2);font-style:italic">${v.observacoes}</span>` : ''}
+        </div>
+        <div class="hist-actions">
+          <button class="hist-btn-edit" onclick="abrirEditVale('${v.id}')">✏ Editar</button>
+          ${canCancel ? `<button class="hist-btn-cancel" onclick="cancelarVale('${v.id}')">✕ Cancelar</button>` : '<div style="flex:1"></div>'}
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    lista.innerHTML = '<div style="color:var(--red);font-size:13px;text-align:center;padding:30px">Erro ao carregar.</div>';
+  }
+}
+
+async function cancelarVale(id) {
+  if(!confirm('Cancelar este lançamento?')) return;
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/vales_destinacao?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'cancelado' })
+    });
+    if(!r.ok) throw new Error('Falha');
+    await carregarHistorico();
+  } catch(e) { alert('Erro ao cancelar: ' + e.message); }
+}
+
+// ── EDIÇÃO NO VALE ─────────────────────────────────────────────
+let _vePrecoAtual = null;
+
+async function abrirEditVale(id) {
+  const v = _histVales.find(x => x.id === id);
+  if(!v) return;
+  // Garante que freteiros estejam carregados
+  if(!_freteiros.length) await init();
+  const sel = document.getElementById('ve-freteiro');
+  sel.innerHTML = '<option value="">Selecione...</option>';
+  _freteiros.forEach(f => {
+    const o = document.createElement('option');
+    o.value = f.id; o.textContent = f.nome;
+    if(f.id === v.freteiro_id) o.selected = true;
+    sel.appendChild(o);
+  });
+  document.getElementById('ve-id').value       = v.id;
+  document.getElementById('ve-os-num').textContent = v.os_numero || '';
+  document.getElementById('ve-veiculo').value  = v.tipo_veiculo || '';
+  document.getElementById('ve-cap').value      = v.capacidade_m3 || '';
+  document.getElementById('ve-residuo').value  = v.tipo_residuo || '';
+  document.getElementById('ve-vale').value     = v.numero_vale_fisico || '';
+  document.getElementById('ve-obs').value      = v.observacoes || '';
+  _vePrecoAtual = v.preco_unitario || null;
+  document.getElementById('ve-preco-badge').textContent = _vePrecoAtual ? 'R$ ' + Number(_vePrecoAtual).toLocaleString('pt-BR') : '—';
+  document.getElementById('vale-edit-overlay').style.display = 'block';
+}
+
+function fecharEditVale() {
+  document.getElementById('vale-edit-overlay').style.display = 'none';
+}
+
+function veAutoPreco() {
+  const fid     = document.getElementById('ve-freteiro').value;
+  const veiculo = document.getElementById('ve-veiculo').value;
+  const residuo = document.getElementById('ve-residuo').value;
+  const cap     = parseFloat(document.getElementById('ve-cap').value);
+  const f = _freteiros.find(x => x.id === fid);
+  if(!f || !veiculo || !residuo) return;
+  const precos = (f.freteiros_tabela_precos || []).filter(x => x.ativo !== false);
+  let p = precos.find(x => x.tipo_veiculo === veiculo && x.tipo_residuo === residuo && Number(x.capacidade_m3) === cap);
+  if(!p) p = precos.find(x => x.tipo_veiculo === veiculo && x.tipo_residuo === residuo);
+  if(p) {
+    _vePrecoAtual = p.preco_unitario;
+    document.getElementById('ve-preco-badge').textContent = 'R$ ' + Number(p.preco_unitario).toLocaleString('pt-BR');
+    if(!cap && p.capacidade_m3) document.getElementById('ve-cap').value = p.capacidade_m3;
+  }
+}
+
+async function salvarEditVale() {
+  const id = document.getElementById('ve-id').value;
+  const body = {
+    freteiro_id:        document.getElementById('ve-freteiro').value || null,
+    tipo_veiculo:       document.getElementById('ve-veiculo').value || null,
+    capacidade_m3:      parseFloat(document.getElementById('ve-cap').value) || null,
+    tipo_residuo:       document.getElementById('ve-residuo').value || null,
+    numero_vale_fisico: document.getElementById('ve-vale').value.trim() || null,
+    preco_unitario:     _vePrecoAtual || null,
+    observacoes:        document.getElementById('ve-obs').value.trim() || null,
+  };
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/vales_destinacao?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if(!r.ok){ const e=await r.json(); throw new Error(JSON.stringify(e)); }
+    fecharEditVale();
+    await carregarHistorico();
+  } catch(e) { alert('Erro ao salvar: ' + e.message); }
 }
 
 init();

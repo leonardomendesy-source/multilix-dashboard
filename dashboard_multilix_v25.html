@@ -2804,9 +2804,9 @@ body { font-size: 13.5px !important; }
           <div class="fi"><label>Data de Saída *</label><input type="date" id="oe-data"/></div>
           <div class="fi"><label>Hora de Saída</label><input type="time" id="oe-hora"/></div>
           <div class="fi" style="grid-column:1/-1"><label>Freteiro *</label><select id="oe-freteiro" onchange="osEditOnFreteiro()"></select></div>
-          <div class="fi"><label>Tipo de Veículo *</label><select id="oe-veiculo" onchange="osEditOnVeiculo()"><option value="">—</option><option value="TRUCK">TRUCK</option><option value="CARRETA">CARRETA</option></select></div>
-          <div class="fi"><label>Capacidade (m³) *</label><input type="number" id="oe-cap" step="0.5"/></div>
-          <div class="fi"><label>Tipo de Resíduo *</label><select id="oe-residuo"><option value="">—</option><option value="MIX">MIX</option><option value="RACHÃO SUJO">RACHÃO SUJO</option></select></div>
+          <div class="fi"><label>Tipo de Veículo *</label><select id="oe-veiculo" onchange="osEditAutoPreco()"><option value="">—</option><option value="TRUCK">TRUCK</option><option value="CARRETA">CARRETA</option></select></div>
+          <div class="fi"><label>Capacidade (m³) *</label><input type="number" id="oe-cap" step="0.5" onchange="osEditAutoPreco()"/></div>
+          <div class="fi"><label>Tipo de Resíduo *</label><select id="oe-residuo" onchange="osEditAutoPreco()"><option value="">—</option><option value="MIX">MIX</option><option value="RACHÃO SUJO">RACHÃO SUJO</option></select></div>
           <div class="fi"><label>Nº Vale Físico *</label><input type="text" id="oe-vale"/></div>
           <div class="fi"><label>Preço Unitário (R$)</label><input type="number" id="oe-preco" step="0.01"/></div>
           <div class="fi"><label>Status</label>
@@ -7953,9 +7953,9 @@ async function osEditOpen(id) {
   const v = _confRows.find(x => x.id === id);
   if(!v) return;
 
-  // Carrega freteiros se ainda não carregados
+  // Carrega freteiros (com tabela de preços) se ainda não carregados
   if(!_osEditFreteiros.length) {
-    const r = await fetch(`${SUPA_URL}/rest/v1/freteiros?select=id,nome&order=nome.asc&limit=200`, {
+    const r = await fetch(`${SUPA_URL}/rest/v1/freteiros?select=id,nome,freteiros_tabela_precos(*)&order=nome.asc&limit=200`, {
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+(_session?.access_token||SUPA_KEY)}
     });
     _osEditFreteiros = await r.json();
@@ -7985,6 +7985,29 @@ async function osEditOpen(id) {
 
 function osEditClose() {
   document.getElementById('os-edit-overlay').style.display = 'none';
+}
+
+function osEditOnFreteiro() {
+  // Ao trocar freteiro, tenta auto-preencher preço; não muda veiculo/residuo pois já estão preenchidos
+  osEditAutoPreco();
+}
+
+function osEditAutoPreco() {
+  const fid     = document.getElementById('oe-freteiro').value;
+  const veiculo = document.getElementById('oe-veiculo').value;
+  const residuo = document.getElementById('oe-residuo').value;
+  const cap     = parseFloat(document.getElementById('oe-cap').value);
+  const f = _osEditFreteiros.find(x => x.id === fid);
+  if(!f || !veiculo || !residuo) return;
+  const precos = (f.freteiros_tabela_precos || []).filter(x => x.ativo !== false);
+  // Busca exata: veículo + resíduo + capacidade
+  let p = precos.find(x => x.tipo_veiculo === veiculo && x.tipo_residuo === residuo && Number(x.capacidade_m3) === cap);
+  // Fallback sem capacidade
+  if(!p) p = precos.find(x => x.tipo_veiculo === veiculo && x.tipo_residuo === residuo);
+  if(p) {
+    document.getElementById('oe-preco').value = p.preco_unitario;
+    if(!cap && p.capacidade_m3) document.getElementById('oe-cap').value = p.capacidade_m3;
+  }
 }
 
 async function osEditSalvar() {
