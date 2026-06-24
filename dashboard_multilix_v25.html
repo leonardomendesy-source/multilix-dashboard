@@ -2761,6 +2761,10 @@ body { font-size: 13.5px !important; }
         <div class="fg"><label>Até</label><input type="date" id="cf-to" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"/></div>
         <div class="fg"><label>Freteiro</label><select id="cf-freteiro" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"><option value="">Todos</option></select></div>
         <div class="fg"><label>Status</label><select id="cf-status" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"><option value="">Todos</option><option value="registrado">Registrado</option><option value="confirmado">Confirmado</option><option value="contestado">Contestado</option><option value="cancelado">Cancelado</option></select></div>
+        <div class="fg"><label>Resíduo</label><select id="cf-residuo" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"><option value="">Todos</option><option value="MIX">MIX</option><option value="RACHÃO SUJO">RACHÃO SUJO</option></select></div>
+        <div class="fg"><label>Veículo</label><select id="cf-veiculo" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"><option value="">Todos</option><option value="TRUCK">TRUCK</option><option value="CARRETA">CARRETA</option></select></div>
+        <div class="fg"><label>Nº Vale</label><input type="text" id="cf-vale" placeholder="Ex: 505" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none;width:100px"/></div>
+        <div class="fg"><label>Observações</label><input type="text" id="cf-obs" placeholder="Buscar..." style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none;width:160px"/></div>
         <button class="btn btn-primary btn-sm" onclick="confLoad()"><i data-lucide="search" style="width:12px;height:12px;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Buscar</button>
         <button class="btn btn-ghost btn-sm" onclick="confClear()"><i data-lucide="rotate-ccw" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Limpar</button>
       </div>
@@ -7750,12 +7754,16 @@ async function confLoad() {
   const to       = document.getElementById('cf-to').value;
   const freteiro = document.getElementById('cf-freteiro').value;
   const status   = document.getElementById('cf-status').value;
+  const residuo  = document.getElementById('cf-residuo').value;
+  const veiculo  = document.getElementById('cf-veiculo').value;
 
   let params = 'select=*,freteiros(nome)&limit=1000';
   if(from)     params += `&data_saida=gte.${from}`;
   if(to)       params += `&data_saida=lte.${to}`;
   if(freteiro) params += `&freteiro_id=eq.${freteiro}`;
   if(status)   params += `&status=eq.${status}`;
+  if(residuo)  params += `&tipo_residuo=eq.${encodeURIComponent(residuo)}`;
+  if(veiculo)  params += `&tipo_veiculo=eq.${veiculo}`;
 
   try {
     const r = await fetch(`${SUPA_URL}/rest/v1/vales_destinacao?${params}`, {
@@ -7771,7 +7779,14 @@ async function confLoad() {
 
 function confSortAndRender() {
   const {col, dir} = _confSort;
-  const sorted = [..._confRows].sort((a, b) => {
+  const vale = (document.getElementById('cf-vale')?.value || '').trim().toLowerCase();
+  const obs  = (document.getElementById('cf-obs')?.value || '').trim().toLowerCase();
+  const base = _confRows.filter(r => {
+    if(vale && !String(r.numero_vale_fisico || '').toLowerCase().includes(vale)) return false;
+    if(obs  && !String(r.observacoes || '').toLowerCase().includes(obs)) return false;
+    return true;
+  });
+  const sorted = [...base].sort((a, b) => {
     let va = a[col] ?? (col==='freteiros' ? a.freteiros?.nome : '') ?? '';
     let vb = b[col] ?? (col==='freteiros' ? b.freteiros?.nome : '') ?? '';
     if(col === 'freteiros'){ va = a.freteiros?.nome||''; vb = b.freteiros?.nome||''; }
@@ -7921,6 +7936,10 @@ function confClear() {
   document.getElementById('cf-to').value   = '';
   document.getElementById('cf-freteiro').value = '';
   document.getElementById('cf-status').value   = '';
+  document.getElementById('cf-residuo').value  = '';
+  document.getElementById('cf-veiculo').value  = '';
+  document.getElementById('cf-vale').value     = '';
+  document.getElementById('cf-obs').value      = '';
   _confRows = [];
   document.getElementById('tbl-conferencia').innerHTML = '';
   document.getElementById('conf-count-badge').textContent = '0 registros';
