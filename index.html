@@ -1999,6 +1999,10 @@ body { font-size: 13.5px !important; }
       <div class="sec blue"><i data-lucide="layers" style="width:13px;height:13px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Indicadores Gerais — Entrada de Resíduos na ATT</div>
       <div class="kpi-grid" id="kpi-cons"></div>
 
+      <!-- PROJEÇÃO DE RECEBIMENTO DA ATT -->
+      <div class="sec blue"><i data-lucide="trending-up" style="width:13px;height:13px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Projeção de Recebimento da ATT</div>
+      <div class="kpi-grid" id="kpi-cons-proj"></div>
+
       <!-- ANÁLISE INTELIGENTE -->
       <div class="sec purple"><i data-lucide="sparkles" style="width:13px;height:13px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Análise Inteligente</div>
       <div class="panel" style="margin-bottom:18px">
@@ -2670,6 +2674,13 @@ body { font-size: 13.5px !important; }
       </div>
 
       <div id="dest-diag-alert"></div>
+
+      <!-- SEÇÃO 0: META DE DESTINAÇÃO MIX — ACOMPANHAMENTO MENSAL -->
+      <div class="sec green"><i data-lucide="target" style="width:13px;height:13px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Meta de Destinação MIX — Acompanhamento Mensal</div>
+      <div id="dest-mix-meta-warn"></div>
+      <div class="kpi-grid" id="kpi-dest-mix-m3"></div>
+      <div class="kpi-grid" id="kpi-dest-mix-trucks"></div>
+      <div id="dest-mix-comparativo" style="margin-bottom:18px"></div>
 
       <!-- SEÇÃO 1: TODOS OS RESÍDUOS -->
       <div class="sec"><i data-lucide="recycle" style="width:13px;height:13px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Geral — Todos os Resíduos</div>
@@ -3392,6 +3403,18 @@ body { font-size: 13.5px !important; }
         <div class="goal-item"><label>Meta Ticket Médio (R$/m³)</label><input type="number" id="meta-agr-ticket" value="64"/></div>
         <div class="goal-item"><label>Meta Faturamento (R$)</label><input type="number" id="meta-agr-fat" value="115200"/></div>
       </div>
+
+      <div class="sec">Meta de Destinação MIX</div>
+      <p style="font-size:11px;color:var(--muted);margin:-6px 0 10px">Meta mensal de destinação de resíduo <b>MIX</b> (não inclui Rachão Sujo). Salva por mês de referência.</p>
+      <div class="goals-grid">
+        <div class="goal-item"><label>Mês de Referência</label><input type="month" id="meta-mix-mes" onchange="loadMetaMixForm()"/></div>
+        <div class="goal-item"><label>Percentual da Meta MIX (%)</label><input type="number" id="meta-mix-pct" step="0.01" placeholder="42" oninput="recalcMetaMixInicial()"/></div>
+        <div class="goal-item"><label>Base Inicial Projetada ATT (m³)</label><input type="number" id="meta-mix-base" step="0.01" placeholder="20000" oninput="recalcMetaMixInicial()"/></div>
+        <div class="goal-item"><label>Meta Inicial MIX (m³) — calculada</label><input type="number" id="meta-mix-inicial-calc" readonly style="opacity:.7;cursor:not-allowed"/></div>
+        <div class="goal-item"><label>Sobrescrever Meta Inicial (m³) — opcional</label><input type="number" id="meta-mix-inicial-manual" step="0.01" placeholder="(usa a calculada)"/></div>
+        <div class="goal-item"><label>Capacidade por Truck (m³)</label><input type="number" id="meta-mix-truck" step="0.01" value="17"/></div>
+      </div>
+
       <div style="margin-top:22px"><button class="btn btn-primary" onclick="salvarMetas()"><i data-lucide="save" style="width:12px;height:12px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Salvar e Atualizar Dashboard</button></div>
     </div>
 
@@ -4044,6 +4067,114 @@ function calcularProjecaoATT(rows,extractor){return calcularProjecaoSegmentada(r
 function calcularProjecaoAgregados(rows,extractor){return calcularProjecaoSegmentada(rows,extractor);}
 function calcularProjecaoDestinacao(rows,extractor){return calcularProjecaoSegmentada(rows,extractor);}
 
+// ════════════════════════════════════════════════════════════════
+// PROJEÇÃO CONSOLIDADA + META DE DESTINAÇÃO MIX — utilitárias
+// Regras de negócio:
+//  • Locação que retorna à ATT = Troca(Coleta) + Retirada (Colocação/Entrega NUNCA entra)
+//  • Cada caçamba estacionária de locação = 4 m³
+//  • Cada truck = 17 m³
+//  • Meta MIX nunca considera RACHÃO SUJO
+// ════════════════════════════════════════════════════════════════
+const M3_POR_CACAMBA_LOC=4;     // cada caçamba estacionária de locação equivale a 4 m³
+const M3_POR_TRUCK_DEFAULT=17;  // capacidade padrão por truck (m³)
+
+// Filtra um array de registros por mês 'YYYY-MM' (vazio = todos). Não muta a origem.
+function _filtMesGen(rows,mes){
+  if(!mes)return rows;
+  return rows.filter(r=>r.data&&(r.data.getFullYear()+'-'+String(r.data.getMonth()+1).padStart(2,'0'))===mes);
+}
+// Locação faturável que retorna fisicamente à ATT: Troca(Coleta) + Retirada (exclui Colocação/Entrega)
+function _locTrocaRetirada(){
+  return S.raw.locacao.filter(r=>r.tipoServico==='Coleta'||r.tipoServico==='Retirada');
+}
+
+// ── Projeção: Recebimento de Terceiros (regra de projeção existente, sem alteração) ──
+function getProjectedThirdPartyVolume(mes){
+  const att=_filtMesGen(S.raw.att,mes);
+  return {
+    cacambas:calcularProjecaoATT(att,r=>r.qtdCacamba).projecao,
+    m3:calcularProjecaoATT(att,r=>r.volume).projecao
+  };
+}
+// ── Projeção: Locação Multilix (apenas Troca+Retirada) ──
+function getProjectedRentalBuckets(mes){
+  const loc=_filtMesGen(_locTrocaRetirada(),mes);
+  return calcularProjecaoLocacao(loc,()=>1).projecao;
+}
+function getProjectedRentalVolume(mes){
+  return getProjectedRentalBuckets(mes)*M3_POR_CACAMBA_LOC;
+}
+// ── Projeção consolidada (Terceiros + Locação) ──
+function getConsolidatedProjectedVolume(mes){
+  const terc=getProjectedThirdPartyVolume(mes);
+  const locCac=getProjectedRentalBuckets(mes);
+  const locM3=locCac*M3_POR_CACAMBA_LOC;
+  return {
+    terceiros:{cacambas:terc.cacambas,m3:terc.m3},
+    locacao:{cacambas:locCac,m3:locM3},
+    total:{cacambas:terc.cacambas+locCac,m3:terc.m3+locM3}
+  };
+}
+
+// ── META DE DESTINAÇÃO MIX — persistência por mês de referência ──
+// As metas gerais do dashboard não são persistidas/por mês; usamos store próprio.
+let _metaMix=JSON.parse(localStorage.getItem('mlx_meta_mix')||'{}');
+function _saveMetaMix(){localStorage.setItem('mlx_meta_mix',JSON.stringify(_metaMix));}
+// Configuração da meta MIX de um mês 'YYYY-MM'
+function getMixMetaConfig(mes){
+  const c=(mes&&_metaMix[mes])||{};
+  return {
+    pct:(c.pct!=null&&c.pct!=='')?Number(c.pct):null,                                   // % livre
+    base:(c.base!=null&&c.base!=='')?Number(c.base):null,                               // base inicial projetada m³
+    metaInicialManual:(c.metaInicialManual!=null&&c.metaInicialManual!=='')?Number(c.metaInicialManual):null,
+    truckCap:(c.truckCap!=null&&c.truckCap!=='')?Number(c.truckCap):M3_POR_TRUCK_DEFAULT,
+    configured:(c.pct!=null&&c.pct!=='')
+  };
+}
+
+// ── MIX recebido no mês (Terceiros + Locação Troca+Retirada), volume real, sem RACHÃO ──
+function getMixReceivedVolume(mes){
+  const isMix=r=>normalizeDestResidue(r.residuo)==='MIX';
+  const att=_filtMesGen(S.raw.att,mes).filter(isMix);
+  const loc=_filtMesGen(_locTrocaRetirada(),mes).filter(isMix);
+  const soma=arr=>arr.reduce((s,r)=>s+(r.volume||0),0);
+  return soma(att)+soma(loc);
+}
+// ── MIX já destinado no mês (volume), sem RACHÃO ──
+function getMixDisposedVolume(mes){
+  // TODO: quando houver coluna de status, filtrar apenas destinações confirmadas
+  return _filtMesGen(S.raw.destinacao,mes).filter(r=>r.residuo==='MIX').reduce((s,r)=>s+(r.volume||0),0);
+}
+// ── Meta inicial × meta dinâmica (m³) ──
+function getMixDisposalTarget(mes){
+  const cfg=getMixMetaConfig(mes);
+  const proj=getConsolidatedProjectedVolume(mes);
+  const pct=cfg.pct||0;
+  const metaInicialCalc=(cfg.base||0)*pct/100;
+  const metaInicial=cfg.metaInicialManual!=null?cfg.metaInicialManual:metaInicialCalc;
+  const metaDinamica=proj.total.m3*pct/100;
+  return {
+    pct,base:cfg.base,truckCap:cfg.truckCap,configured:cfg.configured,
+    projTotalM3:proj.total.m3,projTotalCac:proj.total.cacambas,
+    metaInicial,metaInicialCalc,metaDinamica
+  };
+}
+// ── Progresso da destinação MIX (saldo, % consumido, status) ──
+function getMixDisposalProgress(mes){
+  const t=getMixDisposalTarget(mes);
+  const disposed=getMixDisposedVolume(mes);
+  const recebido=getMixReceivedVolume(mes);
+  const saldo=t.metaDinamica-disposed;
+  const pctConsumido=t.metaDinamica>0?(disposed/t.metaDinamica*100):0;
+  let status='—',statusCor='muted';
+  if(t.metaDinamica>0){
+    if(pctConsumido>100){status='Meta ultrapassada';statusCor='red';}
+    else if(pctConsumido>=80){status='Atenção: próximo do limite';statusCor='yellow';}
+    else{status='Dentro da meta';statusCor='green';}
+  }
+  return {...t,recebido,disposed,saldo,pctConsumido,status,statusCor};
+}
+
 // ── CSV PARSER (suporta ; , \t como separador) ─────────────────
 function parseCSV(text){
   // Remove BOM
@@ -4245,6 +4376,7 @@ function showPage(id,el){
   if(id==='usuarios') carregarUsuarios();
   if(id==='dest-pagamentos') showDestPagamentoPage();
   if(id==='consolidado') updateConsolidado();
+  if(id==='config') initMetaMixForm();
   if(id==='dest-freteiros') freteiroLoadPage();
   if(id==='dest-conferencia') confInit();
   if(id==='destinacao') destMergeSupabase();
@@ -5244,7 +5376,46 @@ function processData(raw,type,fname){
 
 // ── UPDATE ALL ─────────────────────────────────────────────────
 function updateAll(){updateFilterOptions();updateOverview();updateATT();updateLocacao();updateAgregados();updateDestinacao();updateInconsistencias();gerarResumo();updateConsolidado();renderIcons();}
-function salvarMetas(){updateAll();alert('✅ Metas salvas!');}
+// ── Meta de Destinação MIX — formulário em Config ──
+function recalcMetaMixInicial(){
+  const pct=parseFloat(document.getElementById('meta-mix-pct').value)||0;
+  const base=parseFloat(document.getElementById('meta-mix-base').value)||0;
+  const el=document.getElementById('meta-mix-inicial-calc');
+  if(el)el.value=(base*pct/100).toFixed(2);
+}
+function loadMetaMixForm(){
+  const mes=document.getElementById('meta-mix-mes').value;
+  const c=(mes&&_metaMix[mes])||{};
+  document.getElementById('meta-mix-pct').value=(c.pct!=null?c.pct:'');
+  document.getElementById('meta-mix-base').value=(c.base!=null?c.base:'');
+  document.getElementById('meta-mix-inicial-manual').value=(c.metaInicialManual!=null?c.metaInicialManual:'');
+  document.getElementById('meta-mix-truck').value=(c.truckCap!=null?c.truckCap:M3_POR_TRUCK_DEFAULT);
+  recalcMetaMixInicial();
+}
+// Inicializa o mês de referência (mês selecionado na Destinação ou mês atual) ao abrir Config
+function initMetaMixForm(){
+  const el=document.getElementById('meta-mix-mes');
+  if(!el)return;
+  if(!el.value){
+    const now=new Date();
+    el.value=S.destF.mes||S.consF.mes||(now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0'));
+  }
+  loadMetaMixForm();
+}
+function saveMetaMixForm(){
+  const mes=document.getElementById('meta-mix-mes')?document.getElementById('meta-mix-mes').value:'';
+  if(!mes)return;
+  const val=id=>{const e=document.getElementById(id);if(!e)return null;const v=e.value;return v===''?null:Number(v);};
+  const truck=val('meta-mix-truck');
+  _metaMix[mes]={
+    pct:val('meta-mix-pct'),
+    base:val('meta-mix-base'),
+    metaInicialManual:val('meta-mix-inicial-manual'),
+    truckCap:truck!=null?truck:M3_POR_TRUCK_DEFAULT
+  };
+  _saveMetaMix();
+}
+function salvarMetas(){saveMetaMixForm();updateAll();alert('✅ Metas salvas!');}
 
 // ── OVERVIEW ──────────────────────────────────────────────────
 function updateOverview(){
@@ -5940,8 +6111,18 @@ function updateConsolidado(){
     kpi('Média m³ por Caçamba',fN(mediaM3Cac,2),'m³ ÷ caçambas','','kb-orange','orange'),
     kpi('Participação Locação',fN(pctLocM3,1)+'%',fN(locM3,1)+' m³ · '+fN(locCac,0)+' cac','','kb-blue','blue'),
     kpi('Participação Terceiros',fN(pctAttM3,1)+'%',fN(attM3,1)+' m³ · '+fN(attCac,0)+' cac','','kb-green','green'),
-    kpi('Projeção m³ (mês)',fN(prTotalM3,1),'Loc: '+fN(prLocM3,1)+' · Terc: '+fN(prAttM3,1),'','kb-yellow','yellow'),
-    kpi('Projeção Caçambas (mês)',fN(prTotalCac,0),'Loc: '+fN(prLocCac,0)+' · Terc: '+fN(prAttCac,0),'','kb-yellow','yellow'),
+  ].join('');
+
+  // ── Projeção de Recebimento da ATT — cards separados (Terceiros / Locação / Consolidado) ──
+  // Locação usa Troca+Retirada e a regra de 4 m³/caçamba (getConsolidatedProjectedVolume).
+  const cp=getConsolidatedProjectedVolume(S.consF.mes);
+  document.getElementById('kpi-cons-proj').innerHTML=[
+    kpi('Terceiros — Proj. Caçambas',fN(cp.terceiros.cacambas,0)+' caç','Recebimento de Terceiros','','kb-green','green'),
+    kpi('Terceiros — Proj. m³',fN(cp.terceiros.m3,1)+' m³','Recebimento de Terceiros','','kb-green','green'),
+    kpi('Locação — Proj. Caçambas',fN(cp.locacao.cacambas,0)+' caç','Troca + Retirada (sem Colocação)','','kb-blue','blue'),
+    kpi('Locação — Proj. m³',fN(cp.locacao.m3,1)+' m³','Caçambas × 4 m³','','kb-blue','blue'),
+    kpi('Consolidado ATT — Total Caçambas',fN(cp.total.cacambas,0)+' caç','Terceiros + Locação','','kb-purple','purple'),
+    kpi('Consolidado ATT — Total m³',fN(cp.total.m3,1)+' m³','Terceiros + Locação','','kb-purple','purple'),
   ].join('');
 
   // Snapshot consolidado — usado pela Análise Inteligente (IA via n8n)
@@ -6661,6 +6842,9 @@ function updateDestinacao(){
   const all=S.raw.destinacao;
   const rows=filtDest(all);
 
+  // ── Bloco de acompanhamento da Meta de Destinação MIX (usa o mês do filtro) ──
+  renderMixMetaDestinacao(S.destF.mes);
+
   // ── Totais e subconjuntos ─────────────────────────────────────
   const tVol=rows.reduce((s,r)=>s+r.volume,0);
   const tFat=rows.reduce((s,r)=>s+r.valor,0);
@@ -6782,6 +6966,74 @@ function updateDestinacao(){
   // ── Evolução mensal ────────────────────────────────────────
   mkMensalComProj('cDestMesVol','destMesVol',S.raw.destinacao,'volume','#3B82F6','m³',false);
   mkMensalComProj('cDestMesFat','destMesFat',S.raw.destinacao,'valor','#F59E0B','Custo R$',true);
+}
+
+// ── META DE DESTINAÇÃO MIX — bloco de acompanhamento mensal (topo da Destinação) ──
+function renderMixMetaDestinacao(mes){
+  const warnEl=document.getElementById('dest-mix-meta-warn');
+  const m3El=document.getElementById('kpi-dest-mix-m3');
+  const trkEl=document.getElementById('kpi-dest-mix-trucks');
+  const cmpEl=document.getElementById('dest-mix-comparativo');
+  if(!m3El||!trkEl||!cmpEl||!warnEl)return;
+  const clear=()=>{m3El.innerHTML='';trkEl.innerHTML='';cmpEl.innerHTML='';};
+
+  // Sem mês selecionado no filtro → orienta o usuário
+  if(!mes){
+    warnEl.innerHTML='<div class="alert alert-info" style="margin-bottom:14px">'+ic('info',13)+' Selecione um <b>mês</b> no filtro acima para acompanhar a meta de destinação MIX.</div>';
+    clear();return;
+  }
+  const p=getMixDisposalProgress(mes);
+  // Mês sem meta cadastrada → aviso
+  if(!p.configured){
+    warnEl.innerHTML='<div class="alert" style="background:#F59E0B15;border:1px solid #F59E0B40;color:#ffb380;margin-bottom:14px">'+ic('alert-triangle',13)+' Configure a meta de destinação MIX em <b>Metas e Configurações</b> para o mês <b>'+mes+'</b>.</div>';
+    clear();return;
+  }
+  warnEl.innerHTML='';
+  const cap=p.truckCap||M3_POR_TRUCK_DEFAULT;
+  const trk=v=>cap>0?v/cap:0;
+  const statusKb={green:'kb-green',yellow:'kb-yellow',red:'kb-red'}[p.statusCor]||'kb-blue';
+  const statusCol=({green:'green',yellow:'yellow',red:'red'})[p.statusCor]||'blue';
+
+  // ── Linha 1: visão em m³ ──
+  m3El.innerHTML=[
+    kpi('MIX Recebido (mês)',fN(p.recebido,1)+' m³','Terceiros + Locação (Troca+Retirada)','','kb-blue','blue'),
+    kpi('Projeção Total ATT',fN(p.projTotalM3,1)+' m³','Consolidado (Terc + Loc)','','kb-purple','purple'),
+    kpi('Meta Inicial MIX',fN(p.metaInicial,1)+' m³','Base × '+fN(p.pct,2)+'%','','kb-green','green'),
+    kpi('Meta Dinâmica MIX',fN(p.metaDinamica,1)+' m³','Projeção × '+fN(p.pct,2)+'%','','kb-green','green'),
+    kpi('MIX Destinado',fN(p.disposed,1)+' m³','Destinação MIX no mês','','kb-orange','orange'),
+    kpi('Saldo Disponível',fN(p.saldo,1)+' m³','Meta dinâmica − destinado','',p.saldo<0?'kb-red':'kb-blue',p.saldo<0?'red':'blue'),
+  ].join('');
+
+  // ── Linha 2: conversão em trucks (cap m³/truck) ──
+  trkEl.innerHTML=[
+    kpi('Meta Inicial (trucks)',fN(trk(p.metaInicial),2),cap+' m³/truck','','kb-green','green'),
+    kpi('Meta Dinâmica (trucks)',fN(trk(p.metaDinamica),2),cap+' m³/truck','','kb-green','green'),
+    kpi('Trucks Destinados',fN(trk(p.disposed),2),cap+' m³/truck','','kb-orange','orange'),
+    kpi('Saldo (trucks)',fN(trk(p.saldo),2),'Disponível p/ destinar','',p.saldo<0?'kb-red':'kb-blue',p.saldo<0?'red':'blue'),
+    kpi('% da Meta Consumido',fN(p.pctConsumido,2)+'%','Destinado ÷ meta dinâmica','',statusKb,statusCol),
+    kpi('Status da Meta',p.status,'Base na meta dinâmica','',statusKb,statusCol),
+  ].join('');
+
+  // ── Comparativo: Planejado inicial × Projeção atual ──
+  const base=p.base||0;
+  const difBaseM3=p.projTotalM3-base;
+  const difBasePct=base>0?(difBaseM3/base*100):0;
+  const difMetaM3=p.metaDinamica-p.metaInicial;
+  const difMetaPct=p.metaInicial>0?(difMetaM3/p.metaInicial*100):0;
+  const sgn=(v,d=1)=>(v>=0?'+':'')+fN(v,d);
+  const colDif=v=>v>=0?'var(--green)':'var(--red)';
+  cmpEl.innerHTML=`<div class="panel"><div class="panel-head"><span class="panel-title">Planejado inicial × Projeção atual</span></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Indicador</th><th style="text-align:right">Valor</th></tr></thead>
+      <tbody>
+        <tr><td>Base inicial projetada</td><td style="text-align:right">${base>0?fN(base,1)+' m³':'—'}</td></tr>
+        <tr><td>Projeção consolidada atual</td><td style="text-align:right">${fN(p.projTotalM3,1)} m³</td></tr>
+        <tr><td>Diferença (projeção − base)</td><td style="text-align:right;color:${colDif(difBaseM3)}">${base>0?sgn(difBaseM3)+' m³ ('+sgn(difBasePct,2)+'%)':'—'}</td></tr>
+        <tr><td>Meta inicial MIX</td><td style="text-align:right">${fN(p.metaInicial,1)} m³</td></tr>
+        <tr><td>Meta dinâmica MIX</td><td style="text-align:right">${fN(p.metaDinamica,1)} m³</td></tr>
+        <tr><td>Diferença entre metas (dinâmica − inicial)</td><td style="text-align:right;color:${colDif(difMetaM3)}">${p.metaInicial>0?sgn(difMetaM3)+' m³ ('+sgn(difMetaPct,2)+'%)':sgn(difMetaM3)+' m³'}</td></tr>
+      </tbody>
+    </table></div></div>`;
 }
 
 // ── INCONSISTÊNCIAS ───────────────────────────────────────────
