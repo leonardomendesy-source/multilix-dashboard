@@ -329,7 +329,7 @@ const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 const HDR = {'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=representation'};
 const HDR_NO_PREFER = {'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'};
 
-let _parceiros = [], _residuos = [], _equipamentos = [], _geradores = [];
+let _parceiros = [], _residuos = [], _equipamentos = [], _geradores = [], _precos = [];
 let _itens = [];
 let _fotoBlobs = {};   // idx → blob
 let _valeData = null;
@@ -346,16 +346,18 @@ setInterval(updateClock, 1000); updateClock();
 // ── INIT ─────────────────────────────────────────────────────────
 async function init(){
   try {
-    const [rP, rR, rE, rG] = await Promise.all([
+    const [rP, rR, rE, rG, rPr] = await Promise.all([
       fetch(`${SUPA_URL}/rest/v1/parceiros_att?select=id,nome_fantasia,razao_social,documento&status=eq.ativo&order=nome_fantasia.asc&limit=500`,{headers:HDR_NO_PREFER}),
       fetch(`${SUPA_URL}/rest/v1/tipos_residuo_att?select=id,nome&ativo=eq.true&order=ordem.asc`,{headers:HDR_NO_PREFER}),
       fetch(`${SUPA_URL}/rest/v1/equipamentos_att?select=id,nome,tipo,volume_m3_padrao&ativo=eq.true&order=ordem.asc`,{headers:HDR_NO_PREFER}),
       fetch(`${SUPA_URL}/rest/v1/geradores_att?select=id,nome&ativo=eq.true&order=nome.asc&limit=500`,{headers:HDR_NO_PREFER}),
+      fetch(`${SUPA_URL}/rest/v1/parceiros_att_tabela_precos?select=parceiro_id,residuo_id,equipamento_id,preco_m3&ativo=eq.true`,{headers:HDR_NO_PREFER}),
     ]);
     _parceiros   = await rP.json();
     _residuos    = await rR.json();
     _equipamentos= await rE.json();
     _geradores   = await rG.json();
+    _precos      = await rPr.json();
 
     const selR = document.getElementById('if-residuo');
     selR.innerHTML = '<option value="">Selecione o resíduo...</option>';
@@ -504,6 +506,12 @@ function adicionarItem(){
   if(!residuoId){ showAlert('Selecione o tipo de resíduo.'); return; }
   if(!vol||vol<=0){ showAlert('Informe o volume recebido em m³.'); return; }
 
+  // Autopreço: busca na tabela de preços do cliente (parceiro+resíduo+equipamento).
+  // Valor sempre = R$/m³ cadastrado × m³ realmente lançados (não trava o lançamento se faltar preço).
+  const clienteId = document.getElementById('v-cliente-id').value;
+  const precoRow = _precos.find(p=>p.parceiro_id===clienteId && p.equipamento_id===equipId && p.residuo_id===residuoId);
+  const precoUnitario = precoRow ? Number(precoRow.preco_m3) : null;
+
   const idx = _itens.length;
   const item = {
     ctr_mtr: document.getElementById('if-ctr').value.trim()||null,
@@ -514,6 +522,8 @@ function adicionarItem(){
     residuo_id: residuoId,
     residuo_nome_snapshot: residuo?residuo.nome:'',
     observacoes: document.getElementById('if-obs').value.trim()||null,
+    preco_unitario: precoUnitario,
+    valor_total: precoUnitario!=null ? Number((precoUnitario*vol).toFixed(2)) : null,
     _foto: _fotoAtual,
     _fotoPreview: _fotoAtual ? URL.createObjectURL(_fotoAtual) : null,
   };
@@ -549,8 +559,10 @@ function renderItens(){
         <div class="item-pill"><div class="item-pill-label">Resíduo</div><div class="item-pill-value">${esc(it.residuo_nome_snapshot)}</div></div>
         ${it.ctr_mtr?`<div class="item-pill"><div class="item-pill-label">CTR/MTR</div><div class="item-pill-value">${esc(it.ctr_mtr)}</div></div>`:''}
         ${it.numero_cacamba?`<div class="item-pill"><div class="item-pill-label">Nº Caçamba</div><div class="item-pill-value">${esc(it.numero_cacamba)}</div></div>`:''}
+        ${it.valor_total!=null?`<div class="item-pill"><div class="item-pill-label">Valor</div><div class="item-pill-value" style="color:var(--accent)">${fmtMoeda(it.valor_total)}</div></div>`:''}
         ${it.observacoes?`<div class="item-pill" style="grid-column:1/-1"><div class="item-pill-label">Obs</div><div class="item-pill-value">${esc(it.observacoes)}</div></div>`:''}
       </div>
+      ${it.valor_total==null?'<div style="font-size:11px;color:var(--yellow);margin-top:8px">⚠️ Sem preço cadastrado para este cliente — lançamento segue normalmente</div>':''}
       ${it._fotoPreview?`<img class="item-thumb" src="${it._fotoPreview}" alt="foto"/>`:it._foto?'':''}
       ${it._foto?'<div style="font-size:11px;color:var(--accent);margin-top:6px">📷 Foto anexada</div>':''}
     </div>`).join('');
@@ -602,6 +614,7 @@ async function finalizarVale(){
   showLoading('Registrando vale...');
   try {
     const totalVol = _itens.reduce((a,it)=>a+it.volume_m3,0);
+    const totalPreco = _itens.reduce((a,it)=>a+(it.valor_total||0),0);
     const valePayload = {
       parceiro_id: clienteId,
       parceiro_nome_snapshot: clienteNome,
@@ -613,6 +626,7 @@ async function finalizarVale(){
       status: 'aguardando_pagamento',
       total_itens: _itens.length,
       volume_total_m3: totalVol,
+      preco_total: totalPreco>0 ? totalPreco : null,
       usuario_lancamento: 'apontador',
     };
 
@@ -637,6 +651,7 @@ async function finalizarVale(){
         volume_m3: it.volume_m3,
         residuo_id: it.residuo_id,
         residuo_nome_snapshot: it.residuo_nome_snapshot,
+        preco_unitario: it.preco_unitario,
         observacoes: it.observacoes,
         gerador_nome_snapshot: geradorNome||null,
         imagem_url: imgUrl,
@@ -731,6 +746,7 @@ function imprimirComprovante(){ window.print(); }
 // ── HELPERS ──────────────────────────────────────────────────────
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function fmtVol(v){ return Number(v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2}); }
+function fmtMoeda(v){ return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
 function showAlert(msg){ const el=document.getElementById('alert-msg'); el.textContent=msg; el.style.display='block'; el.scrollIntoView({behavior:'smooth',block:'nearest'}); }
 function hideAlert(){ document.getElementById('alert-msg').style.display='none'; }
 function showLoading(txt='Salvando...'){ document.getElementById('loading-text').textContent=txt; document.getElementById('loading-overlay').style.display='flex'; }

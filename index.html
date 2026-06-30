@@ -1785,6 +1785,7 @@ body { font-size: 13.5px !important; }
             <button class="nav-item" onclick="window.open('/entrada-terceiros','_blank')" style="padding-left:54px"><span class="icon" data-lucide="plus-circle"></span>Lançar Vale</button>
             <button class="nav-item" onclick="showPage('att-relatorio',this)" style="padding-left:54px"><span class="icon" data-lucide="bar-chart-2"></span>Relatório de Descartes</button>
             <button class="nav-item" onclick="showPage('att-parceiros',this)" style="padding-left:54px"><span class="icon" data-lucide="users"></span>Parceiros ATT</button>
+            <button class="nav-item" onclick="showPage('att-precos',this)" style="padding-left:54px"><span class="icon" data-lucide="tag"></span>Tabela de Preços</button>
             <button class="nav-item" onclick="showPage('att-residuos',this)" style="padding-left:54px"><span class="icon" data-lucide="recycle"></span>Tipos de Resíduo</button>
             <button class="nav-item" onclick="showPage('att-equipamentos',this)" style="padding-left:54px"><span class="icon" data-lucide="truck"></span>Equipamentos</button>
           </div></div>
@@ -2186,6 +2187,7 @@ body { font-size: 13.5px !important; }
         </div>
         <div style="flex:1"></div>
         <button class="btn btn-sm" style="background:var(--surface2);border:1px solid var(--border);color:var(--text)" onclick="attRelGerarRelatorio()"><i data-lucide="file-text" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Gerar Relatório</button>
+        <button class="btn btn-sm" style="background:#3B82F620;border:1px solid #3B82F6;color:#3B82F6;font-weight:700" onclick="attRelGerarPDFCobranca()"><i data-lucide="receipt" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> PDF de Cobrança</button>
         <button class="btn btn-sm" style="background:var(--green);color:#000;font-weight:700" onclick="attRelExportarXLSX()"><i data-lucide="download" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Exportar XLSX</button>
       </div>
 
@@ -2213,6 +2215,7 @@ body { font-size: 13.5px !important; }
                 <th style="padding:8px 10px;text-align:right;color:var(--muted);font-weight:600">Vol. m³</th>
                 <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Resíduo</th>
                 <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Caçamba</th>
+                <th style="padding:8px 10px;text-align:right;color:var(--muted);font-weight:600">Valor R$</th>
                 <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Status</th>
                 <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Ações</th>
               </tr>
@@ -2317,7 +2320,7 @@ body { font-size: 13.5px !important; }
       </div>
       <!-- MODAL PARCEIRO -->
       <div id="parc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;padding:16px">
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:620px;max-height:90vh;overflow-y:auto">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
             <div style="font-size:15px;font-weight:700" id="parc-modal-title">Novo Parceiro</div>
             <button onclick="document.getElementById('parc-modal').style.display='none'" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
@@ -2336,8 +2339,109 @@ body { font-size: 13.5px !important; }
             </div>
             <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">E-mail</label><input type="text" id="pm-email" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none" placeholder="contato@empresa.com.br"/></div>
             <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Observações</label><textarea id="pm-obs" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none;resize:none;height:70px;font-family:inherit" placeholder="Informações adicionais"></textarea></div>
+
+            <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
+              <div style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+                <span>Tabela de Preços deste Cliente</span>
+                <button type="button" onclick="pmAddPrecoRow()" style="background:var(--surface2);border:1px solid var(--border);color:var(--accent,#10B981);border-radius:6px;padding:3px 9px;font-size:11px;cursor:pointer;font-weight:700">+ Item</button>
+              </div>
+              <div id="pm-precos-container"></div>
+              <div style="font-size:10px;color:var(--muted2);margin-top:2px">Informe o preço fechado da carga; o R$/m³ é calculado automaticamente pelo volume padrão do equipamento. Para equipamento "Avulso", digite o R$/m³ direto.</div>
+            </div>
+
             <div id="pm-error" style="color:var(--red);font-size:12px;display:none"></div>
             <button onclick="attParcSalvar()" style="width:100%;padding:13px;background:var(--green);border:none;border-radius:10px;color:#000;font-size:14px;font-weight:700;cursor:pointer">Salvar Parceiro</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ ATT TERCEIROS: TABELA DE PREÇOS ══════════ -->
+    <div class="page" id="page-att-precos">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-size:16px;font-weight:700">Tabela de Preços — Entrada de Terceiros</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">Preços por cliente, resíduo e equipamento. Usado para precificar automaticamente o lançamento de vales.</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-sm" style="background:var(--surface2);border:1px solid var(--border);color:var(--text)" onclick="precosExportarXLSX()"><i data-lucide="download" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Exportar XLSX</button>
+          <button class="btn btn-sm" style="background:var(--green);color:#000;font-weight:700" onclick="precosNovo()"><i data-lucide="plus" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Novo Preço</button>
+        </div>
+      </div>
+
+      <div class="filterbar" style="margin-bottom:14px">
+        <div class="fg"><label>Parceiro</label><select id="pp-f-parceiro" onchange="precosFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 10px;font-size:12px;outline:none;min-width:160px"><option value="">Todos</option></select></div>
+        <div class="fg"><label>Resíduo</label><select id="pp-f-residuo" onchange="precosFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 10px;font-size:12px;outline:none"><option value="">Todos</option></select></div>
+        <div class="fg"><label>Equipamento</label><select id="pp-f-equip" onchange="precosFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 10px;font-size:12px;outline:none"><option value="">Todos</option></select></div>
+      </div>
+
+      <!-- BARRA DE REAJUSTE EM LOTE -->
+      <div id="pp-bulk-bar" style="display:none;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:12px;flex-wrap:wrap">
+        <span id="pp-sel-count" style="color:var(--accent,#10B981);font-weight:700;font-size:12px">0 selecionados</span>
+        <select id="pp-reaj-tipo" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 8px;font-size:12px"><option value="pct">Percentual (%)</option><option value="fixo">Valor fixo (R$)</option></select>
+        <input type="number" id="pp-reaj-valor" placeholder="Ex: 5 (=5%) ou -3" step="0.01" style="width:110px;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 8px;font-size:12px"/>
+        <input type="text" id="pp-reaj-motivo" placeholder="Motivo do reajuste (opcional)" style="flex:1;min-width:160px;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 8px;font-size:12px"/>
+        <button onclick="precosPrevisaoReajuste()" style="background:#3B82F620;border:1px solid #3B82F6;color:#3B82F6;border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;font-weight:600">Ver Prévia</button>
+      </div>
+      <div id="pp-reaj-preview"></div>
+
+      <div class="panel" style="margin-bottom:18px">
+        <div class="panel-head"><span class="panel-title">Preços Vigentes</span><span class="panel-badge" id="pp-badge">—</span></div>
+        <div class="tbl-wrap" style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead><tr style="border-bottom:1px solid var(--border)">
+              <th style="padding:8px 10px;width:30px"><input type="checkbox" id="pp-chk-all" onchange="precosToggleAll(this.checked)"/></th>
+              <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Parceiro</th>
+              <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Resíduo</th>
+              <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Equipamento</th>
+              <th style="padding:8px 10px;text-align:right;color:var(--muted);font-weight:600">Preço Carga (R$)</th>
+              <th style="padding:8px 10px;text-align:right;color:var(--muted);font-weight:600">R$/m³</th>
+              <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Atualizado em</th>
+              <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Ações</th>
+            </tr></thead>
+            <tbody id="pp-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- HISTÓRICO DE REAJUSTES -->
+      <div class="sec"><i data-lucide="history" style="width:13px;height:13px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Histórico de Reajustes</div>
+      <div class="panel">
+        <div class="tbl-wrap" style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead><tr style="border-bottom:1px solid var(--border)">
+              <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Data</th>
+              <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Parceiro</th>
+              <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Resíduo / Equipamento</th>
+              <th style="padding:8px 10px;text-align:right;color:var(--muted);font-weight:600">R$/m³ Anterior</th>
+              <th style="padding:8px 10px;text-align:right;color:var(--muted);font-weight:600">R$/m³ Novo</th>
+              <th style="padding:8px 10px;text-align:right;color:var(--muted);font-weight:600">Variação</th>
+              <th style="padding:8px 10px;text-align:left;color:var(--muted);font-weight:600">Motivo</th>
+              <th style="padding:8px 10px;text-align:center;color:var(--muted);font-weight:600">Origem</th>
+            </tr></thead>
+            <tbody id="pp-hist-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- MODAL NOVO/EDITAR PREÇO -->
+      <div id="pp-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;padding:16px">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:420px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+            <div style="font-size:15px;font-weight:700" id="pp-modal-title">Novo Preço</div>
+            <button onclick="document.getElementById('pp-modal').style.display='none'" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
+          </div>
+          <div style="display:grid;gap:12px">
+            <input type="hidden" id="ppm-id"/>
+            <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Parceiro (já cadastrado) *</label><select id="ppm-parceiro" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none"><option value="">Selecione um parceiro cadastrado...</option></select></div>
+            <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Resíduo *</label><select id="ppm-residuo" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none"></select></div>
+            <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Equipamento *</label><select id="ppm-equip" onchange="ppmRecalc()" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none"></select></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px" id="ppm-carga-label">Preço Carga (R$)</label><input type="number" id="ppm-carga" step="0.01" oninput="ppmRecalc()" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none"/></div>
+              <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">R$ / m³</label><input type="number" id="ppm-m3" step="0.01" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none"/></div>
+            </div>
+            <div id="ppm-error" style="color:var(--red);font-size:12px;display:none"></div>
+            <button onclick="precosSalvarUnico()" style="width:100%;padding:13px;background:var(--green);border:none;border-radius:10px;color:#000;font-size:14px;font-weight:700;cursor:pointer">Salvar Preço</button>
           </div>
         </div>
       </div>
@@ -4377,7 +4481,8 @@ function showPage(id,el){
   closeMobileMenu();
   if(id==='usuarios') carregarUsuarios();
   if(id==='dest-pagamentos') showDestPagamentoPage();
-  if(id==='consolidado') updateConsolidado();
+  if(id==='att') attMergeSupabase().then(updateATT);
+  if(id==='consolidado') attMergeSupabase().then(updateConsolidado);
   if(id==='config') initMetaMixForm();
   if(id==='dest-freteiros') freteiroLoadPage();
   if(id==='dest-conferencia') confInit();
@@ -4930,7 +5035,12 @@ function updateFilterOptions(){
 function applyResumoFilter(){S.resumoF.mes=document.getElementById('f-mes-resumo').value;gerarResumo();}
 // Garante que os vales de destinação do webapp (Supabase, status≠cancelado) estejam
 // mesclados em S.raw.destinacao antes de gerar o resumo — mesma fonte da tela Destinação.
-function resumoInit(){Promise.resolve(typeof destMergeSupabase==='function'?destMergeSupabase():null).then(()=>gerarResumo());}
+function resumoInit(){
+  Promise.all([
+    typeof destMergeSupabase==='function'?destMergeSupabase():null,
+    typeof attMergeSupabase==='function'?attMergeSupabase():null
+  ]).then(()=>gerarResumo());
+}
 
 // ── CHART ──────────────────────────────────────────────────────
 const CHART_OPT={responsive:true,maintainAspectRatio:false,animation:{duration:500,easing:'easeOutQuart'},plugins:{legend:{labels:{color:'#8a93ab',font:{size:11,family:"'Inter','Segoe UI',sans-serif"},boxWidth:10,padding:14}},tooltip:{backgroundColor:'#1a1f2e',titleColor:'#eef0ff',bodyColor:'#aab2cc',borderColor:'#2e3850',borderWidth:1,padding:10,cornerRadius:10,titleFont:{size:11,weight:'600'},bodyFont:{size:11},displayColors:false}},scales:{x:{ticks:{color:'#5b6478',maxTicksLimit:14,font:{size:10}},grid:{color:'#262D3D40',drawTicks:false},border:{display:false}},y:{ticks:{color:'#5b6478',font:{size:10}},grid:{color:'#262D3D40',drawTicks:false},border:{display:false}}}};
@@ -8377,6 +8487,54 @@ async function destMergeSupabase() {
   } catch(e) {}
 }
 
+// Mescla vales lançados em /entrada-terceiros (vales_descarga + vale_descarga_itens) em
+// S.raw.att, igual destMergeSupabase faz para a Destinação. Sem isso, o lançamento pelo
+// app nunca aparecia em Recebimento de Terceiros/Consolidado/Resumo Executivo.
+// Exclui cancelados e rascunhos (lançamento incompleto, nunca usado por entrada-terceiros.html hoje).
+async function attMergeSupabase() {
+  try {
+    const r = await fetch(
+      `${SUPA_URL}/rest/v1/vales_descarga?select=*,vale_descarga_itens(*)&status=not.in.(cancelado,rascunho)&limit=1000`,
+      { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + (_session?.access_token || SUPA_KEY) } }
+    );
+    const vales = await r.json();
+
+    // Remove registros anteriores do Supabase (re-fetch limpo)
+    S.raw.att = S.raw.att.filter(r => !r._fromSupabase);
+
+    if (!Array.isArray(vales) || !vales.length) return;
+
+    const mapeados = [];
+    vales.forEach(v => {
+      const itens = v.vale_descarga_itens || [];
+      const dataVale = v.data_hora ? new Date(v.data_hora) : null;
+      itens.forEach((it, idx) => {
+        mapeados.push({
+          data: dataVale,
+          os: (v.numero_vale || ('VALE-' + v.id)) + '-' + idx,
+          ctr: it.ctr_mtr || '', cacamba: it.numero_cacamba || '',
+          cliente: v.parceiro_nome_snapshot || '',
+          gerador: it.gerador_nome_snapshot || v.gerador_nome_snapshot || '',
+          nf: '', status: v.status || '',
+          residuo: it.residuo_nome_snapshot || '',
+          volume: Number(it.volume_m3 || 0),
+          eqColoc: '', eqRetir: '',
+          qtdeEq: Number(it.quantidade || 1),
+          qtdCacamba: Number(it.quantidade || 1),
+          geraDoc: '', pfpj: 'NÃO CLASSIFICADO',
+          motorista: v.motorista || '', placa: v.placa || '',
+          tipo: 'att', tipoServico: '',
+          valor: Number(it.preco_unitario || 0),
+          total: Number(it.valor_total || 0),
+          _fromSupabase: true
+        });
+      });
+    });
+
+    S.raw.att = [...S.raw.att, ...mapeados];
+  } catch(e) {}
+}
+
 // ── SIDEBAR TOGGLE ─────────────────────────────────────────────
 function toggleSidebar() {
   document.body.classList.toggle('sidebar-collapsed');
@@ -8497,6 +8655,7 @@ initNavGroups();
     const valesUnicos  = new Set(_relFiltered.map(r=>r.id)).size;
     const totalItens   = _relFiltered.filter(r=>r._item).length;
     const totalVol     = _relFiltered.reduce((a,r)=>a+(r._item?Number(r._item.volume_m3||0):0),0);
+    const totalValor   = _relFiltered.reduce((a,r)=>a+(r._item?Number(r._item.valor_total||0):0),0);
     const aguardando   = new Set(_relFiltered.filter(r=>r.status==='aguardando_pagamento').map(r=>r.id)).size;
 
     const kpiEl = document.getElementById('att-rel-kpis');
@@ -8504,13 +8663,14 @@ initNavGroups();
       ['Vales no período', valesUnicos, 'blue'],
       ['Descargas', totalItens, 'green'],
       ['Volume total (m³)', fmtVol(totalVol), 'orange'],
+      ['Valor Total (R$)', fM(totalValor), 'green'],
       ['Aguardando Pagamento', aguardando, 'yellow'],
     ].map(([l,v,c])=>`<div class="kpi-card"><div class="kpi-label">${esc(l)}</div><div class="kpi-value kpi-${c}">${esc(String(v))}</div></div>`).join('');
 
     document.getElementById('att-rel-badge').textContent = _relFiltered.length+' linha(s)';
 
     if(!_relFiltered.length){
-      tbody.innerHTML = `<tr><td colspan="13" style="padding:24px;text-align:center;color:var(--muted)">Nenhum registro encontrado</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="14" style="padding:24px;text-align:center;color:var(--muted)">Nenhum registro encontrado</td></tr>`;
       return;
     }
 
@@ -8530,6 +8690,7 @@ initNavGroups();
         <td style="padding:8px 10px;text-align:center;font-weight:700">${it ? fmtVol(it.volume_m3) : '—'}</td>
         <td style="padding:8px 10px;text-align:center">${esc(it?.residuo_nome_snapshot||'—')}</td>
         <td style="padding:8px 10px;text-align:center">${esc(it?.numero_cacamba||'—')}</td>
+        <td style="padding:8px 10px;text-align:right;font-weight:700;color:var(--green,#10B981)">${it?.valor_total?fM(it.valor_total):'—'}</td>
         <td style="padding:8px 10px;text-align:center">${attBadge(row.status)}</td>
         <td style="padding:8px 10px;white-space:nowrap;text-align:center">
           <button onclick="attRelVerVale('${row.id}')" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;margin-right:3px">Ver</button>
@@ -8927,13 +9088,13 @@ initNavGroups();
       [`Rel. de Serviço — Entrada de Terceiros ATT Multilix`],
       [`Período: ${dataFiltro}`],
       [],
-      ['Nº CTR','Data Serv.','Nº CTR Eletrônico','Nº Equip.','Gerador','Resíduo','Qtde. (m³)','Preço','Status','Cliente','Placa','Motorista','Obs Item','Obs Geral']
+      ['Nº CTR','Data Serv.','Nº CTR Eletrônico','Nº Equip.','Gerador','Resíduo','Qtde. (m³)','Preço R$/m³','Valor Total R$','Status','Cliente','Placa','Motorista','Obs Item','Obs Geral']
     ];
     Object.values(valesMap).forEach(v=>{
       const ger = v.gerador_nome_snapshot||v._itens[0]?.gerador_nome_snapshot||'';
       const dataServ = v.data_hora?new Date(v.data_hora).toLocaleDateString('pt-BR'):'';
       if(!v._itens.length){
-        det.push([v.numero_vale||'', dataServ,'','',ger,'','','',statusLabel(v.status),v.parceiro_nome_snapshot||'',v.placa||'',v.motorista||'','',v.observacoes_gerais||'']);
+        det.push([v.numero_vale||'', dataServ,'','',ger,'','','','',statusLabel(v.status),v.parceiro_nome_snapshot||'',v.placa||'',v.motorista||'','',v.observacoes_gerais||'']);
       } else {
         v._itens.forEach(it=>{
           det.push([
@@ -8944,7 +9105,8 @@ initNavGroups();
             ger,
             it.residuo_nome_snapshot||'',
             it?Number(it.volume_m3||0):'',
-            '',
+            it.preco_unitario!=null?Number(it.preco_unitario):'',
+            it.valor_total!=null?Number(it.valor_total):'',
             statusLabel(v.status),
             v.parceiro_nome_snapshot||'',
             v.placa||'',
@@ -8957,8 +9119,9 @@ initNavGroups();
     });
     // Total
     const totalVol = _relFiltered.reduce((a,r)=>a+(r._item?Number(r._item.volume_m3||0):0),0);
+    const totalValorXlsx = _relFiltered.reduce((a,r)=>a+(r._item?Number(r._item.valor_total||0):0),0);
     det.push([]);
-    det.push(['TOTAL GERAL','','','','','',totalVol,'R$ —','','','','','','']);
+    det.push(['TOTAL GERAL','','','','','',totalVol,'',totalValorXlsx,'','','','','','']);
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(det), 'Detalhamento');
 
     // Aba 2: Resumo por Equipamento e Resíduo
@@ -8967,12 +9130,12 @@ initNavGroups();
       const eq = r._item.numero_cacamba||r._item.equipamento_nome_snapshot||'—';
       const res = r._item.residuo_nome_snapshot||'—';
       const k = eq+'|'+res;
-      if(!porER[k]) porER[k]={equip:eq,res,qtd:0,vol:0};
-      porER[k].qtd++; porER[k].vol+=Number(r._item.volume_m3||0);
+      if(!porER[k]) porER[k]={equip:eq,res,qtd:0,vol:0,valor:0};
+      porER[k].qtd++; porER[k].vol+=Number(r._item.volume_m3||0); porER[k].valor+=Number(r._item.valor_total||0);
     });
-    const res2 = [['Qtde.','Equipamento','Resíduo','Qtd Coletada (m³)','Valor Total']];
-    Object.values(porER).sort((a,b)=>b.vol-a.vol).forEach(d=>res2.push([d.qtd,d.equip||'—',d.res||'—',d.vol,'']));
-    res2.push(['TOTAL','','',totalVol,'R$ —']);
+    const res2 = [['Qtde.','Equipamento','Resíduo','Qtd Coletada (m³)','Valor Total R$']];
+    Object.values(porER).sort((a,b)=>b.vol-a.vol).forEach(d=>res2.push([d.qtd,d.equip||'—',d.res||'—',d.vol,d.valor]));
+    res2.push(['TOTAL','','',totalVol,totalValorXlsx]);
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(res2), 'Resumo Equip e Resíduo');
 
     // Aba 3: Resumo por Cliente e Gerador
@@ -8981,17 +9144,105 @@ initNavGroups();
       const cli = r.parceiro_nome_snapshot||'—';
       const ger = r.gerador_nome_snapshot||r._item.gerador_nome_snapshot||'—';
       const k = `${cli}|${ger}`;
-      if(!porCG[k]) porCG[k]={cli,ger,qtd_vales:new Set(),qtd:0,vol:0};
-      porCG[k].qtd_vales.add(r.id); porCG[k].qtd++; porCG[k].vol+=Number(r._item.volume_m3||0);
+      if(!porCG[k]) porCG[k]={cli,ger,qtd_vales:new Set(),qtd:0,vol:0,valor:0};
+      porCG[k].qtd_vales.add(r.id); porCG[k].qtd++; porCG[k].vol+=Number(r._item.volume_m3||0); porCG[k].valor+=Number(r._item.valor_total||0);
     });
-    const res3 = [['Cliente','Gerador','Vales','Descargas','Volume Total (m³)']];
-    Object.values(porCG).sort((a,b)=>b.vol-a.vol).forEach(d=>res3.push([d.cli,d.ger,d.qtd_vales.size,d.qtd,d.vol]));
+    const res3 = [['Cliente','Gerador','Vales','Descargas','Volume Total (m³)','Valor Total R$']];
+    Object.values(porCG).sort((a,b)=>b.vol-a.vol).forEach(d=>res3.push([d.cli,d.ger,d.qtd_vales.size,d.qtd,d.vol,d.valor]));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(res3), 'Por Cliente e Gerador');
+
+    // Aba 4: Por Cliente (totais para cobrança)
+    const porCli = {};
+    _relFiltered.filter(r=>r._item).forEach(r=>{
+      const cli = r.parceiro_nome_snapshot||'—';
+      if(!porCli[cli]) porCli[cli]={cli,qtd_vales:new Set(),qtd:0,vol:0,valor:0};
+      porCli[cli].qtd_vales.add(r.id); porCli[cli].qtd++; porCli[cli].vol+=Number(r._item.volume_m3||0); porCli[cli].valor+=Number(r._item.valor_total||0);
+    });
+    const res4 = [['Cliente','Vales','Descargas','Volume Total (m³)','Valor Total R$']];
+    Object.values(porCli).sort((a,b)=>b.valor-a.valor).forEach(d=>res4.push([d.cli,d.qtd_vales.size,d.qtd,d.vol,d.valor]));
+    res4.push(['TOTAL GERAL','','',totalVol,totalValorXlsx]);
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(res4), 'Por Cliente');
 
     XLSX.writeFile(wb, `rel_servico_att_${new Date().toISOString().slice(0,10)}.xlsx`);
   };
 
   function fmtData(s){ if(!s) return ''; const [y,m,d]=s.split('-'); return `${d}/${m}/${y}`; }
+
+  // ── PDF DE COBRANÇA — uma seção por cliente, com itens e total a cobrar ──
+  window.attRelGerarPDFCobranca = function(){
+    if(!_relFiltered.length){ alert('Nenhum dado nos filtros atuais.'); return; }
+    if(!window.jspdf){ alert('Biblioteca PDF não disponível.'); return; }
+    const porCliente = {};
+    _relFiltered.filter(r=>r._item).forEach(r=>{
+      const cli = r.parceiro_nome_snapshot || 'Cliente não identificado';
+      (porCliente[cli] = porCliente[cli]||[]).push(r);
+    });
+    const clientes = Object.keys(porCliente).sort();
+    if(!clientes.length){ alert('Nenhuma descarga com item no filtro atual.'); return; }
+
+    const dataFiltro = (()=>{
+      const f = document.getElementById('fat-from')?.value;
+      const t = document.getElementById('fat-to')?.value;
+      if(f&&t) return `${fmtData(f)} a ${fmtData(t)}`;
+      if(f) return `a partir de ${fmtData(f)}`;
+      if(t) return `até ${fmtData(t)}`;
+      return 'Todos os períodos';
+    })();
+
+    const {jsPDF} = window.jspdf;
+    const doc = new jsPDF({unit:'mm',format:'a4'});
+    const W=210,H=297,mg=20,mr=190,tw=mr-mg,TOP=58,BOT=270;
+    const cD=24,cE=46,cR=38,cV=22,cP=26;
+
+    clientes.forEach((cli, ci)=>{
+      if(ci>0) doc.addPage();
+      try{ _pdfBackground(doc,W,H); }catch(e){}
+      let y = TOP;
+      doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(30,30,30);
+      doc.text('RELATÓRIO DE COBRANÇA — ATT MULTILIX', mg, y); y+=7;
+      doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(80,80,80);
+      doc.text('Período: '+dataFiltro, mg, y); y+=8;
+      doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(30,30,30);
+      doc.text('Cliente: '+cli, mg, y); y+=8;
+
+      const drawHead=()=>{
+        doc.setFillColor(1,110,24); doc.rect(mg,y,tw,8,'F');
+        doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(255,255,255);
+        doc.text('Data',mg+2,y+5.5);
+        doc.text('Equipamento',mg+cD+2,y+5.5);
+        doc.text('Resíduo',mg+cD+cE+2,y+5.5);
+        doc.text('m³',mg+cD+cE+cR+2,y+5.5);
+        doc.text('R$/m³',mg+cD+cE+cR+cV+2,y+5.5);
+        doc.text('Total',mg+cD+cE+cR+cV+cP+2,y+5.5);
+        y+=8;
+      };
+      drawHead();
+
+      const rows = porCliente[cli].slice().sort((a,b)=>new Date(a.data_hora)-new Date(b.data_hora));
+      let subtotal = 0;
+      rows.forEach((r,idx)=>{
+        const it = r._item;
+        if(y+8>BOT){ doc.addPage(); try{_pdfBackground(doc,W,H);}catch(e){} y=TOP; drawHead(); }
+        doc.setFillColor(idx%2===0?240:255, idx%2===0?250:255, idx%2===0?242:255);
+        doc.rect(mg,y,tw,8,'F');
+        doc.setDrawColor(200,220,200); doc.setLineWidth(0.15); doc.line(mg,y+8,mg+tw,y+8);
+        doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(30,30,30);
+        doc.text((fmtDt(r.data_hora)||'—').split(' ')[0], mg+2, y+5.5);
+        doc.text(String(it.equipamento_nome_snapshot||'—').slice(0,24), mg+cD+2, y+5.5);
+        doc.text(String(it.residuo_nome_snapshot||'—').slice(0,20), mg+cD+cE+2, y+5.5);
+        doc.text(fmtVol(it.volume_m3), mg+cD+cE+cR+2, y+5.5);
+        doc.text(it.preco_unitario!=null?fM(it.preco_unitario):'—', mg+cD+cE+cR+cV+2, y+5.5);
+        doc.text(it.valor_total!=null?fM(it.valor_total):'—', mg+cD+cE+cR+cV+cP+2, y+5.5);
+        subtotal += Number(it.valor_total||0);
+        y+=8;
+      });
+      y+=6;
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(30,30,30);
+      doc.text('TOTAL A COBRAR: '+fM(subtotal), mg, y);
+    });
+
+    doc.save(`cobranca_att_${new Date().toISOString().slice(0,10)}.pdf`);
+  };
 
   // ─────────────────────────────────────────────────────────────
   // PARCEIROS ATT
@@ -9002,6 +9253,9 @@ initNavGroups();
     try {
       _parceiros = await api('parceiros_att?select=*&order=nome_fantasia.asc&limit=500');
       attParcFiltrar();
+      // Mantém _residuos/_equipamentos frescos para a tabela de preços do modal (attResLoad/attEqLoad
+      // só atualizam DOM se as respectivas páginas existirem — aqui usamos só os dados).
+      await Promise.all([attResLoad(), attEqLoad()]);
     } catch(e){ console.error('attParcLoad',e); }
   }
 
@@ -9037,10 +9291,12 @@ initNavGroups();
     document.getElementById('pm-status').value='ativo';
     document.getElementById('parc-modal-title').textContent='Novo Parceiro';
     document.getElementById('pm-error').style.display='none';
+    document.getElementById('pm-precos-container').innerHTML='';
+    pmAddPrecoRow();
     document.getElementById('parc-modal').style.display='flex';
   };
 
-  window.attParcEditar = function(id){
+  window.attParcEditar = async function(id){
     const p = _parceiros.find(x=>x.id===id); if(!p) return;
     document.getElementById('pm-id').value = p.id;
     document.getElementById('pm-nome').value = p.nome_fantasia||'';
@@ -9053,7 +9309,16 @@ initNavGroups();
     document.getElementById('pm-status').value = p.status||'ativo';
     document.getElementById('parc-modal-title').textContent='Editar Parceiro';
     document.getElementById('pm-error').style.display='none';
+    document.getElementById('pm-precos-container').innerHTML='<div style="font-size:11px;color:var(--muted)">Carregando preços...</div>';
     document.getElementById('parc-modal').style.display='flex';
+    try {
+      const precos = await api(`parceiros_att_tabela_precos?parceiro_id=eq.${id}&ativo=eq.true`);
+      document.getElementById('pm-precos-container').innerHTML='';
+      if(precos.length) precos.forEach(pr=>pmAddPrecoRow(pr));
+      else pmAddPrecoRow();
+    } catch(e){
+      document.getElementById('pm-precos-container').innerHTML='<div style="font-size:11px;color:var(--red)">Erro ao carregar preços.</div>';
+    }
   };
 
   window.attParcSalvar = async function(){
@@ -9072,10 +9337,25 @@ initNavGroups();
       status: document.getElementById('pm-status').value,
     };
     try {
+      let parceiroId = id;
       if(id){
         await api(`parceiros_att?id=eq.${id}`,{method:'PATCH',body:JSON.stringify(payload)});
       } else {
-        await api('parceiros_att',{method:'POST',body:JSON.stringify(payload)});
+        const created = await api('parceiros_att',{method:'POST',body:JSON.stringify(payload)});
+        parceiroId = created[0]?.id;
+      }
+      if(parceiroId){
+        const linhas = [...document.querySelectorAll('#pm-precos-container .pm-preco-row')].map(row=>{
+          const carga = parseFloat(row.querySelector('.ppr-carga').value);
+          const m3 = parseFloat(row.querySelector('.ppr-m3').value);
+          return {
+            residuo_id: row.querySelector('.ppr-residuo').value,
+            equipamento_id: row.querySelector('.ppr-equip').value,
+            preco_carga: isNaN(carga)?null:carga,
+            preco_m3: isNaN(m3)?null:m3,
+          };
+        }).filter(l=>l.residuo_id && l.equipamento_id && l.preco_m3!=null);
+        await salvarPrecosParceiro(parceiroId, linhas, 'parceiro');
       }
       document.getElementById('parc-modal').style.display='none';
       await attParcLoad();
@@ -9090,6 +9370,94 @@ initNavGroups();
     try { await api(`parceiros_att?id=eq.${id}`,{method:'PATCH',body:JSON.stringify({status:novo})}); await attParcLoad(); }
     catch(e){ alert('Erro: '+e.message); }
   };
+
+  // ─────────────────────────────────────────────────────────────
+  // TABELA DE PREÇOS POR PARCEIRO — linha reutilizável (modal Parceiro
+  // e tela dedicada "Tabela de Preços" usam o mesmo template/lógica)
+  // ─────────────────────────────────────────────────────────────
+  window.pmAddPrecoRow = function(p = {}){
+    const c = document.getElementById('pm-precos-container');
+    if(!c) return;
+    const div = document.createElement('div');
+    div.className = 'pm-preco-row';
+    div.style.cssText = 'display:grid;grid-template-columns:1.3fr 1.3fr .9fr .9fr auto;gap:6px;margin-bottom:6px;align-items:center';
+    if(p.id) div.dataset.precoId = p.id;
+    const resOpts = _residuos.map(r=>`<option value="${r.id}" ${p.residuo_id===r.id?'selected':''}>${esc(r.nome)}</option>`).join('');
+    const eqOpts  = _equipamentos.map(e=>`<option value="${e.id}" data-vol="${e.volume_m3_padrao||''}" data-tipo="${e.tipo||''}" ${p.equipamento_id===e.id?'selected':''}>${esc(e.nome)}</option>`).join('');
+    div.innerHTML = `
+      <select class="ppr-residuo" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 8px;font-size:11px">${resOpts}</select>
+      <select class="ppr-equip" onchange="pmRecalcRow(this)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 8px;font-size:11px">${eqOpts}</select>
+      <input class="ppr-carga" type="number" step="0.01" placeholder="R$ carga" value="${p.preco_carga??''}" oninput="pmRecalcRow(this)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 8px;font-size:11px"/>
+      <input class="ppr-m3" type="number" step="0.01" placeholder="R$/m³" value="${p.preco_m3??''}" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 8px;font-size:11px"/>
+      <button type="button" onclick="this.closest('.pm-preco-row').remove()" style="background:#EF444420;border:1px solid #EF4444;color:#EF4444;border-radius:6px;padding:5px 8px;cursor:pointer">✕</button>
+    `;
+    c.appendChild(div);
+    pmRecalcRow(div.querySelector('.ppr-equip'));
+  };
+
+  // Recalcula R$/m³ a partir do preço da carga + volume padrão do equipamento.
+  // Equipamento "avulso" (sem volume padrão) libera o campo R$/m³ para digitação direta.
+  window.pmRecalcRow = function(el){
+    const row = el.closest('.pm-preco-row'); if(!row) return;
+    const eqSel = row.querySelector('.ppr-equip');
+    const opt = eqSel.options[eqSel.selectedIndex];
+    const vol = opt ? parseFloat(opt.dataset.vol) : NaN;
+    const cargaInp = row.querySelector('.ppr-carga');
+    const m3Inp = row.querySelector('.ppr-m3');
+    if(vol && !isNaN(vol) && vol>0){
+      const carga = parseFloat(cargaInp.value);
+      m3Inp.readOnly = true; m3Inp.style.opacity = '.7';
+      m3Inp.value = (!isNaN(carga) && carga>0) ? (carga/vol).toFixed(2) : '';
+    } else {
+      m3Inp.readOnly = false; m3Inp.style.opacity = '';
+    }
+  };
+
+  // Salva (insere/atualiza/desativa) as linhas de preço de um parceiro, registrando
+  // qualquer mudança de preço em parceiros_att_tabela_precos_historico. Único ponto de
+  // gravação — usado pelo modal do Parceiro e pela tela "Tabela de Preços".
+  // replaceAll=true (padrão, usado pelo modal do Parceiro): `linhas` é a lista COMPLETA de
+  // preços do parceiro — qualquer preço ativo que não esteja em `linhas` é desativado.
+  // replaceAll=false (usado pela tela "Tabela de Preços": edição unitária e reajuste em
+  // lote): só insere/atualiza as linhas informadas, sem mexer nas demais do parceiro.
+  async function salvarPrecosParceiro(parceiroId, linhas, origem, motivoGeral, replaceAll=true){
+    const hdrs = {'apikey':KEY,'Authorization':'Bearer '+(_session?.access_token||KEY),'Content-Type':'application/json','Prefer':'return=representation'};
+    const hdrsNP = {'apikey':KEY,'Authorization':'Bearer '+(_session?.access_token||KEY),'Content-Type':'application/json'};
+    const existing = await api(`parceiros_att_tabela_precos?parceiro_id=eq.${parceiroId}&ativo=eq.true`);
+    const existByKey = {};
+    existing.forEach(r=>{ existByKey[r.residuo_id+'|'+r.equipamento_id] = r; });
+    const newKeys = new Set();
+
+    for(const l of linhas){
+      if(!l.residuo_id || !l.equipamento_id || l.preco_m3==null || isNaN(l.preco_m3)) continue;
+      const key = l.residuo_id+'|'+l.equipamento_id;
+      newKeys.add(key);
+      const ex = existByKey[key];
+      if(ex){
+        const changed = Number(ex.preco_m3)!==Number(l.preco_m3) || Number(ex.preco_carga||0)!==Number(l.preco_carga||0);
+        if(!changed) continue;
+        const r = await fetch(`${SUPA}/rest/v1/parceiros_att_tabela_precos?id=eq.${ex.id}`,{method:'PATCH',headers:hdrsNP,body:JSON.stringify({preco_carga:l.preco_carga??null,preco_m3:l.preco_m3,updated_at:new Date().toISOString()})});
+        if(!r.ok) throw new Error(await r.text());
+        await fetch(`${SUPA}/rest/v1/parceiros_att_tabela_precos_historico`,{method:'POST',headers:hdrsNP,body:JSON.stringify({tabela_preco_id:ex.id,parceiro_id:parceiroId,residuo_id:l.residuo_id,equipamento_id:l.equipamento_id,preco_carga_anterior:ex.preco_carga,preco_carga_novo:l.preco_carga??null,preco_m3_anterior:ex.preco_m3,preco_m3_novo:l.preco_m3,motivo:motivoGeral||null,origem})});
+      } else {
+        const r = await fetch(`${SUPA}/rest/v1/parceiros_att_tabela_precos`,{method:'POST',headers:hdrs,body:JSON.stringify({parceiro_id:parceiroId,residuo_id:l.residuo_id,equipamento_id:l.equipamento_id,preco_carga:l.preco_carga??null,preco_m3:l.preco_m3,ativo:true})});
+        if(!r.ok) throw new Error(await r.text());
+        const [created] = await r.json();
+        await fetch(`${SUPA}/rest/v1/parceiros_att_tabela_precos_historico`,{method:'POST',headers:hdrsNP,body:JSON.stringify({tabela_preco_id:created.id,parceiro_id:parceiroId,residuo_id:l.residuo_id,equipamento_id:l.equipamento_id,preco_carga_anterior:null,preco_carga_novo:l.preco_carga??null,preco_m3_anterior:null,preco_m3_novo:l.preco_m3,motivo:motivoGeral||null,origem})});
+      }
+    }
+    // Linhas removidas do formulário → desativa (preserva histórico, não deleta).
+    // Só roda em replaceAll (modal do Parceiro mostra a lista inteira); edição unitária e
+    // reajuste em lote nunca devem desativar preços que não foram tocados.
+    if(replaceAll){
+      for(const key in existByKey){
+        if(!newKeys.has(key)){
+          const ex = existByKey[key];
+          await fetch(`${SUPA}/rest/v1/parceiros_att_tabela_precos?id=eq.${ex.id}`,{method:'PATCH',headers:hdrsNP,body:JSON.stringify({ativo:false})});
+        }
+      }
+    }
+  }
 
   // ─────────────────────────────────────────────────────────────
   // TIPOS DE RESÍDUO
@@ -9225,6 +9593,262 @@ initNavGroups();
   };
 
   // ─────────────────────────────────────────────────────────────
+  // TABELA DE PREÇOS — tela dedicada (listagem, reajuste em lote, histórico)
+  // ─────────────────────────────────────────────────────────────
+  let _precos = [];
+  let _precosFiltered = [];
+  let _precosHist = [];
+  let _precosSelected = new Set();
+
+  async function precosLoad(){
+    try {
+      _precos = await api('parceiros_att_tabela_precos?select=*,parceiros_att(nome_fantasia),tipos_residuo_att(nome),equipamentos_att(nome,volume_m3_padrao)&ativo=eq.true&order=updated_at.desc&limit=2000');
+      _precosHist = await api('parceiros_att_tabela_precos_historico?select=*,parceiros_att(nome_fantasia),tipos_residuo_att(nome),equipamentos_att(nome)&order=alterado_em.desc&limit=500');
+      precosPopulateFilters();
+      _precosSelected = new Set();
+      precosFiltrar();
+      precosRenderHist();
+    } catch(e){ console.error('precosLoad',e); }
+  }
+
+  function precosPopulateFilters(){
+    const selP = document.getElementById('pp-f-parceiro');
+    if(selP){
+      const cur = selP.value;
+      const names = [...new Map(_precos.map(p=>[p.parceiro_id, p.parceiros_att?.nome_fantasia||'—'])).entries()].sort((a,b)=>a[1].localeCompare(b[1]));
+      selP.innerHTML = '<option value="">Todos</option>'+names.map(([id,n])=>`<option value="${id}">${esc(n)}</option>`).join('');
+      if([...selP.options].some(o=>o.value===cur)) selP.value = cur;
+    }
+    const selR = document.getElementById('pp-f-residuo');
+    if(selR){
+      const cur = selR.value;
+      selR.innerHTML = '<option value="">Todos</option>'+_residuos.map(r=>`<option value="${r.id}">${esc(r.nome)}</option>`).join('');
+      if([...selR.options].some(o=>o.value===cur)) selR.value = cur;
+    }
+    const selE = document.getElementById('pp-f-equip');
+    if(selE){
+      const cur = selE.value;
+      selE.innerHTML = '<option value="">Todos</option>'+_equipamentos.map(e=>`<option value="${e.id}">${esc(e.nome)}</option>`).join('');
+      if([...selE.options].some(o=>o.value===cur)) selE.value = cur;
+    }
+  }
+
+  window.precosFiltrar = function(){
+    const p = document.getElementById('pp-f-parceiro')?.value||'';
+    const r = document.getElementById('pp-f-residuo')?.value||'';
+    const e = document.getElementById('pp-f-equip')?.value||'';
+    _precosFiltered = _precos.filter(row=>{
+      if(p && row.parceiro_id!==p) return false;
+      if(r && row.residuo_id!==r) return false;
+      if(e && row.equipamento_id!==e) return false;
+      return true;
+    });
+    precosRenderTable();
+  };
+
+  function precosRenderTable(){
+    const tbody = document.getElementById('pp-tbody');
+    if(!tbody) return;
+    const badge = document.getElementById('pp-badge'); if(badge) badge.textContent = _precosFiltered.length+' preço(s)';
+    if(!_precosFiltered.length){
+      tbody.innerHTML = `<tr><td colspan="8" style="padding:24px;text-align:center;color:var(--muted)">Nenhum preço cadastrado para este filtro</td></tr>`;
+      precosAtualizarBulkBar();
+      return;
+    }
+    tbody.innerHTML = _precosFiltered.map(row=>{
+      const sel = _precosSelected.has(row.id);
+      return `<tr style="border-bottom:1px solid var(--border);background:${sel?'var(--surface2)':'transparent'}">
+        <td style="padding:8px 10px;text-align:center"><input type="checkbox" data-preco-id="${row.id}" ${sel?'checked':''} onchange="precosToggleRow(this)"/></td>
+        <td style="padding:8px 10px;font-weight:600">${esc(row.parceiros_att?.nome_fantasia||'—')}</td>
+        <td style="padding:8px 10px">${esc(row.tipos_residuo_att?.nome||'—')}</td>
+        <td style="padding:8px 10px">${esc(row.equipamentos_att?.nome||'—')}</td>
+        <td style="padding:8px 10px;text-align:right">${row.preco_carga!=null?fM(row.preco_carga):'—'}</td>
+        <td style="padding:8px 10px;text-align:right;font-weight:700">${fM(row.preco_m3)}</td>
+        <td style="padding:8px 10px;color:var(--muted);font-size:11px;white-space:nowrap">${fmtDt(row.updated_at)}</td>
+        <td style="padding:8px 10px;white-space:nowrap">
+          <button onclick="precosEditar('${row.id}')" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;margin-right:4px">Editar</button>
+          <button onclick="precosDesativar('${row.id}')" style="background:var(--surface2);border:1px solid var(--border);color:var(--red);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">Remover</button>
+        </td>
+      </tr>`;
+    }).join('');
+    precosAtualizarBulkBar();
+  }
+
+  window.precosToggleAll = function(checked){
+    _precosSelected = new Set(checked ? _precosFiltered.map(r=>r.id) : []);
+    precosRenderTable();
+  };
+  window.precosToggleRow = function(el){
+    const id = el.dataset.precoId;
+    if(el.checked) _precosSelected.add(id); else _precosSelected.delete(id);
+    precosAtualizarBulkBar();
+  };
+  function precosAtualizarBulkBar(){
+    const bar = document.getElementById('pp-bulk-bar');
+    if(!bar) return;
+    if(_precosSelected.size){
+      bar.style.display='flex';
+      document.getElementById('pp-sel-count').textContent = _precosSelected.size+' selecionado(s)';
+    } else {
+      bar.style.display='none';
+      const prev = document.getElementById('pp-reaj-preview'); if(prev) prev.innerHTML='';
+    }
+  }
+
+  // ── Reajuste em lote: prévia + aplicação ──
+  window.precosPrevisaoReajuste = function(){
+    const tipo = document.getElementById('pp-reaj-tipo').value;
+    const valor = parseFloat(document.getElementById('pp-reaj-valor').value);
+    const el = document.getElementById('pp-reaj-preview');
+    if(!_precosSelected.size){ el.innerHTML='<div class="alert" style="background:#F59E0B15;border:1px solid #F59E0B40;color:#ffb380;margin-bottom:12px;padding:10px 14px;border-radius:8px">Selecione ao menos um item da tabela.</div>'; return; }
+    if(isNaN(valor)){ el.innerHTML='<div class="alert" style="background:#F59E0B15;border:1px solid #F59E0B40;color:#ffb380;margin-bottom:12px;padding:10px 14px;border-radius:8px">Informe o valor do reajuste.</div>'; return; }
+    const rows = _precos.filter(r=>_precosSelected.has(r.id));
+    const calc = rows.map(r=>{
+      const vol = r.equipamentos_att?.volume_m3_padrao;
+      const novoM3 = Math.max(0, tipo==='pct' ? r.preco_m3*(1+valor/100) : r.preco_m3+valor);
+      let novoCarga = r.preco_carga;
+      if(r.preco_carga!=null){
+        novoCarga = tipo==='pct' ? r.preco_carga*(1+valor/100) : (vol ? novoM3*vol : r.preco_carga);
+        novoCarga = Math.max(0, Number(novoCarga.toFixed(2)));
+      }
+      return {...r, _novoM3:Number(novoM3.toFixed(2)), _novoCarga:novoCarga};
+    });
+    el.innerHTML = `<div class="panel" style="margin-bottom:14px">
+      <div class="panel-head"><span class="panel-title">Prévia do reajuste — ${calc.length} item(ns)</span></div>
+      <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr><th style="padding:6px 8px;text-align:left">Parceiro</th><th style="padding:6px 8px;text-align:left">Resíduo / Equipamento</th><th style="padding:6px 8px;text-align:right">R$/m³ Atual</th><th style="padding:6px 8px;text-align:right">R$/m³ Novo</th></tr></thead>
+        <tbody>${calc.map(r=>`<tr style="border-top:1px solid var(--border)"><td style="padding:6px 8px">${esc(r.parceiros_att?.nome_fantasia||'—')}</td><td style="padding:6px 8px">${esc(r.tipos_residuo_att?.nome||'—')} / ${esc(r.equipamentos_att?.nome||'—')}</td><td style="padding:6px 8px;text-align:right;color:var(--muted)">${fM(r.preco_m3)}</td><td style="padding:6px 8px;text-align:right;font-weight:700;color:var(--green)">${fM(r._novoM3)}</td></tr>`).join('')}</tbody>
+      </table></div>
+      <div style="padding:12px;display:flex;justify-content:flex-end"><button onclick="precosAplicarReajuste()" style="background:var(--green);color:#000;border:none;border-radius:8px;padding:9px 18px;font-weight:700;cursor:pointer;font-size:13px">Confirmar reajuste em ${calc.length} item(ns)</button></div>
+    </div>`;
+    el._calc = calc;
+  };
+
+  window.precosAplicarReajuste = async function(){
+    const el = document.getElementById('pp-reaj-preview');
+    const calc = el?._calc;
+    if(!calc || !calc.length) return;
+    const motivo = document.getElementById('pp-reaj-motivo').value.trim()||null;
+    try {
+      for(const r of calc){
+        await salvarPrecosParceiro(r.parceiro_id, [{residuo_id:r.residuo_id, equipamento_id:r.equipamento_id, preco_carga:r._novoCarga, preco_m3:r._novoM3}], 'tabela_precos', motivo, false);
+      }
+      el.innerHTML=''; document.getElementById('pp-reaj-valor').value=''; document.getElementById('pp-reaj-motivo').value='';
+      _precosSelected = new Set();
+      await precosLoad();
+      alert('✅ Reajuste aplicado em '+calc.length+' item(ns).');
+    } catch(e){ alert('Erro ao aplicar reajuste: '+e.message); }
+  };
+
+  // ── Novo preço / editar preço único (modal #pp-modal) — exige parceiro já cadastrado ──
+  function ppmPopulateSelects(){
+    const selP = document.getElementById('ppm-parceiro');
+    if(selP) selP.innerHTML = '<option value="">Selecione um parceiro cadastrado...</option>'+_parceiros.map(p=>`<option value="${p.id}">${esc(p.nome_fantasia)}</option>`).join('');
+    const selR = document.getElementById('ppm-residuo');
+    if(selR) selR.innerHTML = _residuos.map(r=>`<option value="${r.id}">${esc(r.nome)}</option>`).join('');
+    const selE = document.getElementById('ppm-equip');
+    if(selE) selE.innerHTML = _equipamentos.map(e=>`<option value="${e.id}" data-vol="${e.volume_m3_padrao||''}">${esc(e.nome)}</option>`).join('');
+  }
+  window.ppmRecalc = function(){
+    const selE = document.getElementById('ppm-equip');
+    const opt = selE.options[selE.selectedIndex];
+    const vol = opt ? parseFloat(opt.dataset.vol) : NaN;
+    const cargaEl = document.getElementById('ppm-carga'), m3El = document.getElementById('ppm-m3'), labelEl = document.getElementById('ppm-carga-label');
+    if(vol && !isNaN(vol) && vol>0){
+      labelEl.textContent = 'Preço Carga (R$)';
+      const carga = parseFloat(cargaEl.value);
+      m3El.readOnly = true; m3El.style.opacity='.7';
+      m3El.value = (!isNaN(carga) && carga>0) ? (carga/vol).toFixed(2) : '';
+    } else {
+      labelEl.textContent = 'Preço Carga (opcional, avulso)';
+      m3El.readOnly = false; m3El.style.opacity='';
+    }
+  };
+  window.precosNovo = function(){
+    ppmPopulateSelects();
+    document.getElementById('ppm-id').value='';
+    document.getElementById('ppm-parceiro').value='';
+    document.getElementById('ppm-carga').value='';
+    document.getElementById('ppm-m3').value='';
+    document.getElementById('ppm-error').style.display='none';
+    document.getElementById('pp-modal-title').textContent='Novo Preço';
+    ppmRecalc();
+    document.getElementById('pp-modal').style.display='flex';
+  };
+  window.precosEditar = function(id){
+    const row = _precos.find(r=>r.id===id); if(!row) return;
+    ppmPopulateSelects();
+    document.getElementById('ppm-id').value = row.id;
+    document.getElementById('ppm-parceiro').value = row.parceiro_id;
+    document.getElementById('ppm-residuo').value = row.residuo_id;
+    document.getElementById('ppm-equip').value = row.equipamento_id;
+    document.getElementById('ppm-carga').value = row.preco_carga??'';
+    document.getElementById('ppm-m3').value = row.preco_m3??'';
+    document.getElementById('ppm-error').style.display='none';
+    document.getElementById('pp-modal-title').textContent='Editar Preço';
+    ppmRecalc();
+    document.getElementById('pp-modal').style.display='flex';
+  };
+  window.precosSalvarUnico = async function(){
+    const parceiroId = document.getElementById('ppm-parceiro').value;
+    const residuoId = document.getElementById('ppm-residuo').value;
+    const equipId = document.getElementById('ppm-equip').value;
+    const carga = parseFloat(document.getElementById('ppm-carga').value);
+    const m3 = parseFloat(document.getElementById('ppm-m3').value);
+    const errEl = document.getElementById('ppm-error');
+    if(!parceiroId){ errEl.textContent='Selecione um parceiro já cadastrado.'; errEl.style.display='block'; return; }
+    if(!residuoId || !equipId){ errEl.textContent='Selecione resíduo e equipamento.'; errEl.style.display='block'; return; }
+    if(isNaN(m3) || m3<=0){ errEl.textContent='Informe um R$/m³ válido.'; errEl.style.display='block'; return; }
+    try {
+      await salvarPrecosParceiro(parceiroId, [{residuo_id:residuoId, equipamento_id:equipId, preco_carga:isNaN(carga)?null:carga, preco_m3:m3}], 'tabela_precos', null, false);
+      document.getElementById('pp-modal').style.display='none';
+      await precosLoad();
+    } catch(e){ errEl.textContent='Erro: '+e.message; errEl.style.display='block'; }
+  };
+  window.precosDesativar = async function(id){
+    if(!confirm('Remover este preço? O histórico é preservado.')) return;
+    try {
+      const hdrsNP = {'apikey':KEY,'Authorization':'Bearer '+(_session?.access_token||KEY),'Content-Type':'application/json'};
+      const r = await fetch(`${SUPA}/rest/v1/parceiros_att_tabela_precos?id=eq.${id}`,{method:'PATCH',headers:hdrsNP,body:JSON.stringify({ativo:false})});
+      if(!r.ok) throw new Error(await r.text());
+      await precosLoad();
+    } catch(e){ alert('Erro: '+e.message); }
+  };
+
+  // ── Histórico de reajustes ──
+  function precosRenderHist(){
+    const tbody = document.getElementById('pp-hist-tbody');
+    if(!tbody) return;
+    if(!_precosHist.length){ tbody.innerHTML = `<tr><td colspan="8" style="padding:24px;text-align:center;color:var(--muted)">Nenhum reajuste registrado ainda</td></tr>`; return; }
+    tbody.innerHTML = _precosHist.map(h=>{
+      const pctVar = (h.preco_m3_anterior!=null && Number(h.preco_m3_anterior)>0) ? ((Number(h.preco_m3_novo)-Number(h.preco_m3_anterior))/Number(h.preco_m3_anterior)*100) : null;
+      return `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:8px 10px;white-space:nowrap;color:var(--muted);font-size:11px">${fmtDt(h.alterado_em)}</td>
+        <td style="padding:8px 10px;font-weight:600">${esc(h.parceiros_att?.nome_fantasia||'—')}</td>
+        <td style="padding:8px 10px">${esc(h.tipos_residuo_att?.nome||'—')} / ${esc(h.equipamentos_att?.nome||'—')}</td>
+        <td style="padding:8px 10px;text-align:right;color:var(--muted)">${h.preco_m3_anterior!=null?fM(h.preco_m3_anterior):'— (novo)'}</td>
+        <td style="padding:8px 10px;text-align:right;font-weight:700">${fM(h.preco_m3_novo)}</td>
+        <td style="padding:8px 10px;text-align:right;color:${pctVar==null?'var(--muted)':pctVar>=0?'var(--green)':'var(--red)'}">${pctVar==null?'—':(pctVar>=0?'+':'')+pctVar.toFixed(1)+'%'}</td>
+        <td style="padding:8px 10px;color:var(--muted)">${esc(h.motivo||'—')}</td>
+        <td style="padding:8px 10px;text-align:center;font-size:11px;color:var(--muted)">${esc(h.origem)}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── Exportar XLSX: preços vigentes + histórico ──
+  window.precosExportarXLSX = function(){
+    if(!window.XLSX){ alert('Biblioteca XLSX não disponível.'); return; }
+    const wb = XLSX.utils.book_new();
+    const vig = [['Parceiro','Resíduo','Equipamento','Preço Carga (R$)','R$/m³','Atualizado em']];
+    _precos.forEach(r=>vig.push([r.parceiros_att?.nome_fantasia||'', r.tipos_residuo_att?.nome||'', r.equipamentos_att?.nome||'', r.preco_carga??'', r.preco_m3, fmtDt(r.updated_at)]));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(vig), 'Preços Vigentes');
+    const hist = [['Data','Parceiro','Resíduo','Equipamento','R$/m³ Anterior','R$/m³ Novo','Motivo','Origem']];
+    _precosHist.forEach(h=>hist.push([fmtDt(h.alterado_em), h.parceiros_att?.nome_fantasia||'', h.tipos_residuo_att?.nome||'', h.equipamentos_att?.nome||'', h.preco_m3_anterior??'', h.preco_m3_novo, h.motivo||'', h.origem]));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(hist), 'Histórico de Reajustes');
+    XLSX.writeFile(wb, `tabela_precos_att_${new Date().toISOString().slice(0,10)}.xlsx`);
+  };
+
+  // ─────────────────────────────────────────────────────────────
   // Integração com showPage do dashboard
   // ─────────────────────────────────────────────────────────────
   const _origShowPage = window.showPage;
@@ -9232,6 +9856,7 @@ initNavGroups();
     if(_origShowPage) _origShowPage(page, el);
     if(page==='att-relatorio') attRelLoad();
     if(page==='att-parceiros') attParcLoad();
+    if(page==='att-precos'){ Promise.all([attResLoad(),attEqLoad()]).then(()=>{ if(!_parceiros.length) attParcLoad().then(precosLoad); else precosLoad(); }); }
     if(page==='att-residuos') attResLoad();
     if(page==='att-equipamentos') attEqLoad();
   };
