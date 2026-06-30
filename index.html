@@ -3371,7 +3371,7 @@ body { font-size: 13.5px !important; }
       <div class="sec">Resumo Executivo Automático</div>
       <div style="display:flex;gap:10px;margin-bottom:18px;align-items:flex-end;flex-wrap:wrap">
         <div class="fg"><label>Mês da Análise</label><select id="f-mes-resumo" onchange="applyResumoFilter()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"><option value="">Todos</option></select></div>
-        <button class="btn btn-primary btn-sm" onclick="gerarResumo()"><i data-lucide="refresh-cw" style="width:12px;height:12px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Regenerar</button>
+        <button class="btn btn-primary btn-sm" onclick="resumoInit()"><i data-lucide="refresh-cw" style="width:12px;height:12px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Regenerar</button>
         <button class="btn btn-ghost btn-sm" onclick="copiarResumo()"><i data-lucide="clipboard" style="width:12px;height:12px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Copiar (WhatsApp/E-mail)</button>
       </div>
       <div class="exec-box" id="exec-box">Carregue os dados para gerar o resumo executivo automático.</div>
@@ -4382,6 +4382,7 @@ function showPage(id,el){
   if(id==='dest-freteiros') freteiroLoadPage();
   if(id==='dest-conferencia') confInit();
   if(id==='destinacao') destMergeSupabase();
+  if(id==='resumo') resumoInit();
   if(id==='emails-comercial') emailsInit();
 }
 
@@ -4927,6 +4928,9 @@ function updateFilterOptions(){
   setMesOpts('f-mes-resumo',meses,S.resumoF,'mes');
 }
 function applyResumoFilter(){S.resumoF.mes=document.getElementById('f-mes-resumo').value;gerarResumo();}
+// Garante que os vales de destinação do webapp (Supabase, status≠cancelado) estejam
+// mesclados em S.raw.destinacao antes de gerar o resumo — mesma fonte da tela Destinação.
+function resumoInit(){Promise.resolve(typeof destMergeSupabase==='function'?destMergeSupabase():null).then(()=>gerarResumo());}
 
 // ── CHART ──────────────────────────────────────────────────────
 const CHART_OPT={responsive:true,maintainAspectRatio:false,animation:{duration:500,easing:'easeOutQuart'},plugins:{legend:{labels:{color:'#8a93ab',font:{size:11,family:"'Inter','Segoe UI',sans-serif"},boxWidth:10,padding:14}},tooltip:{backgroundColor:'#1a1f2e',titleColor:'#eef0ff',bodyColor:'#aab2cc',borderColor:'#2e3850',borderWidth:1,padding:10,cornerRadius:10,titleFont:{size:11,weight:'600'},bodyFont:{size:11},displayColors:false}},scales:{x:{ticks:{color:'#5b6478',maxTicksLimit:14,font:{size:10}},grid:{color:'#262D3D40',drawTicks:false},border:{display:false}},y:{ticks:{color:'#5b6478',font:{size:10}},grid:{color:'#262D3D40',drawTicks:false},border:{display:false}}}};
