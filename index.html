@@ -3369,7 +3369,8 @@ body { font-size: 13.5px !important; }
     <!-- RESUMO -->
     <div class="page" id="page-resumo">
       <div class="sec">Resumo Executivo Automático</div>
-      <div style="display:flex;gap:10px;margin-bottom:18px">
+      <div style="display:flex;gap:10px;margin-bottom:18px;align-items:flex-end;flex-wrap:wrap">
+        <div class="fg"><label>Mês da Análise</label><select id="f-mes-resumo" onchange="applyResumoFilter()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"><option value="">Todos</option></select></div>
         <button class="btn btn-primary btn-sm" onclick="gerarResumo()"><i data-lucide="refresh-cw" style="width:12px;height:12px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Regenerar</button>
         <button class="btn btn-ghost btn-sm" onclick="copiarResumo()"><i data-lucide="clipboard" style="width:12px;height:12px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Copiar (WhatsApp/E-mail)</button>
       </div>
@@ -3784,6 +3785,7 @@ const S={
   agrF:{from:null,to:null,mes:'',cli:'',prod:'',pj:''},
   destF:{from:null,to:null,mes:'',res:'',freteiro:'',veic:''},
   consF:{mes:''},
+  resumoF:{mes:''},
   sourceLinks:{destinacao:'https://docs.google.com/spreadsheets/d/e/2PACX-1vS278GG7a9-4CN8lRlDHffSaAVTFx-OE3t96zATwC8VilUubItshIqvKDse-PXiPw/pubhtml'},
   top10:{att:{col:'fat',dir:'desc'},loc:{col:'fat',dir:'desc'},agr:{col:'fat',dir:'desc'}},
   cal:{att:{start:null,end:null,vy:new Date().getFullYear(),vm:new Date().getMonth()},loc:{start:null,end:null,vy:new Date().getFullYear(),vm:new Date().getMonth()},agr:{start:null,end:null,vy:new Date().getFullYear(),vm:new Date().getMonth()},dest:{start:null,end:null,vy:new Date().getFullYear(),vm:new Date().getMonth()}}
@@ -4922,7 +4924,9 @@ function updateFilterOptions(){
   updateDestFreteiroOptions();
   setOpts('f-veic-dest',[...new Set(S.raw.destinacao.map(r=>r.veiculo).filter(Boolean))].sort());
   setMesOpts('f-mes-cons',meses,S.consF,'mes');
+  setMesOpts('f-mes-resumo',meses,S.resumoF,'mes');
 }
+function applyResumoFilter(){S.resumoF.mes=document.getElementById('f-mes-resumo').value;gerarResumo();}
 
 // ── CHART ──────────────────────────────────────────────────────
 const CHART_OPT={responsive:true,maintainAspectRatio:false,animation:{duration:500,easing:'easeOutQuart'},plugins:{legend:{labels:{color:'#8a93ab',font:{size:11,family:"'Inter','Segoe UI',sans-serif"},boxWidth:10,padding:14}},tooltip:{backgroundColor:'#1a1f2e',titleColor:'#eef0ff',bodyColor:'#aab2cc',borderColor:'#2e3850',borderWidth:1,padding:10,cornerRadius:10,titleFont:{size:11,weight:'600'},bodyFont:{size:11},displayColors:false}},scales:{x:{ticks:{color:'#5b6478',maxTicksLimit:14,font:{size:10}},grid:{color:'#262D3D40',drawTicks:false},border:{display:false}},y:{ticks:{color:'#5b6478',font:{size:10}},grid:{color:'#262D3D40',drawTicks:false},border:{display:false}}}};
@@ -7070,25 +7074,90 @@ function updateInconsistencias(){
 
 // ── RESUMO ────────────────────────────────────────────────────
 function gerarResumo(){
-  const att=S.raw.att,loc=S.raw.locacao,agr=S.raw.agregados,dest=S.raw.destinacao;
-  if(!att.length&&!loc.length&&!agr.length&&!dest.length)return;
+  const mes=S.resumoF.mes;
+  // Filtra cada origem pelo mês selecionado (vazio = todos)
+  const att=_filtMesGen(S.raw.att,mes),loc=_filtMesGen(S.raw.locacao,mes),agr=_filtMesGen(S.raw.agregados,mes),dest=_filtMesGen(S.raw.destinacao,mes);
+  const box=document.getElementById('exec-box');
+  if(!att.length&&!loc.length&&!agr.length&&!dest.length){
+    box.textContent=mes?`📊 RESUMO EXECUTIVO — MULTILIX\n\nSem lançamentos no período selecionado (${MNAMES[+mes.split('-')[1]-1]}/${mes.split('-')[0]}).`:'Carregue os dados para gerar o resumo executivo automático.';
+    return;
+  }
+  // ── ATT ──
   const tCac=att.reduce((s,r)=>s+r.qtdCacamba,0),tM3=att.reduce((s,r)=>s+r.volume,0),fAtt=att.reduce((s,r)=>s+r.valor,0),tkAtt=tCac>0?fAtt/tCac:0;
   const pCac=gM('att-cacamba')>0?(tCac/gM('att-cacamba')*100).toFixed(1):'—';
   const pM3=gM('att-m3')>0?(tM3/gM('att-m3')*100).toFixed(1):'—';
+  // ── Locação ──
   const tLoc=loc.reduce((s,r)=>s+r.qtdCacamba,0),fLoc=loc.reduce((s,r)=>s+r.valor,0),pLoc=gM('loc-cacamba')>0?(tLoc/gM('loc-cacamba')*100).toFixed(1):'—';
+  // ── Agregados ──
   const tAgrM3=agr.reduce((s,r)=>s+r.volume,0),fAgr=agr.reduce((s,r)=>s+r.valor,0),pAgr=gM('agr-m3')>0?(tAgrM3/gM('agr-m3')*100).toFixed(1):'—';
-  const fatT=fAtt+fLoc+fAgr,nc=[...att,...loc,...agr,...dest].filter(r=>r.pfpj==='NÃO CLASSIFICADO'&&r.cliente).length;
+  const nc=[...att,...loc,...agr,...dest].filter(r=>r.pfpj==='NÃO CLASSIFICADO'&&r.cliente).length;
   const topCli=groupBy(att,'cliente','volume')[0];
   const prCacAtt=calcularProjecaoATT(att,r=>r.qtdCacamba).projecao;
   const prM3Att=calcularProjecaoATT(att,r=>r.volume).projecao;
-  const prFatAtt=calcularProjecaoATT(att,r=>r.valor).projecao;
-  const fatLoc=loc.filter(r=>r.tipoServico==='Coleta'||r.tipoServico==='Retirada');
-  const prFatLocR=calcularProjecaoLocacao(fatLoc,r=>r.valor).projecao;
-  const prFatAgrR=calcularProjecaoAgregados(agr,r=>r.valor).projecao;
-  const prFatTotal=prFatAtt+prFatLocR+prFatAgrR;
-  const ultimaDataGeral=obterUltimaDataLancamento(att)||obterUltimaDataLancamento(loc)||obterUltimaDataLancamento(agr);
+  // ── Destinação (MIX / Rachão Sujo) ──
+  const totalDestM3=dest.reduce((s,r)=>s+r.volume,0);
+  const viagTot=totalDestM3>0?Math.ceil(totalDestM3/17):0;
+  const mixM3=dest.filter(r=>r.residuo==='MIX').reduce((s,r)=>s+r.volume,0);
+  const rachM3=dest.filter(r=>r.residuo==='RACHÃO SUJO').reduce((s,r)=>s+r.volume,0);
+  const viagMix=mixM3>0?Math.ceil(mixM3/17):0,viagRach=rachM3>0?Math.ceil(rachM3/17):0;
+  const mixP=mes?getMixDisposalProgress(mes):null;
+  const metaMixM3=(mixP&&mixP.configured)?mixP.metaDinamica:null;
+  const metaMixViag=metaMixM3!=null?metaMixM3/17:null;
+  // ── Período / data de referência ──
+  const ultimaDataGeral=obterUltimaDataLancamento(att)||obterUltimaDataLancamento(loc)||obterUltimaDataLancamento(agr)||obterUltimaDataLancamento(dest);
+  const periodoStr=mes?`${MNAMES[+mes.split('-')[1]-1]}/${mes.split('-')[0]}`:'Todos os lançamentos';
   const dataRefStr=ultimaDataGeral?fD(ultimaDataGeral):'—';
-  document.getElementById('exec-box').textContent=`📊 RESUMO EXECUTIVO — MULTILIX\nData de referência (último lançamento): ${dataRefStr}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🏗️ ATT — RECEBIMENTO DE TERCEIROS\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n• Caçambas recebidas: ${fN(tCac,0)} de ${gM('att-cacamba')} (${pCac}% da meta)\n• m³ recebidos: ${fN(tM3,1)} de ${gM('att-m3')} (${pM3}% da meta)\n• Faturamento ATT: ${fM(fAtt)}\n• Ticket médio: ${tkAtt>0?fM(tkAtt):'—'} (meta: R$ ${gM('att-ticket')})\n• Projeção caçambas: ${fN(prCacAtt,0)} | Projeção m³: ${fN(prM3Att,1)}${topCli?'\n• Principal cliente: '+topCli.name+' ('+fN(topCli.value,1)+' m³)':''}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🗑️ LOCAÇÃO — CAÇAMBAS MULTILIX\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n• Caçambas locadas: ${fN(tLoc,0)} de ${gM('loc-cacamba')} (${pLoc}% da meta)\n• Faturamento: ${fM(fLoc)}\n• Ticket médio: ${tLoc>0?fM(fLoc/tLoc):'—'}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🪨 AGREGADOS RECICLADOS\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n• m³ vendidos: ${fN(tAgrM3,1)} de ${gM('agr-m3')} (${pAgr}% da meta)\n• Faturamento: ${fM(fAgr)}\n• Ticket médio: ${tAgrM3>0?fM(fAgr/tAgrM3):'—'}/m³\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n📦 DESTINAÇÃO\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n• Total destinado: ${fN(dest.reduce((s,r)=>s+r.volume,0),1)} m³ | ${fN(dest.reduce((s,r)=>s+r.volume,0)>0?Math.ceil(dest.reduce((s,r)=>s+r.volume,0)/17):0,0)} viagens (m³÷17) | ${dest.length} registros\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n💰 RESULTADO CONSOLIDADO\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n• Faturamento total: ${fM(fatT)}\n• Projeção faturamento mês: ${fM(prFatTotal)}\n\n⚠️ PONTOS DE ATENÇÃO:\n${nc>0?'• '+nc+' registros sem classificação PF/PJ':'• Classificação PF/PJ ok ✅'}\n${parseFloat(pCac)<80&&pCac!=='—'?'• ATT abaixo de 80% da meta':'• ATT dentro do esperado ✅'}\n${parseFloat(pLoc)<80&&pLoc!=='—'?'• Locação abaixo de 80% da meta':'• Locação dentro do esperado ✅'}`;
+  // ── Pontos de atenção ──
+  const atATT=(parseFloat(pCac)<80&&pCac!=='—')?'• ATT abaixo de 80% da meta':'• ATT dentro do esperado ✅';
+  const atLOC=(parseFloat(pLoc)<80&&pLoc!=='—')?'• Locação abaixo de 80% da meta':'• Locação dentro do esperado ✅';
+  const atAGR=(parseFloat(pAgr)<80&&pAgr!=='—')?'• Agregado reciclado abaixo de 80% da meta':'• Agregado reciclado dentro do esperado ✅';
+  const atDEST=(mixP&&mixP.configured)
+    ?`• Destinação MIX: ${mixP.status} (${fN(mixP.disposed,1)} m³ de ${fN(mixP.metaDinamica,1)} m³ · ${fN(mixP.pctConsumido,1)}%)`
+    :'• Destinação: configure a meta MIX em Metas e Configurações';
+  const atPFPJ=nc>0?'• '+nc+' registros sem classificação PF/PJ':'• Classificação PF/PJ ok ✅';
+
+  box.textContent=`📊 RESUMO EXECUTIVO — MULTILIX
+Data de referência (período): ${periodoStr} (último lançamento: ${dataRefStr})
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+🏗️ ATT — RECEBIMENTO DE TERCEIROS
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Caçambas recebidas: ${fN(tCac,0)} de ${gM('att-cacamba')} (${pCac}% da meta)
+• m³ recebidos: ${fN(tM3,1)} de ${gM('att-m3')} (${pM3}% da meta)
+• Ticket médio: ${tkAtt>0?fM(tkAtt):'—'} (meta: R$ ${gM('att-ticket')})
+• Projeção caçambas: ${fN(prCacAtt,0)} | Projeção m³: ${fN(prM3Att,1)}${topCli?'\n• Principal cliente: '+topCli.name+' ('+fN(topCli.value,1)+' m³)':''}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+🗑️ LOCAÇÃO — CAÇAMBAS MULTILIX
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Caçambas locadas: ${fN(tLoc,0)} de ${gM('loc-cacamba')} (${pLoc}% da meta)
+• Ticket médio: ${tLoc>0?fM(fLoc/tLoc):'—'}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+🪨 AGREGADOS RECICLADOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+• m³ vendidos: ${fN(tAgrM3,1)} de ${gM('agr-m3')} (${pAgr}% da meta)
+• Ticket médio: ${tAgrM3>0?fM(fAgr/tAgrM3):'—'}/m³
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+📦 DESTINAÇÃO
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Total destinado: ${fN(totalDestM3,1)} m³ | ${fN(viagTot,0)} viagens (m³÷17)
+
+🟦 MIX
+Metros cúbicos: ${fN(mixM3,1)} m³ | Meta variável: ${metaMixM3!=null?fN(metaMixM3,1)+' m³':'—'}
+Viagens: ${fN(viagMix,0)} viagens | Meta variável: ${metaMixViag!=null?fN(metaMixViag,1)+' viagens':'—'}
+
+🪨 Rachão Sujo
+Metros cúbicos: ${fN(rachM3,1)} m³ | Meta: —
+Viagens: ${fN(viagRach,0)} viagens | Meta: —
+
+⚠️ PONTOS DE ATENÇÃO:
+${atATT}
+${atLOC}
+${atAGR}
+${atDEST}
+${atPFPJ}`;
 }
 function copiarResumo(){navigator.clipboard.writeText(document.getElementById('exec-box').textContent).then(()=>alert('✅ Copiado!'));}
 
