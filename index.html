@@ -7095,18 +7095,19 @@ function gerarResumo(){
   const prCacAtt=calcularProjecaoATT(att,r=>r.qtdCacamba).projecao;
   const prM3Att=calcularProjecaoATT(att,r=>r.volume).projecao;
   // ── Destinação (MIX / Rachão Sujo) ──
+  const mixRows=dest.filter(r=>r.residuo==='MIX'),rachRows=dest.filter(r=>r.residuo==='RACHÃO SUJO');
   const totalDestM3=dest.reduce((s,r)=>s+r.volume,0);
   const viagTot=totalDestM3>0?Math.ceil(totalDestM3/17):0;
-  const mixM3=dest.filter(r=>r.residuo==='MIX').reduce((s,r)=>s+r.volume,0);
-  const rachM3=dest.filter(r=>r.residuo==='RACHÃO SUJO').reduce((s,r)=>s+r.volume,0);
+  const mixM3=mixRows.reduce((s,r)=>s+r.volume,0);
+  const rachM3=rachRows.reduce((s,r)=>s+r.volume,0);
   const viagMix=mixM3>0?Math.ceil(mixM3/17):0,viagRach=rachM3>0?Math.ceil(rachM3/17):0;
   const mixP=mes?getMixDisposalProgress(mes):null;
   const metaMixM3=(mixP&&mixP.configured)?mixP.metaDinamica:null;
   const metaMixViag=metaMixM3!=null?metaMixM3/17:null;
-  // ── Período / data de referência ──
-  const ultimaDataGeral=obterUltimaDataLancamento(att)||obterUltimaDataLancamento(loc)||obterUltimaDataLancamento(agr)||obterUltimaDataLancamento(dest);
+  // ── Período + último lançamento por item (até a última data de cada item no mês filtrado) ──
   const periodoStr=mes?`${MNAMES[+mes.split('-')[1]-1]}/${mes.split('-')[0]}`:'Todos os lançamentos';
-  const dataRefStr=ultimaDataGeral?fD(ultimaDataGeral):'—';
+  const ulData=rows=>{const d=obterUltimaDataLancamento(rows);return d?fD(d):'—';};
+  const ulAtt=ulData(att),ulLoc=ulData(loc),ulAgr=ulData(agr),ulMix=ulData(mixRows),ulRach=ulData(rachRows);
   // ── Pontos de atenção ──
   const atATT=(parseFloat(pCac)<80&&pCac!=='—')?'• ATT abaixo de 80% da meta':'• ATT dentro do esperado ✅';
   const atLOC=(parseFloat(pLoc)<80&&pLoc!=='—')?'• Locação abaixo de 80% da meta':'• Locação dentro do esperado ✅';
@@ -7117,10 +7118,10 @@ function gerarResumo(){
   const atPFPJ=nc>0?'• '+nc+' registros sem classificação PF/PJ':'• Classificação PF/PJ ok ✅';
 
   box.textContent=`📊 RESUMO EXECUTIVO — MULTILIX
-Data de referência (período): ${periodoStr} (último lançamento: ${dataRefStr})
+Data de referência (período): ${periodoStr}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
-🏗️ ATT — RECEBIMENTO DE TERCEIROS
+🏗️ ATT — RECEBIMENTO DE TERCEIROS (último lançamento: ${ulAtt})
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 • Caçambas recebidas: ${fN(tCac,0)} de ${gM('att-cacamba')} (${pCac}% da meta)
 • m³ recebidos: ${fN(tM3,1)} de ${gM('att-m3')} (${pM3}% da meta)
@@ -7128,13 +7129,13 @@ Data de referência (período): ${periodoStr} (último lançamento: ${dataRefStr
 • Projeção caçambas: ${fN(prCacAtt,0)} | Projeção m³: ${fN(prM3Att,1)}${topCli?'\n• Principal cliente: '+topCli.name+' ('+fN(topCli.value,1)+' m³)':''}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
-🗑️ LOCAÇÃO — CAÇAMBAS MULTILIX
+🗑️ LOCAÇÃO — CAÇAMBAS MULTILIX (último lançamento: ${ulLoc})
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 • Caçambas locadas: ${fN(tLoc,0)} de ${gM('loc-cacamba')} (${pLoc}% da meta)
 • Ticket médio: ${tLoc>0?fM(fLoc/tLoc):'—'}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
-🪨 AGREGADOS RECICLADOS
+🪨 AGREGADOS RECICLADOS (último lançamento: ${ulAgr})
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 • m³ vendidos: ${fN(tAgrM3,1)} de ${gM('agr-m3')} (${pAgr}% da meta)
 • Ticket médio: ${tAgrM3>0?fM(fAgr/tAgrM3):'—'}/m³
@@ -7144,11 +7145,11 @@ Data de referência (período): ${periodoStr} (último lançamento: ${dataRefStr
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 • Total destinado: ${fN(totalDestM3,1)} m³ | ${fN(viagTot,0)} viagens (m³÷17)
 
-🟦 MIX
+🟦 MIX (último lançamento: ${ulMix})
 Metros cúbicos: ${fN(mixM3,1)} m³ | Meta variável: ${metaMixM3!=null?fN(metaMixM3,1)+' m³':'—'}
 Viagens: ${fN(viagMix,0)} viagens | Meta variável: ${metaMixViag!=null?fN(metaMixViag,1)+' viagens':'—'}
 
-🪨 Rachão Sujo
+🪨 Rachão Sujo (último lançamento: ${ulRach})
 Metros cúbicos: ${fN(rachM3,1)} m³ | Meta: —
 Viagens: ${fN(viagRach,0)} viagens | Meta: —
 
