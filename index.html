@@ -8906,7 +8906,8 @@ initNavGroups();
   window.attRelGerarRelatorio = function(){
     if(!_relFiltered.length){ alert('Nenhum dado nos filtros atuais.'); return; }
 
-    const totalVol = _relFiltered.reduce((a,r)=>a+(r._item?Number(r._item.volume_m3||0):0),0);
+    const totalVol   = _relFiltered.reduce((a,r)=>a+(r._item?Number(r._item.volume_m3||0):0),0);
+    const totalValor = _relFiltered.reduce((a,r)=>a+(r._item?Number(r._item.valor_total||0):0),0);
 
     const valesMap = {};
     _relFiltered.forEach(row=>{
@@ -8964,7 +8965,7 @@ initNavGroups();
           '<td style="padding:3px 6px;font-size:9px;color:#000;text-align:center">'+esc(ger)+'</td>'+
           '<td style="padding:3px 6px;font-size:9px;color:#000;text-align:center">'+esc(it.residuo_nome_snapshot||'—')+'</td>'+
           '<td style="padding:3px 6px;font-size:9px;text-align:center;color:#000">'+fmtVol(it.volume_m3)+'</td>'+
-          '<td style="padding:3px 6px;font-size:9px;text-align:center;color:#000">R$ —</td>'+
+          '<td style="padding:3px 6px;font-size:9px;text-align:center;font-weight:700;color:#1b5e20">'+(it.valor_total?fM(it.valor_total):'—')+'</td>'+
           '<td style="padding:3px 6px;font-size:9px;color:#000;text-align:center">'+statusLabel(v.status)+'</td>'+
         '</tr>';
       }).join('');
@@ -8973,15 +8974,15 @@ initNavGroups();
     const porRes = {};
     _relFiltered.filter(r=>r._item).forEach(r=>{
       const res=r._item.residuo_nome_snapshot||'—';
-      if(!porRes[res]) porRes[res]={res,qtd:0,vol:0};
-      porRes[res].qtd++; porRes[res].vol+=Number(r._item.volume_m3||0);
+      if(!porRes[res]) porRes[res]={res,qtd:0,vol:0,valor:0};
+      porRes[res].qtd++; porRes[res].vol+=Number(r._item.volume_m3||0); porRes[res].valor+=Number(r._item.valor_total||0);
     });
     const resumoHtml = Object.values(porRes).sort((a,b)=>b.vol-a.vol).map(d=>
       '<tr style="border-bottom:1px solid #e8e8e8">'+
       '<td style="padding:3px 8px;font-size:9px;text-align:center;color:#000">'+d.qtd+'</td>'+
       '<td style="padding:3px 8px;font-size:9px;color:#000;text-align:center">'+esc(d.res)+'</td>'+
       '<td style="padding:3px 8px;font-size:9px;text-align:center;color:#000">'+fmtVol(d.vol)+'</td>'+
-      '<td style="padding:3px 8px;font-size:9px;text-align:center;color:#000">R$ —</td>'+
+      '<td style="padding:3px 8px;font-size:9px;text-align:center;font-weight:700;color:#1b5e20">'+(d.valor?fM(d.valor):'—')+'</td>'+
       '</tr>'
     ).join('');
 
@@ -9035,7 +9036,7 @@ initNavGroups();
           '<tfoot><tr style="border-top:2px solid #bbb;background:#f9f9f9">'+
             '<td colspan="6" style="padding:4px 6px;font-size:9px;font-weight:700;color:#000;text-align:right">Total:</td>'+
             '<td style="padding:4px 6px;font-size:9px;font-weight:700;text-align:center;color:#000">'+fmtVol(totalVol)+'</td>'+
-            '<td style="padding:4px 6px;font-size:9px;font-weight:700;text-align:center;color:#000">R$ —</td>'+
+            '<td style="padding:4px 6px;font-size:9px;font-weight:700;text-align:center;color:#1b5e20">'+(totalValor?fM(totalValor):'—')+'</td>'+
             '<td></td>'+
           '</tr></tfoot>'+
         '</table>'+
@@ -9051,7 +9052,7 @@ initNavGroups();
         '</table>'+
         '<div style="font-size:9px;font-weight:700;margin-bottom:16px">'+
           'Total Geral: <span style="font-size:11px">'+fmtVol(totalVol)+'</span>'+
-          '&nbsp;&nbsp;R$ —'+
+          (totalValor?'&nbsp;&nbsp;<span style="color:#1b5e20;font-weight:700">'+fM(totalValor)+'</span>':'')+
         '</div>'+
         // RODAPÉ
         '<div style="border-top:1px solid #bbb;padding-top:4px;display:flex;justify-content:space-between;font-size:8px;color:#666">'+
@@ -9188,77 +9189,100 @@ initNavGroups();
   // ── PDF DE COBRANÇA — uma seção por cliente, com itens e total a cobrar ──
   window.attRelGerarPDFCobranca = function(){
     if(!_relFiltered.length){ alert('Nenhum dado nos filtros atuais.'); return; }
-    if(!window.jspdf){ alert('Biblioteca PDF não disponível.'); return; }
+
     const porCliente = {};
-    _relFiltered.filter(r=>r._item).forEach(r=>{
+    _relFiltered.forEach(r=>{
       const cli = r.parceiro_nome_snapshot || 'Cliente não identificado';
-      (porCliente[cli] = porCliente[cli]||[]).push(r);
+      if(!porCliente[cli]) porCliente[cli]={_itensRows:[]};
+      porCliente[cli]._itensRows.push(r);
     });
     const clientes = Object.keys(porCliente).sort();
-    if(!clientes.length){ alert('Nenhuma descarga com item no filtro atual.'); return; }
+    if(!clientes.length){ alert('Nenhuma descarga no filtro atual.'); return; }
 
     const dataFiltro = (()=>{
       const f = document.getElementById('fat-from')?.value;
       const t = document.getElementById('fat-to')?.value;
-      if(f&&t) return `${fmtData(f)} a ${fmtData(t)}`;
-      if(f) return `a partir de ${fmtData(f)}`;
-      if(t) return `até ${fmtData(t)}`;
+      if(f&&t) return fmtData(f)+' até '+fmtData(t);
+      if(f) return 'a partir de '+fmtData(f);
+      if(t) return 'até '+fmtData(t);
       return 'Todos os períodos';
     })();
 
-    const {jsPDF} = window.jspdf;
-    const doc = new jsPDF({unit:'mm',format:'a4'});
-    const W=210,H=297,mg=20,mr=190,tw=mr-mg,TOP=58,BOT=270;
-    const cD=24,cE=46,cR=38,cV=22,cP=26;
+    function statusLabel(st){
+      if(st==='concluido') return 'Concluído';
+      if(st==='cancelado') return 'Cancelado';
+      return 'Aguard. Pag.';
+    }
+    const thStyle='padding:6px 8px;font-size:9px;color:#fff;font-weight:700;background:#2e7d32;border-bottom:2px solid #1b4620;white-space:nowrap;text-align:center';
+    const hoje=new Date();
+    const dataEmissao=hoje.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'});
+    const horaEmissao=hoje.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
 
-    clientes.forEach((cli, ci)=>{
-      if(ci>0) doc.addPage();
-      try{ _pdfBackground(doc,W,H); }catch(e){}
-      let y = TOP;
-      doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(30,30,30);
-      doc.text('RELATÓRIO DE COBRANÇA — ATT MULTILIX', mg, y); y+=7;
-      doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(80,80,80);
-      doc.text('Período: '+dataFiltro, mg, y); y+=8;
-      doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(30,30,30);
-      doc.text('Cliente: '+cli, mg, y); y+=8;
+    const blocos = clientes.map(cli=>{
+      const rows = porCliente[cli]._itensRows;
+      const valesMap={};
+      rows.forEach(r=>{ if(!valesMap[r.id]) valesMap[r.id]={...r,_itens:[]}; if(r._item) valesMap[r.id]._itens.push(r._item); });
+      const vales=Object.values(valesMap);
+      const volCli=rows.reduce((a,r)=>a+(r._item?Number(r._item.volume_m3||0):0),0);
+      const valCli=rows.reduce((a,r)=>a+(r._item?Number(r._item.valor_total||0):0),0);
+      const porRes={};
+      rows.filter(r=>r._item).forEach(r=>{ const res=r._item.residuo_nome_snapshot||'—'; if(!porRes[res]) porRes[res]={res,qtd:0,vol:0,valor:0}; porRes[res].qtd++; porRes[res].vol+=Number(r._item.volume_m3||0); porRes[res].valor+=Number(r._item.valor_total||0); });
 
-      const drawHead=()=>{
-        doc.setFillColor(1,110,24); doc.rect(mg,y,tw,8,'F');
-        doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(255,255,255);
-        doc.text('Data',mg+2,y+5.5);
-        doc.text('Equipamento',mg+cD+2,y+5.5);
-        doc.text('Resíduo',mg+cD+cE+2,y+5.5);
-        doc.text('m³',mg+cD+cE+cR+2,y+5.5);
-        doc.text('R$/m³',mg+cD+cE+cR+cV+2,y+5.5);
-        doc.text('Total',mg+cD+cE+cR+cV+cP+2,y+5.5);
-        y+=8;
-      };
-      drawHead();
+      let rowNum=0;
+      const rowsHtml=vales.map(v=>{
+        const ger=v.gerador_nome_snapshot||v._itens[0]?.gerador_nome_snapshot||'—';
+        const dataServ=v.data_hora?fmtDt(v.data_hora).split(' ')[0]:'—';
+        if(!v._itens.length){ rowNum++; const bg=rowNum%2===0?'#f7f7f7':'#fff'; return '<tr style="background:'+bg+';border-bottom:1px solid #e8e8e8"><td style="padding:3px 6px;font-size:9px;color:#000;text-align:center">'+esc(v.numero_vale)+'</td><td style="padding:3px 6px;font-size:9px;color:#000;text-align:center">'+dataServ+'</td><td colspan="4" style="padding:3px 6px;font-size:9px;color:#000;text-align:center">'+esc(ger)+'</td><td style="padding:3px 6px;font-size:9px;text-align:center;color:#000">—</td><td style="padding:3px 6px;font-size:9px;text-align:center;color:#000">—</td><td style="padding:3px 6px;font-size:9px;color:#000;text-align:center">'+statusLabel(v.status)+'</td></tr>'; }
+        return v._itens.map(it=>{ rowNum++; const bg=rowNum%2===0?'#f7f7f7':'#fff'; return '<tr style="background:'+bg+';border-bottom:1px solid #e8e8e8"><td style="padding:3px 6px;font-size:9px;color:#000;text-align:center">'+esc(v.numero_vale)+'</td><td style="padding:3px 6px;font-size:9px;color:#000;text-align:center">'+dataServ+'</td><td style="padding:3px 6px;font-size:9px;color:#000;text-align:center">'+esc(it.ctr_mtr||'—')+'</td><td style="padding:3px 6px;font-size:9px;color:#000;text-align:center">'+esc(it.numero_cacamba||it.equipamento_nome_snapshot||'—')+'</td><td style="padding:3px 6px;font-size:9px;color:#000;text-align:center">'+esc(ger)+'</td><td style="padding:3px 6px;font-size:9px;color:#000;text-align:center">'+esc(it.residuo_nome_snapshot||'—')+'</td><td style="padding:3px 6px;font-size:9px;text-align:center;color:#000">'+fmtVol(it.volume_m3)+'</td><td style="padding:3px 6px;font-size:9px;text-align:center;font-weight:700;color:#1b5e20">'+(it.valor_total?fM(it.valor_total):'—')+'</td><td style="padding:3px 6px;font-size:9px;color:#000;text-align:center">'+statusLabel(v.status)+'</td></tr>'; }).join('');
+      }).join('');
 
-      const rows = porCliente[cli].slice().sort((a,b)=>new Date(a.data_hora)-new Date(b.data_hora));
-      let subtotal = 0;
-      rows.forEach((r,idx)=>{
-        const it = r._item;
-        if(y+8>BOT){ doc.addPage(); try{_pdfBackground(doc,W,H);}catch(e){} y=TOP; drawHead(); }
-        doc.setFillColor(idx%2===0?240:255, idx%2===0?250:255, idx%2===0?242:255);
-        doc.rect(mg,y,tw,8,'F');
-        doc.setDrawColor(200,220,200); doc.setLineWidth(0.15); doc.line(mg,y+8,mg+tw,y+8);
-        doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(30,30,30);
-        doc.text((fmtDt(r.data_hora)||'—').split(' ')[0], mg+2, y+5.5);
-        doc.text(String(it.equipamento_nome_snapshot||'—').slice(0,24), mg+cD+2, y+5.5);
-        doc.text(String(it.residuo_nome_snapshot||'—').slice(0,20), mg+cD+cE+2, y+5.5);
-        doc.text(fmtVol(it.volume_m3), mg+cD+cE+cR+2, y+5.5);
-        doc.text(it.preco_unitario!=null?fM(it.preco_unitario):'—', mg+cD+cE+cR+cV+2, y+5.5);
-        doc.text(it.valor_total!=null?fM(it.valor_total):'—', mg+cD+cE+cR+cV+cP+2, y+5.5);
-        subtotal += Number(it.valor_total||0);
-        y+=8;
-      });
-      y+=6;
-      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(30,30,30);
-      doc.text('TOTAL A COBRAR: '+fM(subtotal), mg, y);
+      const resumoHtml=Object.values(porRes).sort((a,b)=>b.vol-a.vol).map(d=>'<tr style="border-bottom:1px solid #e8e8e8"><td style="padding:3px 8px;font-size:9px;text-align:center;color:#000">'+d.qtd+'</td><td style="padding:3px 8px;font-size:9px;color:#000;text-align:center">'+esc(d.res)+'</td><td style="padding:3px 8px;font-size:9px;text-align:center;color:#000">'+fmtVol(d.vol)+'</td><td style="padding:3px 8px;font-size:9px;text-align:center;font-weight:700;color:#1b5e20">'+(d.valor?fM(d.valor):'—')+'</td></tr>').join('');
+
+      return '<div style="page-break-after:always;font-family:Arial,sans-serif;font-size:10px;color:#000">'+
+        '<table style="width:100%;border-collapse:collapse;margin-bottom:6px"><tr>'+
+          '<td style="width:160px;vertical-align:middle;padding:0 12px 0 0"><img src="'+MULTILIX_LOGO_B64+'" height="80" style="display:block;max-width:150px"></td>'+
+          '<td style="text-align:center;vertical-align:middle"><div style="font-size:22px;font-weight:700;color:#222">Rel. de Serviço</div><div style="font-size:13px;font-weight:700;color:#2e7d32;margin-top:4px">Cliente: '+esc(cli)+'</div></td>'+
+          '<td style="text-align:right;vertical-align:top;font-size:9px;color:#444;white-space:nowrap;padding:0 0 0 12px">Página: 1<br>Data: '+dataEmissao+'<br>'+horaEmissao+'</td>'+
+        '</tr></table>'+
+        '<hr style="border:none;border-top:1px solid #bbb;margin:6px 0">'+
+        '<div style="text-align:right;font-size:9px;color:#333;margin-bottom:8px">Período: '+dataFiltro+'</div>'+
+        '<table style="width:100%;border-collapse:collapse;margin-bottom:14px">'+
+          '<thead><tr>'+
+            '<th style="'+thStyle+'">Nº CTR</th><th style="'+thStyle+'">Data Serv.</th>'+
+            '<th style="'+thStyle+'">Nº CTR Eletrônico</th><th style="'+thStyle+'">Nº Equip.</th>'+
+            '<th style="'+thStyle+';min-width:120px">Gerador</th><th style="'+thStyle+'">Resíduo</th>'+
+            '<th style="'+thStyle+'">Qtde. (m³)</th><th style="'+thStyle+'">Valor (R$)</th><th style="'+thStyle+'">Status</th>'+
+          '</tr></thead>'+
+          '<tbody>'+rowsHtml+'</tbody>'+
+          '<tfoot><tr style="border-top:2px solid #bbb;background:#f9f9f9">'+
+            '<td colspan="6" style="padding:4px 6px;font-size:9px;font-weight:700;color:#000;text-align:right">Total:</td>'+
+            '<td style="padding:4px 6px;font-size:9px;font-weight:700;text-align:center;color:#000">'+fmtVol(volCli)+'</td>'+
+            '<td style="padding:4px 6px;font-size:9px;font-weight:700;text-align:center;color:#1b5e20">'+(valCli?fM(valCli):'—')+'</td>'+
+            '<td></td>'+
+          '</tr></tfoot>'+
+        '</table>'+
+        '<table style="width:100%;border-collapse:collapse;margin-bottom:8px">'+
+          '<thead><tr>'+
+            '<th style="'+thStyle+';width:80px">Qtde. Desc.</th><th style="'+thStyle+'">Tipo de Resíduo</th>'+
+            '<th style="'+thStyle+'">Volume (m³)</th><th style="'+thStyle+'">Valor Total</th>'+
+          '</tr></thead>'+
+          '<tbody>'+resumoHtml+'</tbody>'+
+        '</table>'+
+        '<div style="font-size:10px;font-weight:700;margin-bottom:16px;border-top:2px solid #2e7d32;padding-top:6px">'+
+          'Total Geral '+esc(cli)+': <span style="font-size:12px">'+fmtVol(volCli)+'</span>'+
+          (valCli?'&nbsp;&nbsp;<span style="color:#1b5e20;font-size:13px">'+fM(valCli)+'</span>':'')+
+        '</div>'+
+        '<div style="border-top:1px solid #bbb;padding-top:4px;display:flex;justify-content:space-between;font-size:8px;color:#666">'+
+          '<span>ATT Multilix — Documento gerado automaticamente pelo sistema.</span>'+
+          '<span>Não possui valor jurídico sem assinatura responsável.</span>'+
+        '</div>'+
+      '</div>';
     });
 
-    doc.save(`cobranca_att_${new Date().toISOString().slice(0,10)}.pdf`);
+    const pageSize='A4 portrait';
+    const w=window.open('','_blank','width=1050,height=800');
+    w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Rel. de Cobrança - ATT Multilix</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:10px;color:#000;background:#fff;padding:10mm 12mm}table{border-collapse:collapse;width:100%}@page{size:'+pageSize+';margin:10mm 12mm}@media print{body{padding:0}thead{display:table-header-group}tr{page-break-inside:avoid}div[style*="page-break-after"]:last-child{page-break-after:auto}}</style></head><body>'+blocos.join('')+'</body></html>');
+    w.document.close(); w.focus(); setTimeout(function(){ w.print(); },800);
   };
 
   // ─────────────────────────────────────────────────────────────
