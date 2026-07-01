@@ -9644,12 +9644,14 @@ initNavGroups();
   async function precosLoad(){
     try {
       _precos = await api('parceiros_att_tabela_precos?select=*,parceiros_att(nome_fantasia),tipos_residuo_att(nome),equipamentos_att(nome,volume_m3_padrao)&ativo=eq.true&order=updated_at.desc&limit=2000');
-      _precosHist = await api('parceiros_att_tabela_precos_historico?select=*,parceiros_att(nome_fantasia),tipos_residuo_att(nome),equipamentos_att(nome)&order=alterado_em.desc&limit=500');
       precosPopulateFilters();
       _precosSelected = new Set();
       precosFiltrar();
+    } catch(e){ console.error('precosLoad precos',e); }
+    try {
+      _precosHist = await api('parceiros_att_tabela_precos_historico?select=*&order=alterado_em.desc&limit=500');
       precosRenderHist();
-    } catch(e){ console.error('precosLoad',e); }
+    } catch(e){ console.error('precosLoad hist',e); }
   }
 
   function precosPopulateFilters(){
@@ -9865,8 +9867,8 @@ initNavGroups();
       const pctVar = (h.preco_m3_anterior!=null && Number(h.preco_m3_anterior)>0) ? ((Number(h.preco_m3_novo)-Number(h.preco_m3_anterior))/Number(h.preco_m3_anterior)*100) : null;
       return `<tr style="border-bottom:1px solid var(--border)">
         <td style="padding:8px 10px;white-space:nowrap;color:var(--muted);font-size:11px">${fmtDt(h.alterado_em)}</td>
-        <td style="padding:8px 10px;font-weight:600">${esc(h.parceiros_att?.nome_fantasia||'—')}</td>
-        <td style="padding:8px 10px">${esc(h.tipos_residuo_att?.nome||'—')} / ${esc(h.equipamentos_att?.nome||'—')}</td>
+        <td style="padding:8px 10px;font-weight:600">${esc((_parceiros.find(p=>p.id===h.parceiro_id)||{}).nome_fantasia||'—')}</td>
+        <td style="padding:8px 10px">${esc((_residuos.find(r=>r.id===h.residuo_id)||{}).nome||'—')} / ${esc((_equipamentos.find(e=>e.id===h.equipamento_id)||{}).nome||'—')}</td>
         <td style="padding:8px 10px;text-align:right;color:var(--muted)">${h.preco_m3_anterior!=null?fM(h.preco_m3_anterior):'— (novo)'}</td>
         <td style="padding:8px 10px;text-align:right;font-weight:700">${fM(h.preco_m3_novo)}</td>
         <td style="padding:8px 10px;text-align:right;color:${pctVar==null?'var(--muted)':pctVar>=0?'var(--green)':'var(--red)'}">${pctVar==null?'—':(pctVar>=0?'+':'')+pctVar.toFixed(1)+'%'}</td>
@@ -9884,7 +9886,7 @@ initNavGroups();
     _precos.forEach(r=>vig.push([r.parceiros_att?.nome_fantasia||'', r.tipos_residuo_att?.nome||'', r.equipamentos_att?.nome||'', r.preco_carga??'', r.preco_m3, fmtDt(r.updated_at)]));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(vig), 'Preços Vigentes');
     const hist = [['Data','Parceiro','Resíduo','Equipamento','R$/m³ Anterior','R$/m³ Novo','Motivo','Origem']];
-    _precosHist.forEach(h=>hist.push([fmtDt(h.alterado_em), h.parceiros_att?.nome_fantasia||'', h.tipos_residuo_att?.nome||'', h.equipamentos_att?.nome||'', h.preco_m3_anterior??'', h.preco_m3_novo, h.motivo||'', h.origem]));
+    _precosHist.forEach(h=>hist.push([fmtDt(h.alterado_em), (_parceiros.find(p=>p.id===h.parceiro_id)||{}).nome_fantasia||'', (_residuos.find(r=>r.id===h.residuo_id)||{}).nome||'', (_equipamentos.find(e=>e.id===h.equipamento_id)||{}).nome||'', h.preco_m3_anterior??'', h.preco_m3_novo, h.motivo||'', h.origem]));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(hist), 'Histórico de Reajustes');
     XLSX.writeFile(wb, `tabela_precos_att_${new Date().toISOString().slice(0,10)}.xlsx`);
   };
