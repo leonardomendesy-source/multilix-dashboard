@@ -2364,6 +2364,8 @@ body { font-size: 13.5px !important; }
           <div style="font-size:12px;color:var(--muted);margin-top:2px">Preços por cliente, resíduo e equipamento. Usado para precificar automaticamente o lançamento de vales.</div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-sm" style="background:var(--surface2);border:1px solid var(--border);color:var(--text)" onclick="precosExportarModelo()"><i data-lucide="table-2" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Baixar Modelo</button>
+          <label class="btn btn-sm" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);cursor:pointer"><input type="file" id="pp-import-file" accept=".xlsx" style="display:none" onchange="precosImportarArquivo(this)"><i data-lucide="upload" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Importar Planilha</label>
           <button class="btn btn-sm" style="background:var(--surface2);border:1px solid var(--border);color:var(--text)" onclick="precosExportarXLSX()"><i data-lucide="download" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Exportar XLSX</button>
           <button class="btn btn-sm" style="background:var(--green);color:#000;font-weight:700" onclick="precosNovo()"><i data-lucide="plus" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Novo Preço</button>
         </div>
@@ -2442,6 +2444,21 @@ body { font-size: 13.5px !important; }
             </div>
             <div id="ppm-error" style="color:var(--red);font-size:12px;display:none"></div>
             <button onclick="precosSalvarUnico()" style="width:100%;padding:13px;background:var(--green);border:none;border-radius:10px;color:#000;font-size:14px;font-weight:700;cursor:pointer">Salvar Preço</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL IMPORTAÇÃO DE PLANILHA -->
+      <div id="pp-import-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;padding:16px">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:520px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <div style="font-size:15px;font-weight:700">Prévia da Importação</div>
+            <button onclick="document.getElementById('pp-import-modal').style.display='none'" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
+          </div>
+          <div id="pp-import-preview"></div>
+          <div style="display:flex;gap:10px;margin-top:16px">
+            <button onclick="document.getElementById('pp-import-modal').style.display='none'" style="flex:1;padding:11px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;cursor:pointer">Cancelar</button>
+            <button id="pp-import-aplicar" onclick="precosImportarAplicar()" style="flex:1;padding:11px;background:var(--green);border:none;border-radius:10px;color:#000;font-size:13px;font-weight:700;cursor:pointer">Aplicar</button>
           </div>
         </div>
       </div>
@@ -9846,6 +9863,135 @@ initNavGroups();
     _precosHist.forEach(h=>hist.push([fmtDt(h.alterado_em), h.parceiros_att?.nome_fantasia||'', h.tipos_residuo_att?.nome||'', h.equipamentos_att?.nome||'', h.preco_m3_anterior??'', h.preco_m3_novo, h.motivo||'', h.origem]));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(hist), 'Histórico de Reajustes');
     XLSX.writeFile(wb, `tabela_precos_att_${new Date().toISOString().slice(0,10)}.xlsx`);
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // Exportar planilha-modelo de preços (para preenchimento em lote)
+  // ─────────────────────────────────────────────────────────────
+  window.precosExportarModelo = async function(){
+    if(!window.XLSX){ alert('Biblioteca XLSX não disponível.'); return; }
+    let vigentes = [];
+    try { vigentes = await api('parceiros_att_tabela_precos?ativo=eq.true&limit=2000'); } catch(e){}
+    const vigMap = {};
+    vigentes.forEach(v=>{ vigMap[v.parceiro_id+'|'+v.residuo_id+'|'+v.equipamento_id]=v; });
+    const rows = [['parceiro_id','Parceiro','residuo_id','Resíduo','equipamento_id','Equipamento','Vol m³ Padrão','Preço Carga R$','Preço R$/m³']];
+    _parceiros.forEach(p=>{
+      _residuos.forEach(r=>{
+        _equipamentos.forEach(e=>{
+          const v = vigMap[p.id+'|'+r.id+'|'+e.id];
+          rows.push([p.id, p.nome_fantasia||p.nome, r.id, r.nome, e.id, e.nome, e.volume_m3_padrao??'', v?.preco_carga??'', v?.preco_m3??'']);
+        });
+      });
+    });
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{hidden:true},{wch:28},{hidden:true},{wch:22},{hidden:true},{wch:24},{wch:13},{wch:15},{wch:13}];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Preços');
+    const mes = new Date().toISOString().slice(0,7).replace('-','');
+    XLSX.writeFile(wb, `modelo_precos_att_${mes}.xlsx`);
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // Importar planilha preenchida de preços
+  // ─────────────────────────────────────────────────────────────
+  window.precosImportarArquivo = function(input){
+    const file = input.files[0];
+    if(!file) return;
+    input.value='';
+    if(!window.XLSX){ alert('Biblioteca XLSX não disponível.'); return; }
+    const reader = new FileReader();
+    reader.onload = function(ev){
+      try {
+        const wb = XLSX.read(new Uint8Array(ev.target.result), {type:'array'});
+        const ws = wb.Sheets['Preços'];
+        if(!ws){ alert('Aba "Preços" não encontrada. Baixe o modelo novamente.'); return; }
+        const data = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+        if(data.length < 2){ alert('Planilha vazia.'); return; }
+        const parcMap = {};
+        _parceiros.forEach(p=>parcMap[p.id]=p);
+        const equipMap = {};
+        _equipamentos.forEach(e=>equipMap[e.id]=e);
+        const linhas = [], erros = [];
+        for(let i=1; i<data.length; i++){
+          const row = data[i];
+          const pId = String(row[0]||'').trim();
+          const rId = String(row[2]||'').trim();
+          const eId = String(row[4]||'').trim();
+          if(!pId && !rId && !eId) continue;
+          const rawCarga = row[7], rawM3 = row[8];
+          const precoCarga = (rawCarga===''||rawCarga==null) ? null : Number(rawCarga);
+          const precoM3raw = (rawM3===''||rawM3==null) ? null : Number(rawM3);
+          if(precoM3raw==null && precoCarga==null) continue;
+          if(!parcMap[pId]){ erros.push(`Linha ${i+1}: parceiro_id desconhecido`); continue; }
+          if(!rId){ erros.push(`Linha ${i+1}: residuo_id em branco`); continue; }
+          if(!eId){ erros.push(`Linha ${i+1}: equipamento_id em branco`); continue; }
+          const equip = equipMap[eId];
+          let pm3 = precoM3raw, pcarga = precoCarga;
+          if(equip?.volume_m3_padrao && precoCarga!=null){
+            pm3 = Number((precoCarga/equip.volume_m3_padrao).toFixed(4));
+          } else if(!equip?.volume_m3_padrao && precoM3raw==null){
+            erros.push(`Linha ${i+1}: equipamento avulso requer Preço R$/m³`); continue;
+          }
+          if(pm3==null){ erros.push(`Linha ${i+1}: não foi possível determinar R$/m³`); continue; }
+          linhas.push({parceiro_id:pId, residuo_id:rId, equipamento_id:eId, preco_carga:pcarga, preco_m3:pm3});
+        }
+        if(!linhas.length && !erros.length){ alert('Nenhuma linha com preço encontrada. Preencha os campos e reimporte.'); return; }
+        api('parceiros_att_tabela_precos?ativo=eq.true&limit=2000').then(vigentes=>{
+          const vigMap = {};
+          vigentes.forEach(v=>vigMap[v.parceiro_id+'|'+v.residuo_id+'|'+v.equipamento_id]=v);
+          let criados=0, atualizados=0;
+          linhas.forEach(l=>{ vigMap[l.parceiro_id+'|'+l.residuo_id+'|'+l.equipamento_id] ? atualizados++ : criados++; });
+          const porParc = {};
+          linhas.forEach(l=>{ if(!porParc[l.parceiro_id]) porParc[l.parceiro_id]=[]; porParc[l.parceiro_id].push(l); });
+          window._importPayload = {linhas, porParc};
+          let html = `<div style="font-size:13px;margin-bottom:12px"><b style="color:var(--green)">${criados} preços serão criados</b> · <b style="color:#3B82F6">${atualizados} serão atualizados</b>${erros.length?` · <b style="color:var(--red)">${erros.length} erros ignorados</b>`:''}</div>`;
+          if(erros.length) html += `<div style="background:#EF444420;border:1px solid var(--red);border-radius:8px;padding:10px;margin-bottom:10px;font-size:11px;color:var(--red);max-height:80px;overflow-y:auto">${erros.join('<br>')}</div>`;
+          html += `<div style="max-height:200px;overflow-y:auto;font-size:12px">`;
+          Object.entries(porParc).forEach(([pId,ls])=>{
+            const pNome = parcMap[pId]?.nome_fantasia||parcMap[pId]?.nome||pId;
+            html += `<div style="font-weight:600;color:var(--accent);margin-top:8px">${pNome} (${ls.length} ${ls.length===1?'item':'itens'})</div>`;
+            ls.forEach(l=>{
+              const res = _residuos.find(r=>r.id===l.residuo_id)?.nome||l.residuo_id;
+              const eq = _equipamentos.find(e=>e.id===l.equipamento_id)?.nome||l.equipamento_id;
+              const existe = vigMap[l.parceiro_id+'|'+l.residuo_id+'|'+l.equipamento_id];
+              html += `<div style="padding:2px 8px;color:var(--muted2)">${existe?'✏️':'➕'} ${res} / ${eq} — R$${l.preco_m3}/m³${l.preco_carga!=null?' (carga: R$'+l.preco_carga+')':''}</div>`;
+            });
+          });
+          html += '</div>';
+          document.getElementById('pp-import-preview').innerHTML = html;
+          document.getElementById('pp-import-aplicar').disabled = linhas.length===0;
+          document.getElementById('pp-import-modal').style.display='flex';
+        }).catch(e=>{ alert('Erro ao buscar preços atuais: '+e.message); });
+      } catch(e){ alert('Erro ao ler planilha: '+e.message); }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  window.precosImportarAplicar = async function(){
+    const payload = window._importPayload;
+    if(!payload) return;
+    const btnEl = document.getElementById('pp-import-aplicar');
+    btnEl.disabled = true;
+    const parceiros = Object.keys(payload.porParc);
+    let done = 0;
+    try {
+      for(const pId of parceiros){
+        btnEl.textContent = `Atualizando ${++done}/${parceiros.length}...`;
+        await salvarPrecosParceiro(pId, payload.porParc[pId], 'importacao', 'Importação de planilha', false);
+      }
+      document.getElementById('pp-import-modal').style.display='none';
+      window._importPayload = null;
+      await precosLoad();
+      const t = document.createElement('div');
+      t.textContent = `✓ ${payload.linhas.length} preços importados com sucesso`;
+      t.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--green);color:#000;padding:10px 20px;border-radius:10px;font-weight:700;font-size:13px;z-index:9999';
+      document.body.appendChild(t);
+      setTimeout(()=>t.remove(), 3500);
+    } catch(e){
+      alert('Erro ao importar: '+e.message);
+      btnEl.disabled=false;
+      btnEl.textContent='Aplicar';
+    }
   };
 
   // ─────────────────────────────────────────────────────────────
