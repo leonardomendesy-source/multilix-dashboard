@@ -2926,7 +2926,40 @@ body { font-size: 13.5px !important; }
 
     <!-- RECICLÁVEIS > DASHBOARD -->
     <div class="page" id="page-reciclaveis">
-      <div class="panel"><div style="padding:30px;text-align:center;color:var(--muted)">Dashboard Recicláveis — em construção.</div></div>
+      <div class="filterbar">
+        <div class="fg"><label>De</label><input type="date" id="rf-from" onchange="recDashRender()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"/></div>
+        <div class="fg"><label>Até</label><input type="date" id="rf-to" onchange="recDashRender()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"/></div>
+        <div class="fg"><label>Destino</label><select id="rf-destino" onchange="recDashRender()"><option value="">Todos</option></select></div>
+        <div class="fg"><label>Resíduo</label><select id="rf-residuo" onchange="recDashRender()"><option value="">Todos</option></select></div>
+        <div class="fg"><label>Status</label><select id="rf-status" onchange="recDashRender()"><option value="">Todos</option><option value="registrado">Registrado</option><option value="conferido">Conferido</option><option value="contestado">Contestado</option></select></div>
+        <button class="btn btn-ghost btn-sm" onclick="recDashClear()"><i data-lucide="rotate-ccw" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Limpar</button>
+        <button class="btn btn-ghost btn-sm" onclick="recDashUpdate()"><i data-lucide="refresh-cw" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Atualizar</button>
+      </div>
+
+      <!-- KPIs GERAIS -->
+      <div class="sec green"><i data-lucide="leaf" style="width:13px;height:13px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Recicláveis — Volumes &amp; Receita</div>
+      <div class="kpi-grid" id="kpi-rec-geral"></div>
+
+      <!-- PROJEÇÃO -->
+      <div class="sec blue"><i data-lucide="trending-up" style="width:13px;height:13px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Projeção do Mês (dias úteis)</div>
+      <div class="kpi-grid" id="kpi-rec-proj"></div>
+
+      <!-- GRÁFICOS -->
+      <div class="g2" style="margin-bottom:18px">
+        <div class="panel"><div class="panel-head"><span class="panel-title">Evolução Diária — m³ Destinado</span><span class="panel-badge" id="rec-chart-range">Todo o período</span></div><div class="chart-wrap-tall" data-chart-id="cRecDia"><canvas id="cRecDia"></canvas></div></div>
+        <div class="panel"><div class="panel-head"><span class="panel-title">Distribuição por Resíduo — m³</span></div><div class="chart-wrap-tall" data-chart-id="cRecResiduo"><canvas id="cRecResiduo"></canvas></div></div>
+      </div>
+      <div class="g2" style="margin-bottom:18px">
+        <div class="panel"><div class="panel-head"><span class="panel-title">Ranking por Destino — m³</span></div><div class="chart-wrap-tall" data-chart-id="cRecDestino"><canvas id="cRecDestino"></canvas></div></div>
+        <div class="panel"><div class="panel-head"><span class="panel-title">Resumo por Resíduo</span></div><div id="rk-rec" class="tbl-wrap"></div></div>
+      </div>
+
+      <!-- LANÇAMENTOS -->
+      <div class="sec">Lançamentos de Recicláveis</div>
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">Lançamentos filtrados</span><span class="panel-badge" id="rec-count-badge">0 registros</span></div>
+        <div class="tbl-wrap" id="tbl-rec-lanc"></div>
+      </div>
     </div>
 
     <!-- RECICLÁVEIS > DESTINOS & RESÍDUOS -->
@@ -9356,8 +9389,165 @@ async function recOsEditSalvar() {
   } catch(e) { alert('Erro ao salvar: ' + e.message); }
 }
 
-// ── DASHBOARD RECICLÁVEIS (implementado na etapa 5) ────────────
-function recDashUpdate() {}
+// ── DASHBOARD RECICLÁVEIS ──────────────────────────────────────
+let _recDashRows = [];
+let _recDashFiltrosPopulados = false;
+
+// Valor efetivo de um vale: conferido usa valor_final; senão estima pela tabela
+function recValorEfetivo(v) {
+  if(v.valor_final != null) return Number(v.valor_final);
+  const preco = v.preco_unitario != null ? Number(v.preco_unitario) : null;
+  return recCalcValor(v.peso_kg != null ? Number(v.peso_kg) : null, v.volume_m3 != null ? Number(v.volume_m3) : null, preco, v.unidade_preco);
+}
+
+async function recDashUpdate() {
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/vales_reciclaveis?select=*,destinos_reciclaveis(nome),tipos_residuo_reciclavel(nome)&status=neq.cancelado&order=data_saida.desc&limit=1000`, {
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+(_session?.access_token||SUPA_KEY)}
+    });
+    const vales = await r.json();
+    _recDashRows = (Array.isArray(vales) ? vales : []).map(v => ({
+      data:    v.data_saida ? (p => new Date(+p[0], +p[1]-1, +p[2]))(v.data_saida.split('-')) : null,
+      os:      v.os_numero || '',
+      destino: v.destinos_reciclaveis?.nome || '—',
+      residuo: v.tipos_residuo_reciclavel?.nome || '—',
+      volume:  Number(v.volume_m3 || 0),
+      peso:    v.peso_kg != null ? Number(v.peso_kg) : null,
+      valor:   recValorEfetivo(v),
+      valorFinal: v.valor_final != null ? Number(v.valor_final) : null,
+      status:  v.status,
+      unidade: v.unidade_preco || null,
+      _raw: v
+    }));
+
+    // Popula filtros (uma vez)
+    if(!_recDashFiltrosPopulados) {
+      _recDashFiltrosPopulados = true;
+      const selD = document.getElementById('rf-destino');
+      [...new Set(_recDashRows.map(r => r.destino))].sort().forEach(n => {
+        if(n === '—') return;
+        const o = document.createElement('option'); o.value = n; o.textContent = n; selD.appendChild(o);
+      });
+      const selR = document.getElementById('rf-residuo');
+      [...new Set(_recDashRows.map(r => r.residuo))].sort().forEach(n => {
+        if(n === '—') return;
+        const o = document.createElement('option'); o.value = n; o.textContent = n; selR.appendChild(o);
+      });
+    }
+    recDashRender();
+  } catch(e) {
+    document.getElementById('kpi-rec-geral').innerHTML = '<div style="padding:20px;color:#EF4444">Erro ao carregar dados de recicláveis.</div>';
+  }
+}
+
+function recDashRender() {
+  const from    = document.getElementById('rf-from').value;
+  const to      = document.getElementById('rf-to').value;
+  const destino = document.getElementById('rf-destino').value;
+  const residuo = document.getElementById('rf-residuo').value;
+  const status  = document.getElementById('rf-status').value;
+
+  const dtFrom = from ? (p => new Date(+p[0], +p[1]-1, +p[2]))(from.split('-')) : null;
+  const dtTo   = to   ? (p => new Date(+p[0], +p[1]-1, +p[2]))(to.split('-'))   : null;
+
+  const rows = _recDashRows.filter(r => {
+    if(dtFrom && (!r.data || r.data < dtFrom)) return false;
+    if(dtTo   && (!r.data || r.data > dtTo))   return false;
+    if(destino && r.destino !== destino) return false;
+    if(residuo && r.residuo !== residuo) return false;
+    if(status  && r.status  !== status)  return false;
+    return true;
+  });
+
+  // ── KPIs GERAIS ──
+  const tVol   = rows.reduce((s,r)=>s+r.volume,0);
+  const nViag  = rows.length;
+  const tPeso  = rows.reduce((s,r)=>s+(r.peso||0),0);
+  const conferidos = rows.filter(r=>r.status==='conferido');
+  const rsRecebido = conferidos.reduce((s,r)=>s+(r.valorFinal||0),0);
+  const pendentes  = rows.filter(r=>r.status!=='conferido');
+  const estimaveis = pendentes.filter(r=>r.valor!=null);
+  const rsAReceber = estimaveis.reduce((s,r)=>s+r.valor,0);
+  const semEstimativa = pendentes.length - estimaveis.length;
+
+  document.getElementById('kpi-rec-geral').innerHTML = [
+    kpi('Total Destinado', fN(tVol,1)+' m³', nViag+' viagens/caçambas','','kb-green','green'),
+    kpi('Peso Total', fN(tPeso/1000,2)+' ton', fN(tPeso,0)+' kg pesados','','kb-blue','blue'),
+    kpi('R$ Recebido', fM(rsRecebido), conferidos.length+' conferidos','','kb-green','green'),
+    kpi('R$ a Receber (est.)', fM(rsAReceber), estimaveis.length+' pendentes'+(semEstimativa?` · ${semEstimativa} sem estimativa`:''),'','kb-orange','orange'),
+    kpi('Ticket Médio/Viagem', nViag>0 ? fM((rsRecebido+rsAReceber)/nViag) : '—','Receita ÷ viagens','','kb-purple','purple'),
+  ].join('');
+
+  // ── PROJEÇÃO DO MÊS (dias úteis — mesma regra dos demais módulos) ──
+  const hoje = new Date();
+  const rowsMes = _recDashRows.filter(r => r.data && r.data.getFullYear()===hoje.getFullYear() && r.data.getMonth()===hoje.getMonth());
+  const rowsMesValor = rowsMes.filter(r => r.valor != null);
+  const pVol = calcularProjecaoSegmentada(rowsMes, r=>r.volume);
+  const pVal = calcularProjecaoSegmentada(rowsMesValor, r=>r.valor||0);
+  const mesLabel = hoje.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+
+  document.getElementById('kpi-rec-proj').innerHTML = [
+    kpi('m³ Realizado (mês)', fN(pVol.realizado,1)+' m³', mesLabel,'','kb-blue','blue'),
+    kpi('Projeção m³ (mês)', fN(pVol.projecao,1)+' m³', pVol.ultimaData?'último lançamento: '+fD(pVol.ultimaData):'sem lançamentos','','kb-green','green'),
+    kpi('R$ Realizado (mês)', fM(pVal.realizado), 'recebido + estimado','','kb-blue','blue'),
+    kpi('Projeção R$ (mês)', fM(pVal.projecao), 'média por dia útil × dias restantes','','kb-green','green'),
+  ].join('');
+
+  // ── Período exibido ──
+  const rangeLabel = (from||to) ? ((from?from.split('-').reverse().join('/'):'início')+' → '+(to?to.split('-').reverse().join('/'):'hoje')) : 'Todo o período';
+  document.getElementById('rec-chart-range').textContent = rangeLabel;
+
+  // ── GRÁFICOS ──
+  mkBar('cRecDia','recDia',rows,'volume','#10B981','m³/dia');
+
+  const byResiduo = groupBy(rows,'residuo','volume').filter(r=>r.name!=='—'&&r.value>0);
+  const ctxRes = document.getElementById('cRecResiduo');
+  if(ctxRes){
+    if(S.charts.recResiduo){try{S.charts.recResiduo.destroy();}catch(e){}}
+    const _recTotalM3 = byResiduo.reduce((s,r)=>s+r.value,0);
+    S.charts.recResiduo = new Chart(ctxRes,{type:'doughnut',data:{labels:byResiduo.map(r=>r.name),datasets:[{data:byResiduo.map(r=>r.value),backgroundColor:['#10B981','#3B82F6','#F59E0B','#8B5CF6','#06B6D4','#EF4444','#84CC16'],borderWidth:0,hoverOffset:8,spacing:2}]},options:{responsive:true,maintainAspectRatio:false,cutout:'66%',plugins:{legend:{position:'bottom',labels:{color:'#8a93ab',font:{size:11},padding:12,usePointStyle:true,pointStyle:'circle'}},tooltip:{backgroundColor:'#1a1f2e',titleColor:'#eef0ff',bodyColor:'#aab2cc',borderColor:'#2e3850',borderWidth:1,cornerRadius:10,padding:10,displayColors:false}}},plugins:[{id:'recResiduoLbl',afterDraw(chart){const{ctx:c,chartArea:{width,height,left,top}}=chart;const cx=left+width/2,cy=top+height/2-10;c.save();c.textAlign='center';c.textBaseline='middle';c.font='700 14px Inter,sans-serif';c.fillStyle='#eef0ff';c.fillText(fN(_recTotalM3,1)+' m³',cx,cy);c.font='500 10px Inter,sans-serif';c.fillStyle='#8a93ab';c.fillText('total destinado',cx,cy+16);c.restore();}}]});
+  }
+
+  const byDestino = groupBy(rows,'destino','volume').filter(r=>r.name!=='—'&&r.value>0).slice(0,10);
+  mkRankingBar('cRecDestino','recDestino',byDestino,'#10B981','m³');
+
+  // ── RESUMO POR RESÍDUO ──
+  const byRes = {};
+  rows.forEach(r => {
+    const k = r.residuo || '—';
+    if(!byRes[k]) byRes[k] = {residuo:k, m3:0, viagens:0, pesoKg:0, receita:0};
+    byRes[k].m3 += r.volume;
+    byRes[k].viagens += 1;
+    byRes[k].pesoKg += (r.peso||0);
+    byRes[k].receita += (r.valor||0);
+  });
+  const arrRes = Object.values(byRes).sort((a,b)=>b.m3-a.m3);
+  document.getElementById('rk-rec').innerHTML = arrRes.length ?
+    `<table class="dest-mini-table"><thead><tr><th>Resíduo</th><th style="text-align:right">m³</th><th style="text-align:right">Viagens</th><th style="text-align:right">Peso (ton)</th><th style="text-align:right">Receita R$</th><th style="text-align:right">R$/m³</th></tr></thead><tbody>${arrRes.map(r=>`<tr><td>${r.residuo}</td><td style="text-align:right">${fN(r.m3,1)}</td><td style="text-align:right">${fN(r.viagens,0)}</td><td style="text-align:right">${fN(r.pesoKg/1000,2)}</td><td style="text-align:right">${fM(r.receita)}</td><td style="text-align:right">${r.m3>0?fM(r.receita/r.m3):'—'}</td></tr>`).join('')}</tbody></table>` :
+    '<div class="empty"><p style="color:var(--muted)">Sem dados</p></div>';
+
+  // ── LANÇAMENTOS ──
+  const badge = document.getElementById('rec-count-badge');
+  badge.textContent = rows.length + ' registro' + (rows.length!==1?'s':'');
+  const ultimos = [...rows].sort((a,b)=>(b.data||0)-(a.data||0)).slice(0,80);
+  const stBadge = s => ({
+    registrado:'<span style="background:#3B82F620;color:#3B82F6;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700">REG</span>',
+    conferido:'<span style="background:#10B98120;color:#10B981;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700">CONF</span>',
+    contestado:'<span style="background:#F59E0B20;color:#F59E0B;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700">CONT</span>',
+  }[s]||s);
+  document.getElementById('tbl-rec-lanc').innerHTML = ultimos.length ?
+    `<table style="width:100%;border-collapse:collapse"><thead><tr><th>Data</th><th>O.S.</th><th>Destino</th><th>Resíduo</th><th style="text-align:right">m³</th><th style="text-align:right">Peso (kg)</th><th style="text-align:right">Valor R$</th><th>Status</th></tr></thead><tbody>${ultimos.map(r=>`<tr><td style="white-space:nowrap">${fD(r.data)}</td><td style="font-weight:700;font-size:11px;color:#10B981">${r.os}</td><td>${r.destino}</td><td>${r.residuo}</td><td style="text-align:right">${fN(r.volume,1)}</td><td style="text-align:right">${r.peso!=null?fN(r.peso,0):'—'}</td><td style="text-align:right;font-weight:600">${r.valor!=null?fM(r.valor):'—'}</td><td>${stBadge(r.status)}</td></tr>`).join('')}</tbody></table>` :
+    '<div style="padding:20px;color:var(--muted);text-align:center">Nenhum lançamento no filtro atual.</div>';
+}
+
+function recDashClear() {
+  document.getElementById('rf-from').value = '';
+  document.getElementById('rf-to').value = '';
+  document.getElementById('rf-destino').value = '';
+  document.getElementById('rf-residuo').value = '';
+  document.getElementById('rf-status').value = '';
+  recDashRender();
+}
 
 // ── SIDEBAR TOGGLE ─────────────────────────────────────────────
 function toggleSidebar() {

@@ -12,6 +12,12 @@ Dashboard de vendas da Multilix. Arquivo principal: `index.html` (alias de `dash
 - Locação
 - Agregados
 - E-mails Comercial (lê da tabela `emails_comercial` no Supabase, alimentada pelo workflow n8n `gZgBvKDtCjHjBYJf`)
+- Destinação (frete MIX/Rachão): webapp `/vale` (apontador), Conferência, Freteiros, Pagamentos
+- **Recicláveis (v37-v40)**: venda de resíduos triados (madeira, papel, plásticos, gesso, metal) para destinos/compradores.
+  - Tabelas Supabase: `tipos_residuo_reciclavel`, `destinos_reciclaveis`, `destinos_reciclaveis_precos` (unidade kg/ton/carga/m3), `vales_reciclaveis` (OS `REC-####` via trigger `trg_os_numero_rec` + sequence `vales_rec_os_seq`; `valor_final` = generated coalesce(valor_recebido, valor_calculado))
+  - `/vale`: tela de seleção Frete × Recicláveis; fluxo rec = destino → resíduo precificado → m³ + 2 fotos (bucket `destinacao-fotos/reciclaveis/`); funções JS prefixo `rec`/`onRec`
+  - index.html: páginas `page-reciclaveis` (dashboard c/ projeção por dias úteis via `calcularProjecaoSegmentada`), `page-rec-destinos` (cadastros), `page-rec-conferencia` (baixa por peso do ticket, `recCalcValor`, valor manual prevalece). JS no bloco 2, antes de `// ── SIDEBAR TOGGLE ──`
+  - RLS: vales com INSERT/UPDATE anon (apontador sem login); cadastros só authenticated. Obs: em `vales_destinacao` (frete) o UPDATE é só authenticated — editar/cancelar no /vale falha silenciosamente (bug latente antigo, não corrigido de propósito)
 
 ## Git
 - Branch principal: `main`
