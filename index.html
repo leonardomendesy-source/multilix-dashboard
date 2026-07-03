@@ -2959,7 +2959,35 @@ body { font-size: 13.5px !important; }
 
     <!-- RECICLÁVEIS > CONFERÊNCIA -->
     <div class="page" id="page-rec-conferencia">
-      <div class="panel"><div style="padding:30px;text-align:center;color:var(--muted)">Conferência de Recicláveis — em construção.</div></div>
+      <div class="filterbar">
+        <div class="fg"><label>De</label><input type="date" id="rcf-from" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"/></div>
+        <div class="fg"><label>Até</label><input type="date" id="rcf-to" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"/></div>
+        <div class="fg"><label>Destino</label><select id="rcf-destino" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"><option value="">Todos</option></select></div>
+        <div class="fg"><label>Status</label><select id="rcf-status" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"><option value="">Todos</option><option value="registrado">Registrado</option><option value="conferido">Conferido</option><option value="contestado">Contestado</option><option value="cancelado">Cancelado</option></select></div>
+        <div class="fg"><label>Resíduo</label><select id="rcf-residuo" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"><option value="">Todos</option></select></div>
+        <div class="fg"><label>O.S.</label><input type="text" id="rcf-os" placeholder="Ex: REC-0001" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none;width:110px"/></div>
+        <div class="fg"><label>Observações</label><input type="text" id="rcf-obs" placeholder="Buscar..." style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none;width:160px"/></div>
+        <button class="btn btn-primary btn-sm" onclick="recConfLoad()"><i data-lucide="search" style="width:12px;height:12px;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Buscar</button>
+        <button class="btn btn-ghost btn-sm" onclick="recConfClear()"><i data-lucide="rotate-ccw" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Limpar</button>
+      </div>
+
+      <!-- Barra de ações em lote -->
+      <div id="rec-conf-bulk-bar" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 16px;margin-bottom:14px;align-items:center;flex-wrap:wrap;gap:10px">
+        <span id="rec-conf-sel-count" style="font-size:12px;font-weight:700;color:var(--text)">0 selecionados</span>
+        <button onclick="recConfSelectAll()" class="btn btn-ghost btn-sm">Selecionar todos</button>
+        <button onclick="recConfDeselectAll()" class="btn btn-ghost btn-sm">Desmarcar todos</button>
+        <div style="flex:1"></div>
+        <button onclick="recConfBulkStatus('contestado')" style="background:#F59E0B20;border:1px solid #F59E0B40;color:#F59E0B;border-radius:7px;padding:5px 12px;cursor:pointer;font-size:12px;font-weight:600">⚠ Contestar selecionados</button>
+        <button onclick="recConfBulkStatus('cancelado')" style="background:#EF444420;border:1px solid #EF444440;color:#EF4444;border-radius:7px;padding:5px 12px;cursor:pointer;font-size:12px;font-weight:600">✕ Cancelar selecionados</button>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Saídas de Recicláveis</span>
+          <span class="panel-badge" id="rec-conf-count-badge">0 registros</span>
+        </div>
+        <div class="tbl-wrap" id="tbl-rec-conferencia"></div>
+      </div>
     </div>
 
     <!-- MODAL EDIÇÃO DE O.S. -->
@@ -3055,6 +3083,76 @@ body { font-size: 13.5px !important; }
         <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:22px">
           <button onclick="recDestinoCloseModal()" class="btn btn-ghost btn-sm">Cancelar</button>
           <button onclick="recDestinoSalvar()" class="btn btn-primary btn-sm">Salvar Destino</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL LANÇAR PESO (CONFERIR RECICLÁVEL) -->
+    <div id="rec-peso-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:1000;overflow-y:auto;padding:30px 16px" onclick="if(event.target===this)recPesoClose()">
+      <div style="max-width:520px;margin:0 auto;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px" onclick="event.stopPropagation()">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+          <div>
+            <h2 style="font-size:16px;font-weight:700;color:var(--text)">⚖ Lançar Peso &amp; Conferir</h2>
+            <div id="rp2-os-num" style="font-size:11px;color:#10B981;font-weight:700;margin-top:2px"></div>
+          </div>
+          <button onclick="recPesoClose()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px">✕</button>
+        </div>
+        <input type="hidden" id="rp2-id"/>
+        <div id="rp2-info" style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:16px;font-size:12px;line-height:1.9;color:var(--muted)"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="fi"><label>Peso do Ticket (kg)</label><input type="number" id="rp2-peso" step="0.01" placeholder="0" oninput="recPesoRecalc()"/></div>
+          <div class="fi"><label>Valor Calculado</label><div id="rp2-valor-calc" style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px 13px;font-size:16px;font-weight:800;color:#10B981">—</div></div>
+          <div class="fi" style="grid-column:1/-1"><label>Valor a Receber (R$) — ajuste manual se necessário</label><input type="number" id="rp2-valor" step="0.01" placeholder="0,00" oninput="this.dataset.manual='1'"/></div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+          <button onclick="recPesoClose()" class="btn btn-ghost btn-sm">Cancelar</button>
+          <button onclick="recPesoSalvar()" class="btn btn-primary btn-sm" style="background:#10B981;border-color:#10B981">✓ Conferir</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL EDIÇÃO DE O.S. RECICLÁVEL -->
+    <div id="rec-os-edit-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:1000;overflow-y:auto;padding:30px 16px" onclick="if(event.target===this)recOsEditClose()">
+      <div style="max-width:640px;margin:0 auto;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px" onclick="event.stopPropagation()">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+          <div>
+            <h2 style="font-size:16px;font-weight:700;color:var(--text)">Editar O.S. — Reciclável</h2>
+            <div id="rec-os-edit-num" style="font-size:11px;color:#10B981;font-weight:700;margin-top:2px"></div>
+          </div>
+          <button onclick="recOsEditClose()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px">✕</button>
+        </div>
+        <input type="hidden" id="ro-id"/>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="fi"><label>Data de Saída *</label><input type="date" id="ro-data"/></div>
+          <div class="fi"><label>Hora de Saída</label><input type="time" id="ro-hora"/></div>
+          <div class="fi" style="grid-column:1/-1"><label>Destino *</label><select id="ro-destino" onchange="recOsEditAutoPreco()"></select></div>
+          <div class="fi"><label>Tipo de Resíduo *</label><select id="ro-residuo" onchange="recOsEditAutoPreco()"></select></div>
+          <div class="fi"><label>Volume (m³)</label><input type="number" id="ro-volume" step="0.5"/></div>
+          <div class="fi"><label>Peso (kg)</label><input type="number" id="ro-peso" step="0.01"/></div>
+          <div class="fi"><label>Preço Unitário (R$)</label><input type="number" id="ro-preco" step="0.01"/></div>
+          <div class="fi"><label>Unidade do Preço</label>
+            <select id="ro-unidade">
+              <option value="">—</option>
+              <option value="kg">R$/kg</option>
+              <option value="ton">R$/ton</option>
+              <option value="carga">R$/carga</option>
+              <option value="m3">R$/m³</option>
+            </select>
+          </div>
+          <div class="fi"><label>Valor Recebido (R$) — manual</label><input type="number" id="ro-valor" step="0.01" placeholder="vazio = usa calculado"/></div>
+          <div class="fi"><label>Status</label>
+            <select id="ro-status">
+              <option value="registrado">Registrado</option>
+              <option value="conferido">Conferido</option>
+              <option value="contestado">Contestado</option>
+              <option value="cancelado">Cancelado</option>
+            </select>
+          </div>
+          <div class="fi" style="grid-column:1/-1"><label>Observações</label><textarea id="ro-obs" rows="2" style="resize:none"></textarea></div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+          <button onclick="recOsEditClose()" class="btn btn-ghost btn-sm">Cancelar</button>
+          <button onclick="recOsEditSalvar()" class="btn btn-primary btn-sm">Salvar Alterações</button>
         </div>
       </div>
     </div>
@@ -8860,8 +8958,403 @@ async function recDestinoSalvar() {
   }
 }
 
-// ── CONFERÊNCIA RECICLÁVEIS (implementada na etapa 4) ──────────
-function recConfInit() {}
+// ── CONFERÊNCIA RECICLÁVEIS ────────────────────────────────────
+let _recConfInicializado = false;
+let _recConfRows = [];
+let _recConfSort = {col:'os_numero', dir:'asc'};
+
+async function recConfInit() {
+  if(!_recConfInicializado) {
+    _recConfInicializado = true;
+    const hoje = new Date().toLocaleDateString('sv-SE', {timeZone:'America/Sao_Paulo'});
+    document.getElementById('rcf-from').value = hoje;
+    document.getElementById('rcf-to').value   = hoje;
+    try {
+      const hdr = {'apikey':SUPA_KEY,'Authorization':'Bearer '+(_session?.access_token||SUPA_KEY)};
+      const [rd, rr] = await Promise.all([
+        fetch(`${SUPA_URL}/rest/v1/destinos_reciclaveis?select=id,nome&order=nome.asc&limit=200`, {headers:hdr}),
+        fetch(`${SUPA_URL}/rest/v1/tipos_residuo_reciclavel?select=id,nome&order=nome.asc&limit=200`, {headers:hdr})
+      ]);
+      const destinos = await rd.json();
+      const residuos = await rr.json();
+      const selD = document.getElementById('rcf-destino');
+      destinos.forEach(d => { const o=document.createElement('option'); o.value=d.id; o.textContent=d.nome; selD.appendChild(o); });
+      const selR = document.getElementById('rcf-residuo');
+      residuos.forEach(t => { const o=document.createElement('option'); o.value=t.id; o.textContent=t.nome; selR.appendChild(o); });
+    } catch(e) {}
+  }
+  recConfLoad();
+}
+
+async function recConfLoad() {
+  const tbl   = document.getElementById('tbl-rec-conferencia');
+  const badge = document.getElementById('rec-conf-count-badge');
+  tbl.innerHTML = '<div style="padding:20px;color:var(--muted);text-align:center">Carregando...</div>';
+  recConfDeselectAll();
+
+  const from    = document.getElementById('rcf-from').value;
+  const to      = document.getElementById('rcf-to').value;
+  const destino = document.getElementById('rcf-destino').value;
+  const status  = document.getElementById('rcf-status').value;
+  const residuo = document.getElementById('rcf-residuo').value;
+
+  let params = 'select=*,destinos_reciclaveis(nome),tipos_residuo_reciclavel(nome)&limit=1000';
+  if(from)    params += `&data_saida=gte.${from}`;
+  if(to)      params += `&data_saida=lte.${to}`;
+  if(destino) params += `&destino_id=eq.${destino}`;
+  if(status)  params += `&status=eq.${status}`;
+  if(residuo) params += `&residuo_id=eq.${residuo}`;
+
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/vales_reciclaveis?${params}`, {
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+(_session?.access_token||SUPA_KEY)}
+    });
+    _recConfRows = await r.json();
+    badge.textContent = _recConfRows.length + ' registro' + (_recConfRows.length!==1?'s':'');
+    recConfSortAndRender();
+  } catch(e) {
+    tbl.innerHTML = '<div style="padding:20px;color:#EF4444">Erro ao carregar registros.</div>';
+  }
+}
+
+function recConfSortAndRender() {
+  const {col, dir} = _recConfSort;
+  const os  = (document.getElementById('rcf-os')?.value || '').trim().toLowerCase();
+  const obs = (document.getElementById('rcf-obs')?.value || '').trim().toLowerCase();
+  const base = _recConfRows.filter(r => {
+    if(os  && !String(r.os_numero || '').toLowerCase().includes(os)) return false;
+    if(obs && !String(r.observacoes || '').toLowerCase().includes(obs)) return false;
+    return true;
+  });
+  const sorted = [...base].sort((a, b) => {
+    let va, vb;
+    if(col === 'destino'){ va = a.destinos_reciclaveis?.nome||''; vb = b.destinos_reciclaveis?.nome||''; }
+    else if(col === 'residuo'){ va = a.tipos_residuo_reciclavel?.nome||''; vb = b.tipos_residuo_reciclavel?.nome||''; }
+    else { va = a[col] ?? ''; vb = b[col] ?? ''; }
+    if(['volume_m3','peso_kg','valor_final'].includes(col)){ va = parseFloat(va)||0; vb = parseFloat(vb)||0; return dir==='asc' ? va-vb : vb-va; }
+    return dir==='asc' ? String(va).localeCompare(String(vb),'pt-BR') : String(vb).localeCompare(String(va),'pt-BR');
+  });
+  recConfRenderTable(sorted);
+}
+
+function recConfSetSort(col) {
+  if(_recConfSort.col === col) _recConfSort.dir = _recConfSort.dir==='asc'?'desc':'asc';
+  else { _recConfSort.col = col; _recConfSort.dir = 'asc'; }
+  recConfSortAndRender();
+}
+
+function recConfStatusBadge(s) {
+  return ({
+    registrado: '<span style="background:#3B82F620;color:#3B82F6;border:1px solid #3B82F640;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700">REGISTRADO</span>',
+    conferido:  '<span style="background:#10B98120;color:#10B981;border:1px solid #10B98140;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700">CONFERIDO</span>',
+    contestado: '<span style="background:#F59E0B20;color:#F59E0B;border:1px solid #F59E0B40;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700">CONTESTADO</span>',
+    cancelado:  '<span style="background:#6B728020;color:#9CA3AF;border:1px solid #6B728040;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700">CANCELADO</span>',
+  }[s] || s);
+}
+
+function recConfRenderTable(rows) {
+  const tbl = document.getElementById('tbl-rec-conferencia');
+  if(!rows.length){ tbl.innerHTML='<div style="padding:20px;color:var(--muted);text-align:center">Nenhum registro encontrado para o período.</div>'; return; }
+
+  const arrow = col => _recConfSort.col===col ? (_recConfSort.dir==='asc'?' ↑':' ↓') : '';
+  const th = (col, label) => `<th onclick="recConfSetSort('${col}')" style="cursor:pointer;user-select:none">${label}${arrow(col)}</th>`;
+
+  let html = `<table style="width:100%;border-collapse:collapse">
+    <thead><tr>
+      <th style="width:36px"><input type="checkbox" id="rcf-chk-all" onchange="recConfToggleAll(this.checked)" style="accent-color:var(--accent)"/></th>
+      ${th('os_numero','O.S.')}${th('data_saida','Data')}${th('created_at','Hora')}${th('destino','Destino')}
+      ${th('residuo','Resíduo')}${th('volume_m3','m³')}${th('peso_kg','Peso (kg)')}
+      <th>Preço</th>${th('valor_final','Valor R$')}${th('status','Status')}
+      <th>Observações</th><th>Fotos</th><th>Ação</th>
+    </tr></thead><tbody>`;
+
+  rows.forEach(v => {
+    const nomeDest = v.destinos_reciclaveis?.nome || '—';
+    const nomeRes  = v.tipos_residuo_reciclavel?.nome || '—';
+    const hora  = v.hora_saida ? v.hora_saida.substring(0,5) : (v.created_at ? new Date(v.created_at).toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'}) : '—');
+    const peso  = v.peso_kg != null ? Number(v.peso_kg).toLocaleString('pt-BR') : '<span style="color:var(--muted2)">—</span>';
+    const preco = v.preco_unitario != null ? 'R$'+Number(v.preco_unitario).toLocaleString('pt-BR',{minimumFractionDigits:2})+(REC_UN_LABEL[v.unidade_preco]||'') : '—';
+    const valor = v.valor_final != null ? '<span style="color:#10B981;font-weight:700">R$ '+Number(v.valor_final).toLocaleString('pt-BR',{minimumFractionDigits:2})+'</span>' : '<span style="color:var(--muted2)">—</span>';
+    const obs   = v.observacoes ? `<span style="font-size:11px;color:var(--muted)">${v.observacoes}</span>` : '<span style="color:var(--muted2)">—</span>';
+    const cancelado = v.status === 'cancelado';
+
+    const btnFotoRes = v.foto_residuo_url
+      ? `<button onclick="window.open('${v.foto_residuo_url}','_blank')" style="background:#10B98120;border:1px solid #10B98140;color:#10B981;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px;white-space:nowrap">📷 Res.</button>`
+      : '<span style="color:var(--muted2);font-size:11px">—</span>';
+    const btnFotoVale = v.foto_vale_url
+      ? `<button onclick="window.open('${v.foto_vale_url}','_blank')" style="background:#8B5CF620;border:1px solid #8B5CF640;color:#8B5CF6;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px;white-space:nowrap">🧾 Vale</button>`
+      : '<span style="color:var(--muted2);font-size:11px">—</span>';
+
+    const btnEditar = `<button onclick="recOsEditOpen('${v.id}')" title="Editar O.S." style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:12px">✏</button>`;
+    const btnPeso = `<button onclick="recPesoOpen('${v.id}')" title="Lançar peso e conferir" style="background:#10B98120;border:1px solid #10B98140;color:#10B981;border-radius:6px;padding:3px 7px;cursor:pointer;font-size:12px">⚖</button>`;
+    const acoes = cancelado
+      ? `${btnEditar}<button onclick="recConfAtualizarStatus('${v.id}','registrado')" title="Reativar O.S." style="background:#3B82F620;border:1px solid #3B82F640;color:#3B82F6;border-radius:6px;padding:3px 7px;cursor:pointer;font-size:12px">↩</button>`
+      : `${btnEditar}${btnPeso}
+      <button onclick="recConfAtualizarStatus('${v.id}','contestado')" title="Contestar" style="background:#F59E0B20;border:1px solid #F59E0B40;color:#F59E0B;border-radius:6px;padding:3px 7px;cursor:pointer;font-size:12px">⚠</button>
+      <button onclick="recConfAtualizarStatus('${v.id}','cancelado')" title="Cancelar O.S." style="background:#EF444420;border:1px solid #EF444440;color:#EF4444;border-radius:6px;padding:3px 7px;cursor:pointer;font-size:12px">✕</button>`;
+
+    const rowStyle = cancelado ? 'opacity:.5;' : '';
+    html += `<tr style="${rowStyle}">
+      <td><input type="checkbox" class="rcf-chk-row" data-id="${v.id}" onchange="recConfUpdateBulkBar()" ${cancelado?'disabled':''} style="accent-color:var(--accent)"/></td>
+      <td style="font-weight:700;font-size:11px;color:#10B981;white-space:nowrap">${v.os_numero||'—'}</td>
+      <td style="white-space:nowrap">
+        <input type="date" value="${v.data_saida||''}" onchange="recConfAtualizarData('${v.id}',this.value)"
+          style="background:transparent;border:1px solid transparent;color:var(--text);border-radius:6px;padding:2px 6px;font-size:12px;outline:none;width:110px;cursor:pointer"
+          onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='transparent'"/>
+      </td>
+      <td style="color:var(--muted);white-space:nowrap">${hora}</td>
+      <td style="font-weight:600">${nomeDest}</td>
+      <td>${nomeRes}</td>
+      <td>${v.volume_m3||'—'}</td>
+      <td style="font-weight:600">${peso}</td>
+      <td style="color:var(--muted);font-size:11px;white-space:nowrap">${preco}</td>
+      <td>${valor}</td>
+      <td>${recConfStatusBadge(v.status)}</td>
+      <td style="max-width:160px">${obs}</td>
+      <td><div style="display:flex;gap:4px">${btnFotoRes} ${btnFotoVale}</div></td>
+      <td><div style="display:flex;gap:4px">${acoes}</div></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  tbl.innerHTML = html;
+  recConfUpdateBulkBar();
+}
+
+function recConfToggleAll(checked) {
+  document.querySelectorAll('.rcf-chk-row:not(:disabled)').forEach(c => c.checked = checked);
+  recConfUpdateBulkBar();
+}
+function recConfSelectAll()   { document.querySelectorAll('.rcf-chk-row:not(:disabled)').forEach(c => c.checked=true);  recConfUpdateBulkBar(); }
+function recConfDeselectAll() { document.querySelectorAll('.rcf-chk-row').forEach(c => c.checked=false); recConfUpdateBulkBar(); }
+
+function recConfUpdateBulkBar() {
+  const sel = [...document.querySelectorAll('.rcf-chk-row:checked')];
+  const bar = document.getElementById('rec-conf-bulk-bar');
+  if(bar) {
+    bar.style.display = sel.length ? 'flex' : 'none';
+    document.getElementById('rec-conf-sel-count').textContent = sel.length + ' selecionado' + (sel.length!==1?'s':'');
+  }
+}
+
+async function recConfBulkStatus(status) {
+  const ids = [...document.querySelectorAll('.rcf-chk-row:checked')].map(c => c.dataset.id);
+  if(!ids.length) return;
+  const label = {contestado:'Contestar',cancelado:'Cancelar'}[status];
+  if(!confirm(`${label} ${ids.length} registro(s)?`)) return;
+  try {
+    await Promise.all(ids.map(id =>
+      fetch(`${SUPA_URL}/rest/v1/vales_reciclaveis?id=eq.${id}`, {
+        method:'PATCH',
+        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+_session.access_token,'Content-Type':'application/json'},
+        body: JSON.stringify({status})
+      })
+    ));
+    recConfLoad();
+  } catch(e) { alert('Erro ao atualizar registros.'); }
+}
+
+async function recConfAtualizarStatus(id, status) {
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/vales_reciclaveis?id=eq.${id}`, {
+      method:'PATCH',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+_session.access_token,'Content-Type':'application/json'},
+      body: JSON.stringify({status})
+    });
+    if(!r.ok) throw new Error();
+    recConfLoad();
+  } catch(e) { alert('Erro ao atualizar status.'); }
+}
+
+async function recConfAtualizarData(id, novaData) {
+  if(!novaData) return;
+  try {
+    await fetch(`${SUPA_URL}/rest/v1/vales_reciclaveis?id=eq.${id}`, {
+      method:'PATCH',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+_session.access_token,'Content-Type':'application/json'},
+      body: JSON.stringify({data_saida: novaData})
+    });
+  } catch(e) { alert('Erro ao atualizar data.'); }
+}
+
+function recConfClear() {
+  document.getElementById('rcf-from').value = '';
+  document.getElementById('rcf-to').value   = '';
+  document.getElementById('rcf-destino').value = '';
+  document.getElementById('rcf-status').value  = '';
+  document.getElementById('rcf-residuo').value = '';
+  document.getElementById('rcf-os').value      = '';
+  document.getElementById('rcf-obs').value     = '';
+  _recConfRows = [];
+  document.getElementById('tbl-rec-conferencia').innerHTML = '';
+  document.getElementById('rec-conf-count-badge').textContent = '0 registros';
+  document.getElementById('rec-conf-bulk-bar').style.display = 'none';
+}
+
+// ── LANÇAR PESO / CONFERIR ─────────────────────────────────────
+let _recPesoVale = null;
+
+function recPesoOpen(id) {
+  const v = _recConfRows.find(x => x.id === id);
+  if(!v) return;
+  _recPesoVale = v;
+  document.getElementById('rp2-id').value = v.id;
+  document.getElementById('rp2-os-num').textContent = v.os_numero || '';
+  const nomeDest = v.destinos_reciclaveis?.nome || '—';
+  const nomeRes  = v.tipos_residuo_reciclavel?.nome || '—';
+  const precoTxt = v.preco_unitario != null
+    ? 'R$ ' + Number(v.preco_unitario).toLocaleString('pt-BR',{minimumFractionDigits:2}) + (REC_UN_LABEL[v.unidade_preco]||'')
+    : 'sem preço cadastrado';
+  document.getElementById('rp2-info').innerHTML =
+    '<b style="color:var(--text)">' + nomeDest + '</b><br>' +
+    nomeRes + ' · ' + (v.volume_m3||'—') + ' m³ · Tabela: <b style="color:#10B981">' + precoTxt + '</b>';
+  document.getElementById('rp2-peso').value = v.peso_kg != null ? v.peso_kg : '';
+  const valorInput = document.getElementById('rp2-valor');
+  delete valorInput.dataset.manual;
+  valorInput.value = v.valor_final != null ? v.valor_final : '';
+  if(v.valor_recebido != null) valorInput.dataset.manual = '1'; // já houve ajuste manual antes
+  recPesoRecalc();
+  document.getElementById('rec-peso-overlay').style.display = 'block';
+}
+
+function recPesoClose() {
+  document.getElementById('rec-peso-overlay').style.display = 'none';
+  _recPesoVale = null;
+}
+
+function recPesoRecalc() {
+  if(!_recPesoVale) return;
+  const peso = parseFloat(document.getElementById('rp2-peso').value) || null;
+  const precoTab = _recPesoVale.preco_unitario != null ? Number(_recPesoVale.preco_unitario) : null;
+  const calc = recCalcValor(peso, Number(_recPesoVale.volume_m3)||null, precoTab, _recPesoVale.unidade_preco);
+  document.getElementById('rp2-valor-calc').textContent = calc != null
+    ? 'R$ ' + Number(calc).toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—';
+  const valorInput = document.getElementById('rp2-valor');
+  if(calc != null && !valorInput.dataset.manual) valorInput.value = calc.toFixed(2);
+}
+
+async function recPesoSalvar() {
+  if(!_recPesoVale) return;
+  const id    = document.getElementById('rp2-id').value;
+  const peso  = parseFloat(document.getElementById('rp2-peso').value) || null;
+  const valor = parseFloat(document.getElementById('rp2-valor').value);
+  const un    = _recPesoVale.unidade_preco;
+
+  if((un === 'kg' || un === 'ton') && !peso) { alert('Informe o peso do ticket — o preço deste resíduo é por ' + un + '.'); return; }
+  if(isNaN(valor) || valor < 0) { alert('Informe o valor a receber.'); return; }
+
+  const precoTab = _recPesoVale.preco_unitario != null ? Number(_recPesoVale.preco_unitario) : null;
+  const calc = recCalcValor(peso, Number(_recPesoVale.volume_m3)||null, precoTab, un);
+  const body = {
+    peso_kg: peso,
+    valor_calculado: calc,
+    valor_recebido: (calc == null || Math.abs(valor - calc) > 0.004) ? valor : null,
+    status: 'conferido'
+  };
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/vales_reciclaveis?id=eq.${id}`, {
+      method:'PATCH',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+_session.access_token,'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    if(!r.ok){ const e=await r.json(); throw new Error(JSON.stringify(e)); }
+    recPesoClose();
+    recConfLoad();
+  } catch(e) { alert('Erro ao conferir: ' + e.message); }
+}
+
+// ── EDIÇÃO DE O.S. RECICLÁVEL ──────────────────────────────────
+let _recOsEditDestinos = [];
+
+async function recOsEditOpen(id) {
+  const v = _recConfRows.find(x => x.id === id);
+  if(!v) return;
+
+  const hdr = {'apikey':SUPA_KEY,'Authorization':'Bearer '+(_session?.access_token||SUPA_KEY)};
+  if(!_recOsEditDestinos.length) {
+    const r = await fetch(`${SUPA_URL}/rest/v1/destinos_reciclaveis?select=*,destinos_reciclaveis_precos(*)&order=nome.asc&limit=200`, {headers:hdr});
+    _recOsEditDestinos = await r.json();
+  }
+  if(!_recResiduosCache.length) await recCarregarResiduos();
+
+  const selD = document.getElementById('ro-destino');
+  selD.innerHTML = '<option value="">Selecione...</option>';
+  _recOsEditDestinos.forEach(d => {
+    const o = document.createElement('option');
+    o.value = d.id; o.textContent = d.nome;
+    if(d.id === v.destino_id) o.selected = true;
+    selD.appendChild(o);
+  });
+  const selR = document.getElementById('ro-residuo');
+  selR.innerHTML = '<option value="">—</option>';
+  _recResiduosCache.forEach(t => {
+    const o = document.createElement('option');
+    o.value = t.id; o.textContent = t.nome;
+    if(t.id === v.residuo_id) o.selected = true;
+    selR.appendChild(o);
+  });
+
+  document.getElementById('ro-id').value       = v.id;
+  document.getElementById('rec-os-edit-num').textContent = v.os_numero || '';
+  document.getElementById('ro-data').value     = v.data_saida || '';
+  document.getElementById('ro-hora').value     = v.hora_saida || '';
+  document.getElementById('ro-volume').value   = v.volume_m3 || '';
+  document.getElementById('ro-peso').value     = v.peso_kg != null ? v.peso_kg : '';
+  document.getElementById('ro-preco').value    = v.preco_unitario != null ? v.preco_unitario : '';
+  document.getElementById('ro-unidade').value  = v.unidade_preco || '';
+  document.getElementById('ro-valor').value    = v.valor_recebido != null ? v.valor_recebido : '';
+  document.getElementById('ro-status').value   = v.status || 'registrado';
+  document.getElementById('ro-obs').value      = v.observacoes || '';
+  document.getElementById('rec-os-edit-overlay').style.display = 'block';
+}
+
+function recOsEditClose() {
+  document.getElementById('rec-os-edit-overlay').style.display = 'none';
+}
+
+function recOsEditAutoPreco() {
+  const did = document.getElementById('ro-destino').value;
+  const rid = document.getElementById('ro-residuo').value;
+  const d = _recOsEditDestinos.find(x => x.id === did);
+  const p = (d?.destinos_reciclaveis_precos || []).find(x => x.ativo && x.residuo_id === rid);
+  if(p) {
+    document.getElementById('ro-preco').value = p.preco_unitario;
+    document.getElementById('ro-unidade').value = p.unidade;
+  }
+}
+
+async function recOsEditSalvar() {
+  const id = document.getElementById('ro-id').value;
+  const volume = parseFloat(document.getElementById('ro-volume').value) || null;
+  const peso   = parseFloat(document.getElementById('ro-peso').value) || null;
+  const preco  = document.getElementById('ro-preco').value !== '' ? parseFloat(document.getElementById('ro-preco').value) : null;
+  const un     = document.getElementById('ro-unidade').value || null;
+  const valorManual = document.getElementById('ro-valor').value !== '' ? parseFloat(document.getElementById('ro-valor').value) : null;
+
+  const body = {
+    data_saida:      document.getElementById('ro-data').value || null,
+    hora_saida:      document.getElementById('ro-hora').value || null,
+    destino_id:      document.getElementById('ro-destino').value || null,
+    residuo_id:      document.getElementById('ro-residuo').value || null,
+    volume_m3:       volume,
+    peso_kg:         peso,
+    preco_unitario:  preco,
+    unidade_preco:   un,
+    valor_calculado: recCalcValor(peso, volume, preco, un),
+    valor_recebido:  valorManual,
+    status:          document.getElementById('ro-status').value,
+    observacoes:     document.getElementById('ro-obs').value.trim() || null,
+  };
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/vales_reciclaveis?id=eq.${id}`, {
+      method:'PATCH',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+_session.access_token,'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    if(!r.ok){ const e=await r.json(); throw new Error(JSON.stringify(e)); }
+    recOsEditClose();
+    recConfLoad();
+  } catch(e) { alert('Erro ao salvar: ' + e.message); }
+}
 
 // ── DASHBOARD RECICLÁVEIS (implementado na etapa 5) ────────────
 function recDashUpdate() {}
