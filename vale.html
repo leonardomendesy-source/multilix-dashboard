@@ -100,6 +100,19 @@
 
   .alert{background:#EF444415;border:1px solid #EF444440;border-radius:var(--radius);padding:12px 14px;font-size:13px;color:var(--red);margin-bottom:16px;display:none}
   .sec-title{font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.8px;margin:20px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+
+  /* Tela de seleção de fluxo */
+  #tela-selecao{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:75dvh;padding:24px 16px;gap:16px}
+  .sel-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px;text-align:center}
+  .sel-sub{font-size:12px;color:var(--muted);margin-bottom:12px;text-align:center}
+  .sel-card{width:100%;max-width:360px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:26px 20px;cursor:pointer;text-align:center;transition:border-color .15s,transform .1s}
+  .sel-card:active{transform:scale(.98);border-color:var(--accent)}
+  .sel-card-icon{font-size:40px;display:block;margin-bottom:10px}
+  .sel-card-title{font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px}
+  .sel-card-desc{font-size:12px;color:var(--muted)}
+  .sel-card.rec{border-color:#10B98140}
+  .sel-card.rec:active{border-color:var(--green)}
+  .btn-voltar{background:none;border:none;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;padding:6px 0;margin-bottom:8px;display:flex;align-items:center;gap:6px}
 </style>
 </head>
 <body>
@@ -112,8 +125,27 @@
   </div>
 </div>
 
+<!-- TELA DE SELEÇÃO DE FLUXO -->
+<div id="tela-selecao">
+  <div>
+    <div class="sel-title">O que você vai lançar?</div>
+    <div class="sel-sub">Selecione o tipo de saída de resíduo</div>
+  </div>
+  <div class="sel-card" onclick="selecionarFluxo('frete')">
+    <span class="sel-card-icon">🚛</span>
+    <div class="sel-card-title">Frete Destinação</div>
+    <div class="sel-card-desc">MIX · Rachão Sujo — vale do freteiro</div>
+  </div>
+  <div class="sel-card rec" onclick="selecionarFluxo('rec')">
+    <span class="sel-card-icon">♻️</span>
+    <div class="sel-card-title">Recicláveis</div>
+    <div class="sel-card-desc">Madeira, papel, plástico, gesso, metal — venda para destino</div>
+  </div>
+</div>
+
 <!-- FORMULÁRIO -->
-<div class="content" id="tela-form">
+<div class="content" id="tela-form" style="display:none">
+  <button class="btn-voltar" onclick="voltarSelecao()">← Voltar à seleção</button>
   <div id="alert-msg" class="alert"></div>
 
   <div class="sec-title">Dados do Freteiro</div>
@@ -211,6 +243,126 @@
   </div>
   <div style="padding:16px;max-width:500px;width:100%;margin:0 auto">
     <div id="hist-lista"></div>
+  </div>
+</div>
+
+<!-- ═══════════ RECICLÁVEIS ═══════════ -->
+
+<!-- FORMULÁRIO RECICLÁVEIS -->
+<div class="content" id="tela-rec-form" style="display:none">
+  <button class="btn-voltar" onclick="voltarSelecao()">← Voltar à seleção</button>
+  <div id="rec-alert-msg" class="alert"></div>
+
+  <div class="sec-title">♻️ Destinação de Recicláveis</div>
+
+  <div class="field">
+    <label>Destino (comprador) *</label>
+    <select id="r-destino" onchange="onRecDestinoChange()">
+      <option value="">Carregando...</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label>Tipo de Resíduo Reciclável *</label>
+    <select id="r-residuo" onchange="onRecResiduoChange()">
+      <option value="">—</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label>Quantidade da Caçamba (m³) *</label>
+    <input type="number" id="r-volume" placeholder="0" step="0.5" inputmode="decimal"/>
+  </div>
+
+  <div class="field">
+    <label>Preço de Venda</label>
+    <div class="preco-preview" id="r-preco-display">—</div>
+    <div class="preco-label">Conforme tabela do destino — valor final calculado após pesagem</div>
+  </div>
+
+  <div class="sec-title">Fotografias Obrigatórias</div>
+
+  <div class="field">
+    <label>Foto do Resíduo</label>
+    <div class="foto-btn" id="btn-foto-residuo">
+      <input type="file" accept="image/*" capture="environment" class="foto-input" id="input-foto-residuo" onchange="onRecFoto('residuo',this)"/>
+      <span class="foto-btn-icon">📷</span>
+      <span class="foto-btn-label">Fotografar Resíduo</span>
+      <img class="foto-preview" id="prev-residuo"/>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Foto do Vale Físico</label>
+    <div class="foto-btn" id="btn-foto-recvale">
+      <input type="file" accept="image/*" capture="environment" class="foto-input" id="input-foto-recvale" onchange="onRecFoto('recvale',this)"/>
+      <span class="foto-btn-icon">🧾</span>
+      <span class="foto-btn-label">Fotografar Vale</span>
+      <img class="foto-preview" id="prev-recvale"/>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Observações (opcional)</label>
+    <textarea id="r-obs" placeholder="Informações adicionais..."></textarea>
+  </div>
+
+  <button class="btn-registrar" id="btn-registrar-rec" onclick="registrarSaidaRec()">Registrar Saída de Reciclável</button>
+  <button class="btn-hist" onclick="abrirHistoricoRec()">🕐 Ver Últimos Lançamentos</button>
+  <div style="height:32px"></div>
+</div>
+
+<!-- CONFIRMAÇÃO RECICLÁVEIS -->
+<div id="tela-rec-confirmacao" style="display:none;flex-direction:column;align-items:center;justify-content:center;min-height:80dvh;padding:30px 20px;text-align:center">
+  <div class="confirm-icon">♻️</div>
+  <div class="confirm-os" id="rc-os">—</div>
+  <div class="confirm-label">Ordem de Serviço gerada</div>
+  <div class="confirm-card">
+    <div class="confirm-row"><span class="confirm-row-label">Destino</span><span class="confirm-row-value" id="rc-destino">—</span></div>
+    <div class="confirm-row"><span class="confirm-row-label">Resíduo</span><span class="confirm-row-value" id="rc-residuo">—</span></div>
+    <div class="confirm-row"><span class="confirm-row-label">Volume</span><span class="confirm-row-value" id="rc-volume">—</span></div>
+    <div class="confirm-row"><span class="confirm-row-label">Hora</span><span class="confirm-row-value" id="rc-hora">—</span></div>
+  </div>
+  <button class="btn-novo" onclick="recNovoRegistro()">+ Novo Registro</button>
+</div>
+
+<!-- HISTÓRICO RECICLÁVEIS -->
+<div id="tela-rec-historico" style="display:none;flex-direction:column;min-height:80dvh">
+  <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:14px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10">
+    <button onclick="fecharHistoricoRec()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:0 4px">←</button>
+    <div>
+      <div style="font-size:14px;font-weight:700">Últimos Lançamentos — Recicláveis</div>
+      <div style="font-size:11px;color:var(--muted)">Hoje e ontem</div>
+    </div>
+    <button onclick="carregarHistoricoRec()" style="margin-left:auto;background:none;border:none;color:var(--accent);font-size:18px;cursor:pointer" title="Atualizar">⟳</button>
+  </div>
+  <div style="padding:16px;max-width:500px;width:100%;margin:0 auto">
+    <div id="rec-hist-lista"></div>
+  </div>
+</div>
+
+<!-- MODAL EDIÇÃO (reciclável) -->
+<div id="rec-edit-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:200;overflow-y:auto;padding:20px 16px" onclick="if(event.target===this)fecharEditValeRec()">
+  <div class="vale-edit-box" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <div>
+        <div style="font-size:15px;font-weight:700">Editar Lançamento ♻️</div>
+        <div id="re-os-num" style="font-size:11px;color:var(--green);font-weight:700;margin-top:2px"></div>
+      </div>
+      <button onclick="fecharEditValeRec()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
+    </div>
+    <input type="hidden" id="re-id"/>
+    <div class="ve-field"><label>Destino *</label><select id="re-destino" onchange="reAutoPreco()"><option value="">Carregando...</option></select></div>
+    <div class="ve-field"><label>Tipo de Resíduo *</label><select id="re-residuo" onchange="reAutoPreco()"><option value="">—</option></select></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="ve-field"><label>Volume (m³) *</label><input type="number" id="re-volume" step="0.5"/></div>
+      <div class="ve-field"><label>Preço</label><div class="ve-preco-badge" id="re-preco-badge" style="color:var(--green)">—</div></div>
+    </div>
+    <div class="ve-field"><label>Observações</label><textarea id="re-obs" rows="2" style="resize:none;height:70px"></textarea></div>
+    <div style="display:flex;gap:10px;margin-top:4px">
+      <button onclick="fecharEditValeRec()" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:12px;font-size:13px;font-weight:600;cursor:pointer">Cancelar</button>
+      <button onclick="salvarEditValeRec()" style="flex:2;background:var(--green);border:none;color:#000;border-radius:10px;padding:12px;font-size:13px;font-weight:700;cursor:pointer">Salvar Alterações</button>
+    </div>
   </div>
 </div>
 
@@ -634,6 +786,363 @@ async function salvarEditVale() {
     if(!r.ok){ const e=await r.json(); throw new Error(JSON.stringify(e)); }
     fecharEditVale();
     await carregarHistorico();
+  } catch(e) { alert('Erro ao salvar: ' + e.message); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// RECICLÁVEIS — seleção de fluxo + lançamento + histórico
+// ══════════════════════════════════════════════════════════════
+let _recDestinos = [];
+let _recFotos = { residuo: null, recvale: null };
+let _recPrecoSel = null;
+let _recHist = [];
+
+const REC_UNIDADE_LABEL = { kg: '/kg', ton: '/ton', carga: '/carga', m3: '/m³' };
+
+function selecionarFluxo(f) {
+  document.getElementById('tela-selecao').style.display = 'none';
+  if (f === 'rec') {
+    document.getElementById('tela-rec-form').style.display = 'block';
+    if (!_recDestinos.length) recInit();
+  } else {
+    document.getElementById('tela-form').style.display = 'block';
+  }
+}
+
+function voltarSelecao() {
+  document.getElementById('tela-form').style.display = 'none';
+  document.getElementById('tela-rec-form').style.display = 'none';
+  document.getElementById('tela-confirmacao').style.display = 'none';
+  document.getElementById('tela-rec-confirmacao').style.display = 'none';
+  document.getElementById('tela-selecao').style.display = 'flex';
+}
+
+// ── INIT RECICLÁVEIS ──────────────────────────────────────────
+async function recInit() {
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/destinos_reciclaveis?select=*,destinos_reciclaveis_precos(*,tipos_residuo_reciclavel(id,nome,ativo))&ativo=eq.true&order=nome.asc&limit=200`, {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+    });
+    _recDestinos = await r.json();
+    const sel = document.getElementById('r-destino');
+    sel.innerHTML = '<option value="">Selecione o destino...</option>';
+    _recDestinos.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = d.nome;
+      sel.appendChild(opt);
+    });
+  } catch(e) {
+    showRecAlert('Erro ao carregar destinos. Verifique a conexão.');
+  }
+}
+
+function onRecDestinoChange() {
+  const did = document.getElementById('r-destino').value;
+  const d = _recDestinos.find(x => x.id === did);
+  const precos = (d?.destinos_reciclaveis_precos || []).filter(p => p.ativo && p.tipos_residuo_reciclavel?.ativo !== false);
+  const selR = document.getElementById('r-residuo');
+  selR.innerHTML = '<option value="">—</option>';
+  precos.forEach(p => {
+    const o = document.createElement('option');
+    o.value = p.residuo_id;
+    o.textContent = p.tipos_residuo_reciclavel?.nome || '—';
+    selR.appendChild(o);
+  });
+  if (precos.length === 1) { selR.value = precos[0].residuo_id; }
+  onRecResiduoChange();
+}
+
+function onRecResiduoChange() {
+  const did = document.getElementById('r-destino').value;
+  const rid = document.getElementById('r-residuo').value;
+  const d = _recDestinos.find(x => x.id === did);
+  const p = (d?.destinos_reciclaveis_precos || []).find(x => x.ativo && x.residuo_id === rid);
+  _recPrecoSel = p || null;
+  const disp = document.getElementById('r-preco-display');
+  if (p) {
+    disp.textContent = 'R$ ' + Number(p.preco_unitario).toLocaleString('pt-BR', {minimumFractionDigits:2}) + (REC_UNIDADE_LABEL[p.unidade] || '');
+  } else {
+    disp.textContent = '—';
+  }
+}
+
+// ── FOTOS RECICLÁVEIS (reusa comprimirImagem) ─────────────────
+function onRecFoto(tipo, input) {
+  const file = input.files[0];
+  if (!file) return;
+  comprimirImagem(file, 800, 0.75, blob => {
+    _recFotos[tipo] = blob;
+    const prev = document.getElementById('prev-' + tipo);
+    prev.src = URL.createObjectURL(blob);
+    prev.style.display = 'block';
+    document.getElementById('btn-foto-' + tipo).classList.add('ok');
+    document.querySelector('#btn-foto-' + tipo + ' .foto-btn-label').textContent = '✓ Foto capturada';
+  });
+}
+
+// ── REGISTRAR RECICLÁVEL ──────────────────────────────────────
+async function registrarSaidaRec() {
+  hideRecAlert();
+  const did    = document.getElementById('r-destino').value;
+  const rid    = document.getElementById('r-residuo').value;
+  const volume = parseFloat(document.getElementById('r-volume').value);
+
+  if (!did)              return showRecAlert('Selecione o destino.');
+  if (!rid)              return showRecAlert('Selecione o tipo de resíduo.');
+  if (!volume || volume <= 0) return showRecAlert('Informe a quantidade em m³.');
+  if (!_recFotos.residuo) return showRecAlert('Foto do resíduo é obrigatória.');
+  if (!_recFotos.recvale) return showRecAlert('Foto do vale é obrigatória.');
+
+  const destino = _recDestinos.find(x => x.id === did);
+  const hoje = new Date().toLocaleDateString('sv-SE', {timeZone:'America/Sao_Paulo'});
+
+  setRecLoading(true, 'Enviando fotos...');
+
+  try {
+    const prefix = `reciclaveis/${hoje}/${did}`;
+    const ts = Date.now();
+    const urlResiduo = await uploadFoto(_recFotos.residuo, `${prefix}/${ts}_residuo.jpg`);
+    const urlVale    = await uploadFoto(_recFotos.recvale, `${prefix}/${ts}_vale.jpg`);
+
+    setRecLoading(true, 'Salvando registro...');
+
+    const body = {
+      data_saida:      hoje,
+      destino_id:      did,
+      residuo_id:      rid,
+      volume_m3:       volume,
+      preco_unitario:  _recPrecoSel?.preco_unitario ?? null,
+      unidade_preco:   _recPrecoSel?.unidade ?? null,
+      foto_residuo_url: urlResiduo,
+      foto_vale_url:    urlVale,
+      observacoes:     document.getElementById('r-obs').value.trim() || null,
+      status:          'registrado'
+    };
+
+    const r = await fetch(`${SUPA_URL}/rest/v1/vales_reciclaveis`, {
+      method: 'POST', headers: HDR, body: JSON.stringify(body)
+    });
+    if (!r.ok) { const e = await r.json(); throw new Error(JSON.stringify(e)); }
+    const res = await r.json();
+    const registro = res[0];
+
+    setRecLoading(false);
+    recMostrarConfirmacao(registro, destino?.nome || '—');
+
+  } catch(e) {
+    setRecLoading(false);
+    showRecAlert('Erro ao registrar: ' + e.message);
+  }
+}
+
+function recMostrarConfirmacao(reg, nomeDestino) {
+  document.getElementById('rc-os').textContent      = reg.os_numero || '—';
+  document.getElementById('rc-destino').textContent = nomeDestino;
+  const selR = document.getElementById('r-residuo');
+  document.getElementById('rc-residuo').textContent = selR.options[selR.selectedIndex]?.textContent || '—';
+  document.getElementById('rc-volume').textContent  = (reg.volume_m3 || '—') + ' m³';
+  const hora = new Date(reg.created_at).toLocaleTimeString('pt-BR', {timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('rc-hora').textContent = hora;
+
+  document.getElementById('tela-rec-form').style.display = 'none';
+  document.getElementById('tela-rec-confirmacao').style.display = 'flex';
+}
+
+function recNovoRegistro() {
+  document.getElementById('tela-rec-confirmacao').style.display = 'none';
+  document.getElementById('tela-rec-form').style.display = 'block';
+  document.getElementById('r-destino').value = '';
+  document.getElementById('r-residuo').innerHTML = '<option value="">—</option>';
+  document.getElementById('r-volume').value = '';
+  document.getElementById('r-obs').value = '';
+  document.getElementById('r-preco-display').textContent = '—';
+  _recFotos = { residuo: null, recvale: null };
+  _recPrecoSel = null;
+  ['residuo','recvale'].forEach(t => {
+    document.getElementById('btn-foto-'+t).classList.remove('ok');
+    document.querySelector('#btn-foto-'+t+' .foto-btn-label').textContent = t==='residuo' ? 'Fotografar Resíduo' : 'Fotografar Vale';
+    const prev = document.getElementById('prev-'+t);
+    prev.src=''; prev.style.display='none';
+    document.getElementById('input-foto-'+t).value='';
+  });
+  hideRecAlert();
+}
+
+// ── UTILS RECICLÁVEIS ─────────────────────────────────────────
+function showRecAlert(msg){ const el=document.getElementById('rec-alert-msg'); el.textContent=msg; el.style.display='block'; window.scrollTo({top:0,behavior:'smooth'}); }
+function hideRecAlert(){ document.getElementById('rec-alert-msg').style.display='none'; }
+function setRecLoading(show, txt=''){
+  const ov=document.getElementById('loading-overlay');
+  ov.style.display=show?'flex':'none';
+  if(txt) document.getElementById('loading-text').textContent=txt;
+  document.getElementById('btn-registrar-rec').disabled=show;
+}
+
+function recBadgeStatus(s) {
+  const map = { registrado:'badge-reg', conferido:'badge-conf', cancelado:'badge-canc', contestado:'badge-cont' };
+  const cls = map[s] || 'badge-reg';
+  return `<span class="badge ${cls}">${s}</span>`;
+}
+
+// ── HISTÓRICO RECICLÁVEIS ─────────────────────────────────────
+async function abrirHistoricoRec() {
+  document.getElementById('tela-rec-form').style.display = 'none';
+  document.getElementById('tela-rec-confirmacao').style.display = 'none';
+  document.getElementById('tela-rec-historico').style.display = 'flex';
+  await carregarHistoricoRec();
+}
+
+function fecharHistoricoRec() {
+  document.getElementById('tela-rec-historico').style.display = 'none';
+  document.getElementById('tela-rec-form').style.display = 'block';
+}
+
+async function carregarHistoricoRec() {
+  const lista = document.getElementById('rec-hist-lista');
+  lista.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:30px">Carregando...</div>';
+  try {
+    const ontem = new Date(Date.now() - 86400000).toLocaleDateString('sv-SE', {timeZone:'America/Sao_Paulo'});
+    const r = await fetch(
+      `${SUPA_URL}/rest/v1/vales_reciclaveis?select=*,destinos_reciclaveis(nome),tipos_residuo_reciclavel(nome)&data_saida=gte.${ontem}&order=created_at.desc&limit=50`,
+      { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY } }
+    );
+    _recHist = await r.json();
+    if (!_recHist.length) { lista.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:30px">Nenhum lançamento encontrado.</div>'; return; }
+    lista.innerHTML = _recHist.map(v => {
+      const nomeDest = v.destinos_reciclaveis?.nome || '—';
+      const nomeRes  = v.tipos_residuo_reciclavel?.nome || '—';
+      const hora = new Date(v.created_at).toLocaleTimeString('pt-BR', {timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'});
+      const canCancel = v.status !== 'cancelado';
+      const obsHtml = v.observacoes ? '<br><span style="color:var(--muted2);font-style:italic">' + v.observacoes + '</span>' : '';
+      const cancelBtn = canCancel ? `<button class="hist-btn-cancel" onclick="cancelarValeRec('${v.id}')">✕ Cancelar</button>` : '<div style="flex:1"></div>';
+      return `<div class="hist-item">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div class="hist-os" style="color:var(--green)">${v.os_numero || '—'}</div>
+          ${recBadgeStatus(v.status)}
+        </div>
+        <div class="hist-info">
+          ${nomeDest}<br>
+          ${nomeRes} · ${v.volume_m3 || '—'}m³<br>
+          <span style="color:var(--muted2)">${v.data_saida || ''} ${hora}</span>
+          ${obsHtml}
+        </div>
+        <div class="hist-actions">
+          <button class="hist-btn-edit" onclick="abrirEditValeRec('${v.id}')">✏ Editar</button>
+          ${cancelBtn}
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    lista.innerHTML = '<div style="color:var(--red);font-size:13px;text-align:center;padding:30px">Erro ao carregar.</div>';
+  }
+}
+
+async function cancelarValeRec(id) {
+  if (!confirm('Cancelar este lançamento?')) return;
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/vales_reciclaveis?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'cancelado' })
+    });
+    if (!r.ok) throw new Error('Falha');
+    await carregarHistoricoRec();
+  } catch(e) { alert('Erro ao cancelar: ' + e.message); }
+}
+
+// ── EDIÇÃO RECICLÁVEL ─────────────────────────────────────────
+let _rePrecoAtual = null;
+let _reUnidadeAtual = null;
+
+async function abrirEditValeRec(id) {
+  const v = _recHist.find(x => x.id === id);
+  if (!v) return;
+  if (!_recDestinos.length) await recInit();
+  const selD = document.getElementById('re-destino');
+  selD.innerHTML = '<option value="">Selecione...</option>';
+  _recDestinos.forEach(d => {
+    const o = document.createElement('option');
+    o.value = d.id; o.textContent = d.nome;
+    if (d.id === v.destino_id) o.selected = true;
+    selD.appendChild(o);
+  });
+  // popula resíduos do destino selecionado (mantém o atual mesmo sem preço)
+  reFillResiduos(v.destino_id, v.residuo_id, v.tipos_residuo_reciclavel?.nome);
+  document.getElementById('re-id').value        = v.id;
+  document.getElementById('re-os-num').textContent = v.os_numero || '';
+  document.getElementById('re-volume').value    = v.volume_m3 || '';
+  document.getElementById('re-obs').value       = v.observacoes || '';
+  _rePrecoAtual = v.preco_unitario ?? null;
+  _reUnidadeAtual = v.unidade_preco ?? null;
+  reRenderPrecoBadge();
+  document.getElementById('rec-edit-overlay').style.display = 'block';
+}
+
+function reFillResiduos(destinoId, residuoIdSel, residuoNomeAtual) {
+  const d = _recDestinos.find(x => x.id === destinoId);
+  const precos = (d?.destinos_reciclaveis_precos || []).filter(p => p.ativo);
+  const selR = document.getElementById('re-residuo');
+  selR.innerHTML = '<option value="">—</option>';
+  let achou = false;
+  precos.forEach(p => {
+    const o = document.createElement('option');
+    o.value = p.residuo_id;
+    o.textContent = p.tipos_residuo_reciclavel?.nome || '—';
+    if (p.residuo_id === residuoIdSel) { o.selected = true; achou = true; }
+    selR.appendChild(o);
+  });
+  if (!achou && residuoIdSel) {
+    const o = document.createElement('option');
+    o.value = residuoIdSel;
+    o.textContent = residuoNomeAtual || 'Resíduo atual';
+    o.selected = true;
+    selR.appendChild(o);
+  }
+}
+
+function reRenderPrecoBadge() {
+  const badge = document.getElementById('re-preco-badge');
+  badge.textContent = _rePrecoAtual != null
+    ? 'R$ ' + Number(_rePrecoAtual).toLocaleString('pt-BR', {minimumFractionDigits:2}) + (REC_UNIDADE_LABEL[_reUnidadeAtual] || '')
+    : '—';
+}
+
+function reAutoPreco() {
+  const did = document.getElementById('re-destino').value;
+  const rid = document.getElementById('re-residuo').value;
+  if (document.activeElement === document.getElementById('re-destino')) {
+    reFillResiduos(did, rid, null);
+  }
+  const d = _recDestinos.find(x => x.id === did);
+  const p = (d?.destinos_reciclaveis_precos || []).find(x => x.ativo && x.residuo_id === document.getElementById('re-residuo').value);
+  if (p) { _rePrecoAtual = p.preco_unitario; _reUnidadeAtual = p.unidade; }
+  reRenderPrecoBadge();
+}
+
+function fecharEditValeRec() {
+  document.getElementById('rec-edit-overlay').style.display = 'none';
+}
+
+async function salvarEditValeRec() {
+  const id = document.getElementById('re-id').value;
+  const body = {
+    destino_id:     document.getElementById('re-destino').value || null,
+    residuo_id:     document.getElementById('re-residuo').value || null,
+    volume_m3:      parseFloat(document.getElementById('re-volume').value) || null,
+    preco_unitario: _rePrecoAtual ?? null,
+    unidade_preco:  _reUnidadeAtual ?? null,
+    observacoes:    document.getElementById('re-obs').value.trim() || null,
+  };
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/vales_reciclaveis?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) { const e = await r.json(); throw new Error(JSON.stringify(e)); }
+    fecharEditValeRec();
+    await carregarHistoricoRec();
   } catch(e) { alert('Erro ao salvar: ' + e.message); }
 }
 
