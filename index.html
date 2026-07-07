@@ -4703,7 +4703,7 @@ function showPage(id,el){
   if(id==='usuarios') carregarUsuarios();
   if(id==='dest-pagamentos') showDestPagamentoPage();
   if(id==='att') updateATT();
-  if(id==='consolidado') attMergeSupabase().then(updateConsolidado);
+  if(id==='consolidado') updateConsolidado();
   if(id==='config') initMetaMixForm();
   if(id==='dest-freteiros') freteiroLoadPage();
   if(id==='dest-conferencia') confInit();
@@ -5261,8 +5261,7 @@ function applyResumoFilter(){S.resumoF.mes=document.getElementById('f-mes-resumo
 // mesclados em S.raw.destinacao antes de gerar o resumo — mesma fonte da tela Destinação.
 function resumoInit(){
   Promise.all([
-    typeof destMergeSupabase==='function'?destMergeSupabase():null,
-    typeof attMergeSupabase==='function'?attMergeSupabase():null
+    typeof destMergeSupabase==='function'?destMergeSupabase():null
   ]).then(()=>gerarResumo());
 }
 
