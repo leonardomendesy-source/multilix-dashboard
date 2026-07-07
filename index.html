@@ -6404,7 +6404,7 @@ function consFiltMes(rows){
 }
 function updateConsolidado(){
   const att=consFiltMes(S.raw.att);
-  const loc=consFiltMes(S.raw.locacao.filter(r=>(r.tipoServico==='Coleta'||r.tipoServico==='Retirada')&&!/viagem.?perdida/i.test(r.residuo||'')&&!/rollon|roll[\s-]?on/i.test(r.residuo||'')&&!/basculante/i.test(r.residuo||'')));
+  const loc=consFiltMes(S.raw.locacao.filter(r=>(r.tipoServico==='Coleta'||r.tipoServico==='Retirada')&&!/viagem.?perdida/i.test(r.residuo||'')&&r.volume===4));
   const all=[...att,...loc];
 
   const diagEl=document.getElementById('cons-diag-alert');
