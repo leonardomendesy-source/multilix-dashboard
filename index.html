@@ -7189,7 +7189,7 @@ function updateDestinacao(){
   // ── Totais e subconjuntos ─────────────────────────────────────
   const tVol=rows.reduce((s,r)=>s+r.volume,0);
   const tFat=rows.reduce((s,r)=>s+r.valor,0);
-  const tViag=rows.reduce((s,r)=>s+(r.viagens||0),0)||Math.ceil(tVol/17);
+  const tViag=tVol>0?Math.ceil(tVol/17):0;
   const custoMed=tVol>0?tFat/tVol:0;
   const custoViag=tViag>0?tFat/tViag:0;
 
