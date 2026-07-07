@@ -2795,6 +2795,7 @@ body { font-size: 13.5px !important; }
         <div class="fg"><label>Freteiro</label><select id="f-freteiro-dest" onchange="applyDestFilters()"><option value="">Todos</option></select></div>
         <div class="fg"><label>Veículo</label><select id="f-veic-dest" onchange="applyDestFilters()"><option value="">Todos</option></select></div>
         <button class="btn btn-ghost btn-sm" onclick="clearDestFilters()"><i data-lucide="rotate-ccw" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Limpar</button>
+        <button class="btn btn-sm" style="background:var(--green);color:#fff;border:none;margin-left:auto" onclick="exportDestinacaoExcel()"><i data-lucide="file-spreadsheet" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Exportar Excel</button>
       </div>
 
       <div id="dest-diag-alert"></div>
@@ -7309,6 +7310,91 @@ function updateDestinacao(){
   mkMensalComProj('cDestMesFat','destMesFat',S.raw.destinacao,'valor','#F59E0B','Custo R$',true);
 }
 
+// ── EXPORT EXCEL — DESTINAÇÃO DE RESÍDUOS ────────────────────────
+function exportDestinacaoExcel(){
+  const all = S.raw.destinacao;
+  if(!all.length){ alert('Nenhum dado carregado para exportar.'); return; }
+
+  const fD = d => {
+    if(!d || !(d instanceof Date)) return '';
+    return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+  };
+  const fMes = d => {
+    if(!d || !(d instanceof Date)) return '';
+    return String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+  };
+  const fSemana = d => {
+    if(!d || !(d instanceof Date)) return '';
+    const iso = d => { const t=new Date(d); t.setHours(0,0,0,0); t.setDate(t.getDate()+4-(t.getDay()||7)); const y=new Date(t.getFullYear(),0,1); return Math.ceil((((t-y)/86400000)+1)/7); };
+    return 'S'+String(iso(d)).padStart(2,'0')+'/'+d.getFullYear();
+  };
+  const fSt = s => ({registrado:'Registrado',confirmado:'Confirmado',cancelado:'Cancelado'}[s]||'Manual');
+
+  const header = [
+    'DATA','MÊS/ANO','SEMANA',
+    'Nº VALE / OS','Nº VALE FÍSICO',
+    'FRETEIRO','CLASSE (RESÍDUO)','VEÍCULO',
+    'CAPACIDADE (m³)','EQUIV. VIAGENS (÷17)',
+    'VALOR UNIT. (R$)','TOTAL (R$)',
+    'STATUS','OBSERVAÇÕES','FOTO CAMINHÃO','FOTO VALE'
+  ];
+
+  const rows = all.map(r => [
+    fD(r.data),
+    fMes(r.data),
+    fSemana(r.data),
+    r.pedido || '',
+    r.numeroVale || r.referencia || '',
+    r.freteiro || r.cliente || '',
+    r.residuo || '',
+    r.veiculo || '',
+    Number(r.volume || 0),
+    r.volume > 0 ? Math.ceil(Number(r.volume)/17) : 0,
+    Number(r.valorUnit || r.valor || 0),
+    Number(r.total || r.valor || 0),
+    fSt(r.status),
+    r.observacoes || '',
+    r.fotoCaminhao || '',
+    r.fotoVale || ''
+  ]);
+
+  // Ordena por data desc
+  rows.sort((a,b)=>{
+    const pa=a[0].split('/'), pb=b[0].split('/');
+    const da=new Date(+pa[2],+pa[1]-1,+pa[0]), db=new Date(+pb[2],+pb[1]-1,+pb[0]);
+    return db-da;
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+
+  ws['!cols'] = [
+    {wch:12},{wch:10},{wch:10},
+    {wch:14},{wch:14},
+    {wch:22},{wch:16},{wch:12},
+    {wch:15},{wch:17},
+    {wch:16},{wch:14},
+    {wch:12},{wch:32},{wch:55},{wch:55}
+  ];
+
+  // Estilo numérico nas colunas de valor (col I=8, J=9, K=10, L=11, base 0)
+  const nRows = rows.length;
+  for(let i=1; i<=nRows; i++){
+    ['I','J','K','L'].forEach(col=>{
+      const ref=col+String(i+1);
+      if(ws[ref] && ws[ref].t==='n') ws[ref].z='#,##0.00';
+    });
+  }
+
+  ws['!freeze'] = {xSplit:0, ySplit:1, topLeftCell:'A2', activeCell:'A2', sqref:'A2'};
+
+  const wb = XLSX.utils.book_new();
+  wb.Props = { Title:'Destinação de Resíduos', Author:'Multilix Dashboard' };
+  XLSX.utils.book_append_sheet(wb, ws, 'Destinação');
+
+  const suf = S.destF?.mes ? '_'+S.destF.mes : '';
+  XLSX.writeFile(wb, `Destinacao_Residuos${suf}_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
 // ── META DE DESTINAÇÃO MIX — bloco de acompanhamento mensal (topo da Destinação) ──
 function renderMixMetaDestinacao(mes){
   const warnEl=document.getElementById('dest-mix-meta-warn');
@@ -8702,6 +8788,11 @@ async function destMergeSupabase() {
         valorUnit:  Number(v.preco_unitario || 0),
         pago: '', tipoDia: '', bloco: '',
         tipo: 'destinacao', cliente: v.freteiros?.nome || '',
+        status:       v.status || '',
+        numeroVale:   v.numero_vale_fisico || '',
+        fotoCaminhao: v.foto_caminhao_url || '',
+        fotoVale:     v.foto_vale_url || '',
+        observacoes:  v.observacoes || '',
         _fromSupabase: true
       }));
 
