@@ -3936,6 +3936,7 @@ async function syncSupabase(){
       });
     }
     _supaConnected = true;
+    await destMergeSupabase();
     cdfLoadDestinos();
     const ts = new Date();
     document.getElementById('lastUpdate').textContent = ts.toLocaleString('pt-BR');
@@ -4700,7 +4701,7 @@ function showPage(id,el){
   closeMobileMenu();
   if(id==='usuarios') carregarUsuarios();
   if(id==='dest-pagamentos') showDestPagamentoPage();
-  if(id==='att') attMergeSupabase().then(updateATT);
+  if(id==='att') updateATT();
   if(id==='consolidado') attMergeSupabase().then(updateConsolidado);
   if(id==='config') initMetaMixForm();
   if(id==='dest-freteiros') freteiroLoadPage();
@@ -6403,7 +6404,7 @@ function consFiltMes(rows){
 }
 function updateConsolidado(){
   const att=consFiltMes(S.raw.att);
-  const loc=consFiltMes(S.raw.locacao.filter(r=>r.tipoServico==='Coleta'||r.tipoServico==='Retirada'));
+  const loc=consFiltMes(S.raw.locacao.filter(r=>(r.tipoServico==='Coleta'||r.tipoServico==='Retirada')&&!/viagem.?perdida/i.test(r.residuo||'')&&!/rollon|roll[\s-]?on/i.test(r.residuo||'')&&!/basculante/i.test(r.residuo||'')));
   const all=[...att,...loc];
 
   const diagEl=document.getElementById('cons-diag-alert');
@@ -8706,7 +8707,7 @@ async function destMergeSupabase() {
 
     S.raw.destinacao = [...S.raw.destinacao, ...mapeados];
     applyDestFilters();
-  } catch(e) {}
+  } catch(e) { applyDestFilters(); }
 }
 
 // Mescla vales lançados em /entrada-terceiros (vales_descarga + vale_descarga_itens) em
