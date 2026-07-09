@@ -112,7 +112,34 @@
   .sel-card-desc{font-size:12px;color:var(--muted)}
   .sel-card.rec{border-color:#10B98140}
   .sel-card.rec:active{border-color:var(--green)}
+  .sel-card.dash{border-color:#3B82F640}
+  .sel-card.dash:active{border-color:#3B82F6}
   .btn-voltar{background:none;border:none;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;padding:6px 0;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+
+  /* DASHBOARD DESTINAÇÃO */
+  #tela-dashboard{display:none;flex-direction:column;min-height:80dvh;padding:16px;max-width:500px;width:100%;margin:0 auto}
+  .dash-mes-wrap{position:relative;margin-bottom:18px}
+  .dash-mes-sel{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:12px 14px;font-size:15px;outline:none;font-family:var(--font);-webkit-appearance:none;appearance:none;cursor:pointer}
+  .dash-mes-sel:focus{border-color:#3B82F6}
+  .dash-mes-arrow{position:absolute;right:14px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--muted);font-size:12px}
+  .dash-sec{font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.7px;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+  .dash-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
+  .dash-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 14px}
+  .dash-card-label{font-size:10px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}
+  .dash-card-num{font-size:32px;font-weight:900;letter-spacing:-.5px;line-height:1;color:var(--accent)}
+  .dash-card-unit{font-size:11px;color:var(--muted);margin-top:3px}
+  .dash-card-vol{font-size:13px;font-weight:700;color:var(--muted);margin-top:4px}
+  .dash-card-proj{font-size:11px;color:var(--muted2);margin-top:8px;padding-top:7px;border-top:1px solid var(--border)}
+  .dash-card-meta{font-size:11px;color:var(--accent);margin-top:4px;font-weight:700}
+  .dash-card.rachao .dash-card-num{color:var(--red)}
+  .dash-table{width:100%;border-collapse:collapse;font-size:13px}
+  .dash-table th{padding:8px 6px;border-bottom:2px solid var(--border);text-align:left;font-size:10px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px}
+  .dash-table td{padding:9px 6px;border-bottom:1px solid var(--border);color:var(--text)}
+  .dash-table tr:last-child td{border-bottom:none}
+  .dash-table .num{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+  .dash-table .proj{text-align:right;font-size:11px;color:var(--muted2)}
+  .dash-loading{text-align:center;color:var(--muted);padding:40px 20px;font-size:13px}
+  .dash-badge{display:inline-block;background:#3B82F620;color:#3B82F6;border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700;margin-left:6px;vertical-align:middle}
 </style>
 </head>
 <body>
@@ -141,6 +168,21 @@
     <div class="sel-card-title">Recicláveis</div>
     <div class="sel-card-desc">Madeira, papel, plástico, gesso, metal — venda para destino</div>
   </div>
+  <div class="sel-card dash" onclick="selecionarFluxo('dashboard')">
+    <span class="sel-card-icon">📊</span>
+    <div class="sel-card-title">Dashboard Destinação</div>
+    <div class="sel-card-desc">Acompanhe MIX, Rachão e Recicláveis por mês com projeções</div>
+  </div>
+</div>
+
+<!-- TELA DASHBOARD DESTINAÇÃO -->
+<div id="tela-dashboard">
+  <button class="btn-voltar" onclick="voltarSelecao()">← Voltar à seleção</button>
+  <div class="dash-mes-wrap">
+    <select class="dash-mes-sel" id="dash-mes" onchange="carregarDashboard(this.value)"></select>
+    <span class="dash-mes-arrow">▼</span>
+  </div>
+  <div id="dash-content"><div class="dash-loading">Carregando...</div></div>
 </div>
 
 <!-- FORMULÁRIO -->
@@ -804,6 +846,8 @@ function selecionarFluxo(f) {
   if (f === 'rec') {
     document.getElementById('tela-rec-form').style.display = 'block';
     if (!_recDestinos.length) recInit();
+  } else if (f === 'dashboard') {
+    abrirDashboard();
   } else {
     document.getElementById('tela-form').style.display = 'block';
   }
@@ -814,7 +858,139 @@ function voltarSelecao() {
   document.getElementById('tela-rec-form').style.display = 'none';
   document.getElementById('tela-confirmacao').style.display = 'none';
   document.getElementById('tela-rec-confirmacao').style.display = 'none';
+  document.getElementById('tela-dashboard').style.display = 'none';
   document.getElementById('tela-selecao').style.display = 'flex';
+}
+
+// ── DASHBOARD DESTINAÇÃO ──────────────────────────────────────────
+async function abrirDashboard() {
+  document.getElementById('tela-dashboard').style.display = 'flex';
+  const sel = document.getElementById('dash-mes');
+  if (!sel.options.length) {
+    const now = new Date();
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const val = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+      const lbl = d.toLocaleDateString('pt-BR', {month:'long', year:'numeric'});
+      const opt = document.createElement('option');
+      opt.value = val;
+      opt.textContent = lbl.charAt(0).toUpperCase() + lbl.slice(1);
+      sel.appendChild(opt);
+    }
+  }
+  await carregarDashboard(sel.value);
+}
+
+function _diasUteis(ano, mes, ate) {
+  let count = 0;
+  const fim = ate || new Date(ano, mes, 0);
+  const fim2 = new Date(Math.min(fim, new Date(ano, mes, 0)));
+  for (let d = new Date(ano, mes-1, 1); d <= fim2; d.setDate(d.getDate()+1)) {
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) count++;
+  }
+  return Math.max(count, 1);
+}
+
+async function carregarDashboard(mes) {
+  document.getElementById('dash-content').innerHTML = '<div class="dash-loading">Carregando...</div>';
+  const [ano, mesNum] = mes.split('-').map(Number);
+  const inicio = `${mes}-01`;
+  const ultimoDia = new Date(ano, mesNum, 0).getDate();
+  const fim = `${mes}-${String(ultimoDia).padStart(2,'0')}`;
+  const H = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY };
+  try {
+    const [rDest, rRec, rResid] = await Promise.all([
+      fetch(`${SUPA_URL}/rest/v1/vales_destinacao?select=tipo_residuo,capacidade_m3,tipo_veiculo&data_saida=gte.${inicio}&data_saida=lte.${fim}&status=neq.cancelado`, {headers:H}),
+      fetch(`${SUPA_URL}/rest/v1/vales_reciclaveis?select=residuo_id,volume_m3&data_saida=gte.${inicio}&data_saida=lte.${fim}&status=neq.cancelado`, {headers:H}),
+      fetch(`${SUPA_URL}/rest/v1/tipos_residuo_reciclavel?select=id,nome&order=nome.asc`, {headers:H}),
+    ]);
+    const dest   = await rDest.json();
+    const rec    = await rRec.json();
+    const resids = await rResid.json();
+
+    // ── Projeção ──
+    const hoje = new Date();
+    const esMesAtual = hoje.getFullYear()===ano && hoje.getMonth()+1===mesNum;
+    const totalDU  = _diasUteis(ano, mesNum, null);
+    const decorrDU = esMesAtual ? _diasUteis(ano, mesNum, hoje) : totalDU;
+    const fator    = totalDU / decorrDU;
+
+    // ── Frete MIX / RACHÃO ──
+    const mixD  = dest.filter(v => v.tipo_residuo === 'MIX');
+    const rachD = dest.filter(v => v.tipo_residuo === 'RACHÃO SUJO');
+    const mixVg  = mixD.length,  mixM3  = mixD.reduce((s,v)=>s+Number(v.capacidade_m3||0),0);
+    const rachVg = rachD.length, rachM3 = rachD.reduce((s,v)=>s+Number(v.capacidade_m3||0),0);
+    const mixProjVg  = esMesAtual ? Math.round(mixVg  * fator) : null;
+    const rachProjVg = esMesAtual ? Math.round(rachVg * fator) : null;
+
+    // Meta localStorage
+    let metaMixVg = null;
+    try { const m=(JSON.parse(localStorage.getItem('mlx_meta_mix')||'{}')||{})[mes]; if(m&&m.metaInicialManual) metaMixVg=m.metaInicialManual; } catch(e){}
+
+    const fmtN = v => Number(v).toLocaleString('pt-BR',{maximumFractionDigits:1});
+
+    function dashCard(label, viagens, m3, projVg, meta, isRach) {
+      const pct = meta ? Math.round(viagens/meta*100) : null;
+      return `<div class="dash-card${isRach?' rachao':''}">
+        <div class="dash-card-label">${label}</div>
+        <div class="dash-card-num">${viagens}<span style="font-size:14px;font-weight:600;margin-left:4px">vg</span></div>
+        <div class="dash-card-vol">${fmtN(m3)} m³</div>
+        ${projVg!=null?`<div class="dash-card-proj">Projeção: <strong>${projVg} viagens</strong></div>`:''}
+        ${meta?`<div class="dash-card-meta">Meta: ${meta} vg${pct!=null?' ('+pct+'%)'  :''}</div>`:''}
+      </div>`;
+    }
+
+    // ── Recicláveis ──
+    const byRes = {};
+    rec.forEach(v => {
+      if (!byRes[v.residuo_id]) byRes[v.residuo_id] = {vg:0, m3:0};
+      byRes[v.residuo_id].vg++;
+      byRes[v.residuo_id].m3 += Number(v.volume_m3||0);
+    });
+    const recRows = resids
+      .filter(r => byRes[r.id])
+      .sort((a,b) => byRes[b.id].m3 - byRes[a.id].m3)
+      .map(r => {
+        const d = byRes[r.id];
+        const pVg = esMesAtual ? Math.round(d.vg*fator*10)/10 : null;
+        const pM3 = esMesAtual ? Math.round(d.m3*fator) : null;
+        return `<tr>
+          <td>${r.nome}</td>
+          <td class="num">${d.vg}</td>
+          <td class="num">${fmtN(d.m3)}</td>
+          <td class="proj">${pVg!=null?'~'+pVg+' vg / '+pM3+' m³':'—'}</td>
+        </tr>`;
+      }).join('');
+
+    const semFreteMsg = !dest.length ? '<p style="font-size:12px;color:var(--muted2);text-align:center;margin-top:6px">Nenhuma saída registrada neste mês</p>' : '';
+    const semRecMsg   = !rec.length  ? '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px;font-size:12px">Nenhum reciclável neste mês</td></tr>' : '';
+    const projNote    = !esMesAtual  ? '<p style="font-size:11px;color:var(--muted2);text-align:center;margin-top:10px">Projeção disponível apenas para o mês atual</p>' : '';
+
+    document.getElementById('dash-content').innerHTML = `
+      <div class="dash-sec">🚛 Frete Destinação</div>
+      <div class="dash-cards">
+        ${dashCard('MIX', mixVg, mixM3, mixProjVg, metaMixVg, false)}
+        ${dashCard('Rachão Sujo', rachVg, rachM3, rachProjVg, null, true)}
+      </div>
+      ${semFreteMsg}
+      <div class="dash-sec">♻️ Recicláveis</div>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+        <table class="dash-table">
+          <thead><tr>
+            <th>Resíduo</th>
+            <th style="text-align:right">Viagens</th>
+            <th style="text-align:right">m³</th>
+            <th style="text-align:right">Projeção</th>
+          </tr></thead>
+          <tbody>${recRows||semRecMsg}</tbody>
+        </table>
+      </div>
+      ${projNote}
+      <div style="height:20px"></div>`;
+  } catch(e) {
+    document.getElementById('dash-content').innerHTML = `<div class="dash-loading" style="color:var(--red)">Erro ao carregar: ${e.message}</div>`;
+  }
 }
 
 // ── INIT RECICLÁVEIS ──────────────────────────────────────────
