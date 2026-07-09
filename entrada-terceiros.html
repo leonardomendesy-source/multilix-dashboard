@@ -750,9 +750,7 @@ ${itensTxt}
 
 Multilix — Gestão de Resíduos da Construção Civil
 (11) 2241-0006 · comercial@multilix.com.br`;
-  const tel = (_parceiroSel && _parceiroSel.telefone||'').replace(/\D/g,'');
-  const dest = tel ? (tel.length<=11 ? '55'+tel : tel) : '';
-  window.open(`https://wa.me/${dest}?text=${encodeURIComponent(txt)}`,'_blank');
+  window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`,'_blank');
 }
 
 function novoVale(){
