@@ -121,12 +121,55 @@ textarea{resize:none;height:80px}
 .sucesso-actions{display:flex;flex-direction:column;gap:10px;width:100%;max-width:400px}
 .btn-secondary{padding:12px 16px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:14px;border-radius:var(--radius);cursor:pointer;font-family:var(--font);font-weight:700}
 
+/* TELA SELEÇÃO */
+#tela-selecao{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:78dvh;padding:24px 20px;gap:14px;max-width:600px;width:100%;margin:0 auto}
+.sel-title{font-size:16px;font-weight:800;color:var(--text);margin-bottom:2px;text-align:center}
+.sel-sub{font-size:13px;color:var(--muted);margin-bottom:8px;text-align:center}
+.sel-card{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:26px 20px;cursor:pointer;text-align:center;transition:border-color .15s,transform .1s}
+.sel-card:active{transform:scale(.98);border-color:var(--accent)}
+.sel-card.hist{border-color:#3B82F640}
+.sel-card.hist:active{border-color:#3B82F6}
+.sel-card-icon{font-size:42px;display:block;margin-bottom:10px}
+.sel-card-title{font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px}
+.sel-card-desc{font-size:12px;color:var(--muted)}
+.btn-voltar{background:none;border:none;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;padding:8px 0;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+
+/* TELA HISTÓRICO */
+#tela-historico{display:none;flex-direction:column;min-height:80dvh;padding:16px;max-width:600px;width:100%;margin:0 auto}
+.hist-search{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);padding:13px 14px;font-size:15px;outline:none;font-family:var(--font);margin-bottom:14px;-webkit-appearance:none}
+.hist-search:focus{border-color:var(--accent)}
+.hist-list{flex:1}
+.hist-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:border-color .15s}
+.hist-item:active{border-color:var(--accent)}
+.hist-item-num{font-size:12px;font-weight:800;color:var(--accent);margin-bottom:3px}
+.hist-item-cli{font-size:14px;font-weight:700;color:var(--text);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist-item-meta{font-size:11px;color:var(--muted);line-height:1.6}
+.hist-empty{text-align:center;color:var(--muted);padding:40px 20px;font-size:14px}
+.hist-loading{text-align:center;color:var(--muted);padding:40px 20px;font-size:13px}
+
+/* TELA DETALHE O.S. */
+#tela-detalhe{display:none;flex-direction:column;min-height:80dvh;padding:16px;max-width:600px;width:100%;margin:0 auto}
+.det-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:14px}
+.det-num{font-size:22px;font-weight:900;color:var(--accent);letter-spacing:-.3px;margin-bottom:2px}
+.det-status{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;background:#3B82F620;color:#3B82F6;margin-bottom:12px}
+.det-row{display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--border)}
+.det-row:last-child{border-bottom:none}
+.det-row-label{font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.4px;margin-top:1px}
+.det-row-value{font-size:13px;font-weight:700;text-align:right;max-width:65%}
+.det-sec{font-size:10px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.7px;margin:16px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.det-item{background:var(--surface2);border-radius:8px;padding:10px 12px;margin-bottom:8px}
+.det-item-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px}
+.det-item-meta{font-size:11px;color:var(--muted);line-height:1.7}
+.det-actions{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+#det-email-status{display:none;font-size:12px;font-weight:600;border-radius:8px;padding:9px 12px;margin-bottom:4px;width:100%}
+
 /* COMPROVANTE IMPRESSÃO */
 #comprovante-print{display:none}
 @media print{
   @page{size:A4;margin:14mm}
   body{background:#fff}
   body > *{display:none!important}
+  #comprovante-print,#comprovante-print-det{display:block!important}
   #comprovante-print{display:block!important;font-family:Arial,Helvetica,sans-serif;color:#1a2f5e;font-size:10pt;max-width:150mm;margin:0 auto}
   .cp-header{text-align:center;padding-bottom:10px}
   .cp-logo{max-width:52mm;height:auto}
@@ -160,8 +203,50 @@ textarea{resize:none;height:80px}
   <div class="header-datetime" id="header-dt">—</div>
 </div>
 
+<!-- TELA SELEÇÃO INICIAL -->
+<div id="tela-selecao">
+  <div>
+    <div class="sel-title">ATT Multilix — Entrada de Terceiros</div>
+    <div class="sel-sub">O que você deseja fazer?</div>
+  </div>
+  <div class="sel-card" onclick="irParaFormulario()">
+    <span class="sel-card-icon">📋</span>
+    <div class="sel-card-title">Gerar Vale de Descarga</div>
+    <div class="sel-card-desc">Registrar nova entrada de resíduo de terceiros</div>
+  </div>
+  <div class="sel-card hist" onclick="irParaHistorico()">
+    <span class="sel-card-icon">🔍</span>
+    <div class="sel-card-title">Pesquisar / Visualizar O.S.</div>
+    <div class="sel-card-desc">Consultar, enviar por WhatsApp ou e-mail</div>
+  </div>
+</div>
+
+<!-- TELA HISTÓRICO -->
+<div id="tela-historico">
+  <button class="btn-voltar" onclick="voltarSelecao()">← Voltar</button>
+  <input class="hist-search" id="hist-search" type="text" placeholder="🔍  Buscar por cliente, gerador, caçamba, CTR/MTR, placa..." oninput="filtrarHistorico(this.value)"/>
+  <div class="hist-list" id="hist-list"><div class="hist-loading">Carregando ordens de serviço...</div></div>
+</div>
+
+<!-- TELA DETALHE O.S. -->
+<div id="tela-detalhe">
+  <button class="btn-voltar" onclick="voltarHistorico()">← Voltar à pesquisa</button>
+  <div class="det-card" id="det-cabecalho"></div>
+  <div id="det-itens-wrap"></div>
+  <div id="det-email-status"></div>
+  <div class="det-actions">
+    <button class="btn btn-primary" onclick="imprimirComprovanteDetalhe()">🖨️ Imprimir Comprovante</button>
+    <button class="btn-secondary" id="det-btn-email" onclick="enviarEmailDetalhe()">📧 Enviar por E-mail</button>
+    <button class="btn-secondary" onclick="enviarWhatsAppDetalhe()">💬 Enviar por WhatsApp</button>
+  </div>
+  <div style="height:30px"></div>
+</div>
+
+<!-- COMPROVANTE IMPRESSÃO (detalhe) -->
+<div id="comprovante-print-det"></div>
+
 <!-- FORMULÁRIO PRINCIPAL -->
-<div class="content" id="tela-form">
+<div class="content" id="tela-form" style="display:none">
 
   <div id="alert-msg" class="alert"></div>
 
@@ -768,8 +853,221 @@ function novoVale(){
   document.getElementById('sc-placa-row').style.display='none';
   hideAlert();
   document.getElementById('tela-sucesso').style.display='none';
-  document.getElementById('tela-form').style.display='block';
+  document.getElementById('tela-form').style.display='none';
+  mostrarTela('tela-selecao');
   window.scrollTo(0,0);
+}
+
+// ── NAVEGAÇÃO ────────────────────────────────────────────────────
+function mostrarTela(id){
+  ['tela-selecao','tela-form','tela-historico','tela-detalhe'].forEach(t=>{
+    const el=document.getElementById(t);
+    if(el) el.style.display = t===id ? (t==='tela-form'?'block':'flex') : 'none';
+  });
+  window.scrollTo(0,0);
+}
+
+function irParaFormulario(){ mostrarTela('tela-form'); }
+function voltarSelecao(){ mostrarTela('tela-selecao'); }
+
+// ── HISTÓRICO ────────────────────────────────────────────────────
+let _histAll = [];   // todos os vales carregados
+let _detVale = null; // vale/itens do detalhe aberto
+
+async function irParaHistorico(){
+  mostrarTela('tela-historico');
+  document.getElementById('hist-search').value = '';
+  document.getElementById('hist-list').innerHTML = '<div class="hist-loading">Carregando ordens de serviço...</div>';
+  try {
+    const r = await fetch(
+      `${SUPA_URL}/rest/v1/vales_descarga?select=*,vale_descarga_itens(*)&order=data_hora.desc&limit=200`,
+      {headers: HDR_NO_PREFER}
+    );
+    if(!r.ok) throw new Error(await r.text());
+    _histAll = await r.json();
+    renderHistorico(_histAll);
+  } catch(e){
+    document.getElementById('hist-list').innerHTML = `<div class="hist-empty">Erro ao carregar: ${esc(e.message)}</div>`;
+  }
+}
+
+function filtrarHistorico(q){
+  if(!q.trim()){ renderHistorico(_histAll); return; }
+  const lower = q.toLowerCase();
+  const found = _histAll.filter(v=>{
+    if((v.numero_vale||'').toLowerCase().includes(lower)) return true;
+    if((v.parceiro_nome_snapshot||'').toLowerCase().includes(lower)) return true;
+    if((v.gerador_nome_snapshot||'').toLowerCase().includes(lower)) return true;
+    if((v.motorista||'').toLowerCase().includes(lower)) return true;
+    if((v.placa||'').toLowerCase().includes(lower)) return true;
+    if((v.vale_descarga_itens||[]).some(it=>
+      (it.numero_cacamba||'').toLowerCase().includes(lower) ||
+      (it.ctr_mtr||'').toLowerCase().includes(lower) ||
+      (it.residuo_nome_snapshot||'').toLowerCase().includes(lower)
+    )) return true;
+    return false;
+  });
+  renderHistorico(found);
+}
+
+function renderHistorico(lista){
+  const el = document.getElementById('hist-list');
+  if(!lista.length){ el.innerHTML='<div class="hist-empty">Nenhuma O.S. encontrada.</div>'; return; }
+  el.innerHTML = lista.map(v=>{
+    const dt = new Date(v.data_hora).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    const itens = v.vale_descarga_itens||[];
+    const cacambas = itens.map(it=>it.numero_cacamba).filter(Boolean).join(', ');
+    return `<div class="hist-item" onclick="abrirDetalhe('${v.id}')">
+      <div class="hist-item-num">${esc(v.numero_vale)}</div>
+      <div class="hist-item-cli">${esc(v.parceiro_nome_snapshot||'—')}</div>
+      <div class="hist-item-meta">
+        ${dt} · ${itens.length} descarga(s) · ${fmtVol(v.volume_total_m3||0)} m³
+        ${v.gerador_nome_snapshot?` · Gerador: ${esc(v.gerador_nome_snapshot)}`:''}
+        ${cacambas?` · Caçambas: ${esc(cacambas)}`:''}
+        ${v.placa?` · ${esc(v.placa)}`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── DETALHE O.S. ─────────────────────────────────────────────────
+function voltarHistorico(){
+  _detVale=null;
+  document.getElementById('det-email-status').style.display='none';
+  mostrarTela('tela-historico');
+}
+
+function abrirDetalhe(id){
+  const v = _histAll.find(x=>x.id===id);
+  if(!v) return;
+  const itens = (v.vale_descarga_itens||[]).sort((a,b)=>String(a.created_at||'').localeCompare(String(b.created_at||'')));
+  _detVale = {vale:v, itens};
+
+  const dt = new Date(v.data_hora).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
+  const row=(l,val)=>`<div class="det-row"><span class="det-row-label">${l}</span><span class="det-row-value">${val}</span></div>`;
+
+  document.getElementById('det-cabecalho').innerHTML = `
+    <div class="det-num">${esc(v.numero_vale)}</div>
+    ${row('Data / Hora', esc(dt))}
+    ${row('Cliente', esc(v.parceiro_nome_snapshot||'—'))}
+    ${v.parceiro_doc_snapshot?row('CPF/CNPJ', esc(v.parceiro_doc_snapshot)):''}
+    ${v.gerador_nome_snapshot?row('Gerador', esc(v.gerador_nome_snapshot)):''}
+    ${v.placa?row('Placa', esc(v.placa)):''}
+    ${v.motorista?row('Motorista', esc(v.motorista)):''}
+    ${row('Descargas', String(itens.length))}
+    ${row('Volume Total', fmtVol(v.volume_total_m3||0)+' m³')}
+    ${v.preco_total!=null?row('Valor Total', fmtMoeda(v.preco_total)):''}
+    ${v.observacoes_gerais?`<div style="margin-top:10px;background:var(--surface2);border-radius:8px;padding:9px 12px;font-size:12px;color:var(--muted)"><strong>Obs.:</strong> ${esc(v.observacoes_gerais)}</div>`:''}`;
+
+  document.getElementById('det-itens-wrap').innerHTML = `
+    <div class="det-sec">Descargas Recebidas</div>
+    ${itens.map((it,i)=>`<div class="det-item">
+      <div class="det-item-title">#${i+1} — ${esc(it.equipamento_nome_snapshot||'—')} · ${fmtVol(it.volume_m3)} m³</div>
+      <div class="det-item-meta">
+        Resíduo: ${esc(it.residuo_nome_snapshot||'—')}
+        ${it.numero_cacamba?` · Caçamba: ${esc(it.numero_cacamba)}`:''}
+        ${it.ctr_mtr?` · CTR/MTR: ${esc(it.ctr_mtr)}`:''}
+        ${it.observacoes?`<br>Obs.: ${esc(it.observacoes)}`:''}
+      </div>
+    </div>`).join('')}`;
+
+  // configura botão e-mail
+  const parcEmail = (v.email_destinatario || '').trim();
+  const btnE = document.getElementById('det-btn-email');
+  const jaEnviado = !!v.email_enviado_em;
+  btnE.textContent = jaEnviado ? `📧 Reenviar por E-mail (enviado ${new Date(v.email_enviado_em).toLocaleDateString('pt-BR')})` : '📧 Enviar por E-mail';
+  document.getElementById('det-email-status').style.display='none';
+
+  construirComprovanteDetalhe({vale:v, itens, clienteNome:v.parceiro_nome_snapshot, geradorNome:v.gerador_nome_snapshot, placa:v.placa, motorista:v.motorista, obsGeral:v.observacoes_gerais, totalVol:v.volume_total_m3||0});
+  mostrarTela('tela-detalhe');
+}
+
+// ── WHATSAPP / E-MAIL DO DETALHE ─────────────────────────────────
+function enviarWhatsAppDetalhe(){
+  if(!_detVale) return;
+  const {vale:v, itens} = _detVale;
+  const dt = new Date(v.data_hora).toLocaleString('pt-BR');
+  const itensTxt = itens.map((it,i)=>
+    `  ${i+1}. ${it.equipamento_nome_snapshot||'—'} — ${fmtVol(it.volume_m3)} m³ — ${it.residuo_nome_snapshot||'—'}`+
+    (it.ctr_mtr?` (CTR/MTR ${it.ctr_mtr})`:'')+
+    (it.numero_cacamba?` [Caçamba ${it.numero_cacamba}]`:'')
+  ).join('\n');
+  const txt =
+`*MULTILIX — COMPROVANTE DE DESCARTE DE RESÍDUO*
+*${v.numero_vale}*
+
+Data/Hora: ${dt}
+Cliente: ${v.parceiro_nome_snapshot||'—'}`+
+(v.gerador_nome_snapshot?`\nGerador: ${v.gerador_nome_snapshot}`:'')+
+(v.placa?`\nPlaca: ${v.placa}`:'')+
+(v.motorista?`\nMotorista: ${v.motorista}`:'')+`
+
+*Descargas (${itens.length}):*
+${itensTxt}
+
+*Volume total: ${fmtVol(v.volume_total_m3||0)} m³*
+
+Multilix — Gestão de Resíduos da Construção Civil
+(11) 2241-0006 · comercial@multilix.com.br`;
+  window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`,'_blank');
+}
+
+function setDetEmailStatus(msg, cor){
+  const el = document.getElementById('det-email-status');
+  el.style.display='block'; el.textContent=msg;
+  el.style.background=cor+'18'; el.style.border='1px solid '+cor+'55'; el.style.color=cor;
+}
+
+async function enviarEmailDetalhe(){
+  if(!_detVale) return;
+  setDetEmailStatus('Enviando comprovante por e-mail...','#3B82F6');
+  try {
+    const r = await fetch('/api/enviar-comprovante',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({vale_id:_detVale.vale.id, force:true})
+    });
+    const res = await r.json();
+    if(res.status==='enviado') setDetEmailStatus('✓ Comprovante enviado para '+res.para,'#10B981');
+    else if(res.status==='ja_enviado') setDetEmailStatus('✓ Já enviado. Use o botão novamente para forçar reenvio.','#10B981');
+    else if(res.status==='sem_email') setDetEmailStatus('Cliente sem e-mail cadastrado no sistema.','#F59E0B');
+    else setDetEmailStatus('Falha no envio: '+(res.detail||res.error||'erro desconhecido'),'#EF4444');
+  } catch(e){ setDetEmailStatus('Falha no envio: '+e.message,'#EF4444'); }
+}
+
+function imprimirComprovanteDetalhe(){ window.print(); }
+
+function construirComprovanteDetalhe(d){
+  const now = new Date(d.vale.data_hora).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
+  const kv = (label,valor)=>`<tr><td>${label}:</td><td>${valor}</td></tr>`;
+  const linhas = [
+    kv('Data / Hora', esc(now)),
+    kv('Cliente', esc(d.clienteNome||'—')),
+    d.vale.parceiro_doc_snapshot ? kv('CPF/CNPJ', esc(d.vale.parceiro_doc_snapshot)) : '',
+    d.geradorNome ? kv('Gerador', esc(d.geradorNome)) : '',
+    d.placa ? kv('Placa', esc(d.placa)) : '',
+    d.motorista ? kv('Motorista', esc(d.motorista)) : '',
+    kv('Descargas', d.itens.length),
+    kv('Volume Total', fmtVol(d.totalVol)+' m³'),
+  ].join('');
+  const rows = d.itens.map((it,i)=>`<tr>
+    <td style="text-align:center">${i+1}</td><td>${esc(it.ctr_mtr||'—')}</td><td style="text-align:center">${esc(it.numero_cacamba||'—')}</td>
+    <td>${esc(it.equipamento_nome_snapshot||'—')}</td><td style="text-align:center">${fmtVol(it.volume_m3)}</td>
+    <td>${esc(it.residuo_nome_snapshot||'—')}</td>
+  </tr>`).join('');
+  document.getElementById('comprovante-print-det').innerHTML = `
+<div class="cp-header">
+  <img class="cp-logo" src="assets/logo-25-anos.jpg" alt="Multilix 25 anos"/>
+  <div class="cp-title">COMPROVANTE DE DESCARTE DE RESÍDUO ${esc(d.vale.numero_vale)}</div>
+  <div class="cp-subtitle">Multilix — Gestão de Resíduos da Construção Civil</div>
+  <div class="cp-endereco">ATT — Área de Transbordo e Triagem · Rod. Fernão Dias km 88,7 — Vila Itapegica, Guarulhos/SP · CEP 07053-171 · (11) 2241-0006</div>
+</div>
+<div class="cp-sep"></div>
+<table class="cp-kv"><tbody>${linhas}</tbody></table>
+<div class="cp-section">Descargas Recebidas</div>
+<table class="cp-itens"><thead><tr><th>#</th><th>CTR/MTR</th><th>Caçamba</th><th>Equipamento</th><th>Vol. m³</th><th>Resíduo</th></tr></thead><tbody>${rows}</tbody></table>
+${d.obsGeral?`<div class="cp-obs"><strong>Observações:</strong> ${esc(d.obsGeral)}</div>`:''}
+<div class="cp-assinatura">Responsável / Assinatura</div>
+<div class="cp-footer">Sistema de Gestão de Resíduos — Multilix · comercial@multilix.com.br</div>`;
 }
 
 // ── COMPROVANTE ──────────────────────────────────────────────────
