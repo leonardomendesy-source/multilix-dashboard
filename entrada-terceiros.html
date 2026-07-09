@@ -169,7 +169,6 @@ textarea{resize:none;height:80px}
   @page{size:A4;margin:14mm}
   body{background:#fff}
   body > *{display:none!important}
-  #comprovante-print,#comprovante-print-det{display:block!important}
   #comprovante-print{display:block!important;font-family:Arial,Helvetica,sans-serif;color:#1a2f5e;font-size:10pt;max-width:150mm;margin:0 auto}
   .cp-header{text-align:center;padding-bottom:10px}
   .cp-logo{max-width:52mm;height:auto}
@@ -242,8 +241,6 @@ textarea{resize:none;height:80px}
   <div style="height:30px"></div>
 </div>
 
-<!-- COMPROVANTE IMPRESSÃO (detalhe) -->
-<div id="comprovante-print-det"></div>
 
 <!-- FORMULÁRIO PRINCIPAL -->
 <div class="content" id="tela-form" style="display:none">
@@ -1055,7 +1052,7 @@ function construirComprovanteDetalhe(d){
     <td>${esc(it.equipamento_nome_snapshot||'—')}</td><td style="text-align:center">${fmtVol(it.volume_m3)}</td>
     <td>${esc(it.residuo_nome_snapshot||'—')}</td>
   </tr>`).join('');
-  document.getElementById('comprovante-print-det').innerHTML = `
+  document.getElementById('comprovante-print').innerHTML = `
 <div class="cp-header">
   <img class="cp-logo" src="assets/logo-25-anos.jpg" alt="Multilix 25 anos"/>
   <div class="cp-title">COMPROVANTE DE DESCARTE DE RESÍDUO ${esc(d.vale.numero_vale)}</div>
