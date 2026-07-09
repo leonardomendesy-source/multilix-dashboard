@@ -1,7 +1,4 @@
 {
   "name": "multilix-dashboard",
-  "private": true,
-  "dependencies": {
-    "nodemailer": "^6.9.14"
-  }
+  "private": true
 }

@@ -1,16 +1,12 @@
-// Envio do Comprovante de Descarte de Resíduo por e-mail (SMTP KingHost).
-// Roda como função serverless no Vercel porque o Supabase Edge Functions
-// bloqueia conexões SMTP de saída. Requer env SMTP_PASS no Vercel.
-const nodemailer = require('nodemailer');
-
+// Envio do Comprovante de Descarte de Resíduo por e-mail.
+// Vercel e Supabase bloqueiam SMTP de saída, então o envio real é delegado
+// a um workflow do n8n (webhook -> Email Send via SMTP KingHost).
+// Requer env N8N_WEBHOOK_URL no Vercel.
 const SUPA_URL = 'https://nbotdfkeiwqwgbesgkve.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ib3RkZmtlaXdxd2diZXNna3ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NDYyMDksImV4cCI6MjA5NjEyMjIwOX0.GmobP5xGzZtxUPwNrZIhMaevJdLz5Db2zEL_o6YtSqg';
 const H = { apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' };
 
-const SMTP_HOST = process.env.SMTP_HOST || 'smtp.kinghost.net';
-const SMTP_PORT = Number(process.env.SMTP_PORT || 465);
-const SMTP_USER = process.env.SMTP_USER || 'comercial@multilix.com.br';
-const SMTP_PASS = process.env.SMTP_PASS || '';
+const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL || '';
 
 const LOGO_URL = 'https://multilix-dashboard.vercel.app/assets/logo-25-anos.jpg';
 
@@ -74,7 +70,7 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
   const { vale_id, force } = req.body || {};
   if (!vale_id) return res.status(400).json({ error: 'vale_id_obrigatorio' });
-  if (!SMTP_PASS) return res.status(500).json({ status: 'erro', detail: 'SMTP_PASS nao configurado no Vercel' });
+  if (!N8N_WEBHOOK_URL) return res.status(500).json({ status: 'erro', detail: 'N8N_WEBHOOK_URL nao configurado no Vercel' });
 
   const rVale = await fetch(`${SUPA_URL}/rest/v1/vales_descarga?id=eq.${encodeURIComponent(vale_id)}&select=*,vale_descarga_itens(*),parceiros_att(email,enviar_comprovante_email,nome_fantasia)`, { headers: H });
   if (!rVale.ok) return res.status(500).json({ error: 'erro_busca_vale', detail: await rVale.text() });
@@ -95,20 +91,21 @@ module.exports = async (req, res) => {
     }).catch(()=>{});
   };
 
-  const transporter = nodemailer.createTransport({
-    host: SMTP_HOST, port: SMTP_PORT, secure: SMTP_PORT === 465,
-    auth: { user: SMTP_USER, pass: SMTP_PASS },
-    connectionTimeout: 15000, greetingTimeout: 15000, socketTimeout: 20000,
-  });
-
   try {
-    await transporter.sendMail({
-      from: `Multilix <${SMTP_USER}>`,
-      to: email,
-      subject: `Comprovante de Descarte de Resíduo ${vale.numero_vale} — Multilix`,
-      text: `Comprovante de Descarte de Resíduo ${vale.numero_vale} — Multilix. Cliente: ${vale.parceiro_nome_snapshot}. Volume total: ${vale.volume_total_m3} m³.`,
-      html: htmlComprovante(vale, itens),
+    const rSend = await fetch(N8N_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to: email,
+        subject: `Comprovante de Descarte de Resíduo ${vale.numero_vale} — Multilix`,
+        text: `Comprovante de Descarte de Resíduo ${vale.numero_vale} — Multilix. Cliente: ${vale.parceiro_nome_snapshot}. Volume total: ${vale.volume_total_m3} m³.`,
+        html: htmlComprovante(vale, itens),
+      }),
     });
+    const rBody = await rSend.json().catch(() => ({}));
+    if (!rSend.ok || rBody.status !== 'enviado') {
+      throw new Error(rBody.detail || `falha no envio (HTTP ${rSend.status})`);
+    }
     await logPatch({ email_enviado_em: new Date().toISOString(), email_destinatario: email, email_erro: null });
     return res.status(200).json({ status: 'enviado', para: email });
   } catch (err) {
