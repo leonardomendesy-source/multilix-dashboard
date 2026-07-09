@@ -163,6 +163,23 @@ textarea{resize:none;height:80px}
 .det-actions{display:flex;flex-direction:column;gap:10px;margin-top:6px}
 #det-email-status{display:none;font-size:12px;font-weight:600;border-radius:8px;padding:9px 12px;margin-bottom:4px;width:100%}
 
+/* MODAL EDIÇÃO */
+#edit-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:200;overflow-y:auto;padding:20px 16px;-webkit-overflow-scrolling:touch}
+.edit-box{max-width:520px;margin:0 auto;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px 20px 30px}
+.edit-title{font-size:15px;font-weight:800;color:var(--accent);margin-bottom:18px}
+.edit-sec{font-size:10px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.7px;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.edit-field{margin-bottom:12px}
+.edit-field label{display:block;font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px}
+.edit-field input,.edit-field select,.edit-field textarea{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 13px;font-size:14px;outline:none;font-family:var(--font);-webkit-appearance:none;appearance:none}
+.edit-field input:focus,.edit-field select:focus,.edit-field textarea:focus{border-color:var(--accent)}
+.edit-field select option{background:var(--surface2)}
+.edit-item-block{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px}
+.edit-item-label{font-size:12px;font-weight:700;color:var(--accent);margin-bottom:10px}
+.edit-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.edit-actions{display:flex;gap:10px;margin-top:20px}
+.btn-save{flex:1;padding:14px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:var(--radius);color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:var(--font)}
+.btn-cancel-edit{flex:1;padding:14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--muted);font-size:15px;font-weight:700;cursor:pointer;font-family:var(--font)}
+
 /* COMPROVANTE IMPRESSÃO */
 #comprovante-print{display:none}
 @media print{
@@ -234,11 +251,52 @@ textarea{resize:none;height:80px}
   <div id="det-itens-wrap"></div>
   <div id="det-email-status"></div>
   <div class="det-actions">
+    <button class="btn-secondary" onclick="abrirEdicaoOS()" style="border-color:var(--accent);color:var(--accent)">✏️ Editar O.S.</button>
     <button class="btn btn-primary" onclick="imprimirComprovanteDetalhe()">🖨️ Imprimir Comprovante</button>
     <button class="btn-secondary" id="det-btn-email" onclick="enviarEmailDetalhe()">📧 Enviar por E-mail</button>
     <button class="btn-secondary" onclick="enviarWhatsAppDetalhe()">💬 Enviar por WhatsApp</button>
   </div>
   <div style="height:30px"></div>
+</div>
+
+<!-- MODAL EDIÇÃO O.S. -->
+<div id="edit-overlay">
+  <div class="edit-box">
+    <div class="edit-title" id="edit-title">Editar O.S.</div>
+    <div id="edit-alert" style="display:none;background:#EF444415;border:1px solid #EF444440;border-radius:8px;padding:10px 13px;font-size:13px;color:var(--red);margin-bottom:12px"></div>
+
+    <div class="edit-sec">Dados Gerais</div>
+    <div class="edit-field">
+      <label>Data / Hora</label>
+      <input type="datetime-local" id="ed-data"/>
+    </div>
+    <div class="edit-field">
+      <label>Gerador</label>
+      <input type="text" id="ed-gerador" placeholder="Nome do gerador"/>
+    </div>
+    <div class="edit-row2">
+      <div class="edit-field">
+        <label>Placa</label>
+        <input type="text" id="ed-placa" placeholder="ABC1D23" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"/>
+      </div>
+      <div class="edit-field">
+        <label>Motorista</label>
+        <input type="text" id="ed-motorista" placeholder="Nome"/>
+      </div>
+    </div>
+    <div class="edit-field">
+      <label>Observações Gerais</label>
+      <textarea id="ed-obs" rows="2" style="resize:none;height:64px" placeholder="Observações da O.S."></textarea>
+    </div>
+
+    <div class="edit-sec">Descargas</div>
+    <div id="ed-itens"></div>
+
+    <div class="edit-actions">
+      <button class="btn-cancel-edit" onclick="fecharEdicaoOS()">Cancelar</button>
+      <button class="btn-save" onclick="salvarEdicaoOS()">Salvar</button>
+    </div>
+  </div>
 </div>
 
 
@@ -1033,6 +1091,167 @@ async function enviarEmailDetalhe(){
 }
 
 function imprimirComprovanteDetalhe(){ window.print(); }
+
+// ── EDIÇÃO DE O.S. ───────────────────────────────────────────────
+function abrirEdicaoOS(){
+  if(!_detVale) return;
+  const {vale:v, itens} = _detVale;
+
+  document.getElementById('edit-title').textContent = `Editar ${v.numero_vale}`;
+  document.getElementById('edit-alert').style.display='none';
+
+  // Converter data_hora para datetime-local (YYYY-MM-DDTHH:MM)
+  const dt = new Date(v.data_hora);
+  const pad = n=>String(n).padStart(2,'0');
+  const local = `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+  document.getElementById('ed-data').value = local;
+  document.getElementById('ed-gerador').value = v.gerador_nome_snapshot||'';
+  document.getElementById('ed-placa').value = v.placa||'';
+  document.getElementById('ed-motorista').value = v.motorista||'';
+  document.getElementById('ed-obs').value = v.observacoes_gerais||'';
+
+  // Montar formulário de itens
+  const eqOpts = _equipamentos.map(e=>`<option value="${e.id}" data-vol="${e.volume_m3_padrao||''}">${esc(e.nome)}</option>`).join('');
+  const resOpts = _residuos.map(r=>`<option value="${r.id}">${esc(r.nome)}</option>`).join('');
+
+  document.getElementById('ed-itens').innerHTML = itens.map((it,i)=>`
+    <div class="edit-item-block" data-item-id="${it.id}">
+      <div class="edit-item-label">Descarga #${i+1}</div>
+      <div class="edit-row2">
+        <div class="edit-field">
+          <label>Nº Caçamba</label>
+          <input type="text" class="ed-cacamba" value="${esc(it.numero_cacamba||'')}" placeholder="Ex: 908"/>
+        </div>
+        <div class="edit-field">
+          <label>CTR / MTR</label>
+          <input type="text" class="ed-ctr" value="${esc(it.ctr_mtr||'')}" placeholder="Nº do CTR"/>
+        </div>
+      </div>
+      <div class="edit-field">
+        <label>Equipamento</label>
+        <select class="ed-equip" onchange="onEditEquipChange(this)">
+          <option value="">Selecione...</option>
+          ${eqOpts}
+        </select>
+      </div>
+      <div class="edit-field">
+        <label>Tipo de Resíduo</label>
+        <select class="ed-residuo">
+          <option value="">Selecione...</option>
+          ${resOpts}
+        </select>
+      </div>
+      <div class="edit-field">
+        <label>Volume (m³)</label>
+        <input type="number" class="ed-volume" step="0.5" min="0" value="${it.volume_m3||0}"/>
+      </div>
+      <div class="edit-field">
+        <label>Observação do Item</label>
+        <input type="text" class="ed-item-obs" value="${esc(it.observacoes||'')}" placeholder="Observação específica"/>
+      </div>
+    </div>
+  `).join('');
+
+  // Preencher selects com valores atuais
+  document.querySelectorAll('#ed-itens .edit-item-block').forEach((block,i)=>{
+    const it = itens[i];
+    const selE = block.querySelector('.ed-equip');
+    const selR = block.querySelector('.ed-residuo');
+    if(it.equipamento_id) selE.value = it.equipamento_id;
+    if(it.residuo_id)     selR.value = it.residuo_id;
+  });
+
+  document.getElementById('edit-overlay').style.display='block';
+  document.body.style.overflow='hidden';
+}
+
+function onEditEquipChange(sel){
+  const opt = sel.options[sel.selectedIndex];
+  const vol = opt.dataset.vol;
+  if(vol){
+    const block = sel.closest('.edit-item-block');
+    block.querySelector('.ed-volume').value = vol;
+  }
+}
+
+function fecharEdicaoOS(){
+  document.getElementById('edit-overlay').style.display='none';
+  document.body.style.overflow='';
+}
+
+async function salvarEdicaoOS(){
+  if(!_detVale) return;
+  const {vale:v, itens} = _detVale;
+  const alertEl = document.getElementById('edit-alert');
+  alertEl.style.display='none';
+
+  const dataHoraLocal = document.getElementById('ed-data').value;
+  if(!dataHoraLocal){ alertEl.textContent='Informe a data/hora.'; alertEl.style.display='block'; return; }
+
+  showLoading('Salvando alterações...');
+  try {
+    // Patch vale
+    const valePayload = {
+      data_hora: new Date(dataHoraLocal).toISOString(),
+      gerador_nome_snapshot: document.getElementById('ed-gerador').value.trim()||null,
+      placa: document.getElementById('ed-placa').value.trim().toUpperCase()||null,
+      motorista: document.getElementById('ed-motorista').value.trim()||null,
+      observacoes_gerais: document.getElementById('ed-obs').value.trim()||null,
+    };
+    const rv = await fetch(`${SUPA_URL}/rest/v1/vales_descarga?id=eq.${encodeURIComponent(v.id)}`,
+      {method:'PATCH', headers:HDR, body:JSON.stringify(valePayload)});
+    if(!rv.ok) throw new Error(await rv.text());
+
+    // Patch cada item
+    const blocks = document.querySelectorAll('#ed-itens .edit-item-block');
+    await Promise.all(Array.from(blocks).map(async(block,i)=>{
+      const it = itens[i];
+      const equipId = block.querySelector('.ed-equip').value;
+      const residId = block.querySelector('.ed-residuo').value;
+      const equip = _equipamentos.find(e=>e.id===equipId);
+      const resid = _residuos.find(r=>r.id===residId);
+      const payload = {
+        numero_cacamba: block.querySelector('.ed-cacamba').value.trim()||null,
+        ctr_mtr: block.querySelector('.ed-ctr').value.trim()||null,
+        equipamento_id: equipId||it.equipamento_id,
+        equipamento_nome_snapshot: equip ? equip.nome : it.equipamento_nome_snapshot,
+        residuo_id: residId||it.residuo_id,
+        residuo_nome_snapshot: resid ? resid.nome : it.residuo_nome_snapshot,
+        volume_m3: parseFloat(block.querySelector('.ed-volume').value)||it.volume_m3,
+        observacoes: block.querySelector('.ed-item-obs').value.trim()||null,
+      };
+      const ri = await fetch(`${SUPA_URL}/rest/v1/vale_descarga_itens?id=eq.${encodeURIComponent(it.id)}`,
+        {method:'PATCH', headers:HDR, body:JSON.stringify(payload)});
+      if(!ri.ok) throw new Error(await ri.text());
+    }));
+
+    // Recalcular volume total e atualizar vale
+    const novoVol = Array.from(blocks).reduce((sum,block)=>sum+( parseFloat(block.querySelector('.ed-volume').value)||0),0);
+    await fetch(`${SUPA_URL}/rest/v1/vales_descarga?id=eq.${encodeURIComponent(v.id)}`,
+      {method:'PATCH', headers:HDR, body:JSON.stringify({volume_total_m3:novoVol})});
+
+    hideLoading();
+    fecharEdicaoOS();
+
+    // Recarregar o detalhe com dados atualizados
+    showLoading('Atualizando...');
+    const rAtual = await fetch(`${SUPA_URL}/rest/v1/vales_descarga?id=eq.${encodeURIComponent(v.id)}&select=*,vale_descarga_itens(*)`,
+      {headers:HDR_NO_PREFER});
+    const [vAtual] = await rAtual.json();
+    hideLoading();
+
+    // Atualizar cache em _histAll
+    const idx = _histAll.findIndex(x=>x.id===v.id);
+    if(idx>=0) _histAll[idx]=vAtual;
+
+    abrirDetalhe(v.id);
+  } catch(err){
+    hideLoading();
+    alertEl.textContent='Erro ao salvar: '+(err.message||err);
+    alertEl.style.display='block';
+    document.getElementById('edit-overlay').style.display='block';
+  }
+}
 
 function construirComprovanteDetalhe(d){
   const now = new Date(d.vale.data_hora).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
