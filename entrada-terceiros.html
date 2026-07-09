@@ -713,8 +713,8 @@ async function enviarComprovanteEmail(force){
   if(force && !(_parceiroSel && (_parceiroSel.email||'').trim())){ setEmailStatus('Cliente sem e-mail cadastrado.','#F59E0B'); return; }
   setEmailStatus('Enviando comprovante por e-mail...','#3B82F6');
   try {
-    const r = await fetch(`${SUPA_URL}/functions/v1/enviar-comprovante-vale`,{
-      method:'POST', headers:HDR_NO_PREFER,
+    const r = await fetch('/api/enviar-comprovante',{
+      method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({vale_id:_valeData.vale.id, force:!!force})
     });
     const res = await r.json();
