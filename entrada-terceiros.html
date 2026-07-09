@@ -124,27 +124,27 @@ textarea{resize:none;height:80px}
 /* COMPROVANTE IMPRESSÃO */
 #comprovante-print{display:none}
 @media print{
+  @page{size:A4;margin:14mm}
+  body{background:#fff}
   body > *{display:none!important}
-  #comprovante-print{display:block!important;font-family:Arial,sans-serif;color:#000;font-size:10pt;padding:8mm}
-  .cp-header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:8px;border-bottom:2px solid #000;margin-bottom:8px}
-  .cp-logo-area{display:flex;align-items:center;gap:10px}
-  .cp-logo-svg{width:44px;height:44px}
-  .cp-title-block .cp-title{font-size:15pt;font-weight:900;color:#10B981;line-height:1}
-  .cp-title-block .cp-subtitle{font-size:8pt;color:#555;margin-top:2px}
-  .cp-company{text-align:right;font-size:8pt;color:#444;line-height:1.4}
-  .cp-company strong{font-size:9pt;color:#000}
-  .cp-vale-num{font-size:13pt;font-weight:900;color:#000;text-align:right;margin-top:4px}
-  .cp-section{margin:8px 0 4px;font-weight:700;font-size:9pt;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #ccc;padding-bottom:2px;color:#333}
-  .cp-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 16px;margin-bottom:6px}
-  .cp-field label{font-size:7.5pt;color:#777;text-transform:uppercase}
-  .cp-field p{font-size:9.5pt;font-weight:600}
-  table{width:100%;border-collapse:collapse;font-size:8.5pt;margin:6px 0}
-  th{background:#f0f0f0;font-weight:700;padding:4px 6px;border:1px solid #ccc;text-align:left}
-  td{padding:4px 6px;border:1px solid #ccc}
-  .cp-totais{margin:6px 0;padding:8px;background:#f9f9f9;border-radius:4px;font-size:9pt}
-  .cp-obs{margin:6px 0;padding:6px;background:#fffbeb;border:1px solid #f0e68c;border-radius:4px;font-size:8.5pt}
-  .cp-assinaturas{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:16px}
-  .cp-ass-box{border-top:1px solid #000;padding-top:4px;font-size:8pt;text-align:center}
+  #comprovante-print{display:block!important;font-family:Arial,Helvetica,sans-serif;color:#1a2f5e;font-size:10pt;max-width:150mm;margin:0 auto}
+  .cp-header{text-align:center;padding-bottom:10px}
+  .cp-logo{max-width:52mm;height:auto}
+  .cp-title{font-size:14pt;font-weight:900;color:#1a2f5e;margin-top:10px;letter-spacing:.3pt}
+  .cp-subtitle{font-size:8.5pt;color:#666;margin-top:2px}
+  .cp-endereco{font-size:7.5pt;color:#888;margin-top:2px}
+  .cp-sep{border-top:2px solid #1a2f5e;margin:8px 0 4px}
+  .cp-kv{width:100%;border-collapse:collapse}
+  .cp-kv td{padding:5px 3px;border-bottom:1px dashed #b9bfcc;font-size:9.5pt}
+  .cp-kv td:first-child{color:#555;width:38%}
+  .cp-kv td:last-child{font-weight:700;text-align:right;color:#1a2f5e}
+  .cp-section{margin:12px 0 5px;font-weight:800;font-size:9pt;text-transform:uppercase;letter-spacing:.5px;color:#1a2f5e}
+  table.cp-itens{width:100%;border-collapse:collapse;font-size:8.5pt}
+  .cp-itens th{background:#eef1f6;font-weight:700;padding:4px 5px;border:1px solid #c9ced8;text-align:left;color:#1a2f5e}
+  .cp-itens td{padding:4px 5px;border:1px solid #c9ced8}
+  .cp-obs{margin:8px 0 0;padding:7px;background:#fffbeb;border:1px solid #f0e68c;border-radius:4px;font-size:8.5pt;color:#333}
+  .cp-assinatura{margin:34px auto 0;width:70%;border-top:1px solid #1a2f5e;padding-top:4px;font-size:8pt;text-align:center;color:#555}
+  .cp-footer{border-top:1px dashed #b9bfcc;margin-top:20px;padding-top:8px;text-align:center;font-size:7.5pt;color:#888}
 }
 </style>
 </head>
@@ -308,8 +308,11 @@ textarea{resize:none;height:80px}
     <div class="sucesso-row"><span class="sucesso-row-label">Volume Total</span><span class="sucesso-row-value" id="sc-vol">—</span></div>
     <div class="sucesso-row" id="sc-placa-row" style="display:none"><span class="sucesso-row-label">Placa</span><span class="sucesso-row-value" id="sc-placa">—</span></div>
   </div>
+  <div id="sc-email-status" style="display:none;font-size:12px;font-weight:600;border-radius:8px;padding:9px 12px;margin-bottom:12px;width:100%;max-width:400px"></div>
   <div class="sucesso-actions">
     <button class="btn btn-primary" onclick="imprimirComprovante()">🖨️ Imprimir Comprovante</button>
+    <button class="btn-secondary" id="btn-email" onclick="enviarComprovanteEmail(true)">📧 Enviar por E-mail</button>
+    <button class="btn-secondary" onclick="enviarWhatsApp()">💬 Enviar por WhatsApp</button>
     <button class="btn-secondary" onclick="novoVale()">+ Novo Vale</button>
   </div>
 </div>
@@ -347,7 +350,7 @@ setInterval(updateClock, 1000); updateClock();
 async function init(){
   try {
     const [rP, rR, rE, rG, rPr] = await Promise.all([
-      fetch(`${SUPA_URL}/rest/v1/parceiros_att?select=id,nome_fantasia,razao_social,documento&status=eq.ativo&order=nome_fantasia.asc&limit=500`,{headers:HDR_NO_PREFER}),
+      fetch(`${SUPA_URL}/rest/v1/parceiros_att?select=id,nome_fantasia,razao_social,documento,email,telefone,enviar_comprovante_email&status=eq.ativo&order=nome_fantasia.asc&limit=500`,{headers:HDR_NO_PREFER}),
       fetch(`${SUPA_URL}/rest/v1/tipos_residuo_att?select=id,nome&ativo=eq.true&order=ordem.asc`,{headers:HDR_NO_PREFER}),
       fetch(`${SUPA_URL}/rest/v1/equipamentos_att?select=id,nome,tipo,volume_m3_padrao&ativo=eq.true&order=ordem.asc`,{headers:HDR_NO_PREFER}),
       fetch(`${SUPA_URL}/rest/v1/geradores_att?select=id,nome&ativo=eq.true&order=nome.asc&limit=500`,{headers:HDR_NO_PREFER}),
@@ -406,11 +409,13 @@ function onClienteInput(q){
     </div>`
   });
 }
+let _parceiroSel = null; // parceiro selecionado (com email/telefone/opt-in)
 function selecionarParceiro(el){
   document.getElementById('v-cliente-input').value = el.dataset.nome;
   document.getElementById('v-cliente-id').value    = el.dataset.id;
   document.getElementById('v-cliente-razao').value = el.dataset.razao;
   document.getElementById('v-cliente-doc').value   = el.dataset.doc;
+  _parceiroSel = _parceiros.find(p=>p.id===el.dataset.id) || null;
   closeAc('ac-cliente'); atualizarFinalizar();
 }
 
@@ -687,10 +692,72 @@ function mostrarSucesso(d){
   if(d.geradorNome){ document.getElementById('sc-gerador-row').style.display='flex'; document.getElementById('sc-gerador').textContent=d.geradorNome; }
   if(d.placa){ document.getElementById('sc-placa-row').style.display='flex'; document.getElementById('sc-placa').textContent=d.placa; }
   construirComprovante(d);
+
+  // E-mail: habilita botão se o cliente tem e-mail; envia automático se opt-in
+  const temEmail = !!(_parceiroSel && (_parceiroSel.email||'').trim());
+  const btnEmail = document.getElementById('btn-email');
+  btnEmail.disabled = !temEmail;
+  btnEmail.style.opacity = temEmail ? '' : '.4';
+  btnEmail.title = temEmail ? '' : 'Cliente sem e-mail cadastrado';
+  if(temEmail && _parceiroSel.enviar_comprovante_email) enviarComprovanteEmail(false);
+}
+
+// ── ENVIO E-MAIL / WHATSAPP ──────────────────────────────────────
+function setEmailStatus(msg, cor){
+  const el = document.getElementById('sc-email-status');
+  el.style.display='block'; el.textContent=msg;
+  el.style.background=cor+'18'; el.style.border='1px solid '+cor+'55'; el.style.color=cor;
+}
+async function enviarComprovanteEmail(force){
+  if(!_valeData) return;
+  if(force && !(_parceiroSel && (_parceiroSel.email||'').trim())){ setEmailStatus('Cliente sem e-mail cadastrado.','#F59E0B'); return; }
+  setEmailStatus('Enviando comprovante por e-mail...','#3B82F6');
+  try {
+    const r = await fetch(`${SUPA_URL}/functions/v1/enviar-comprovante-vale`,{
+      method:'POST', headers:HDR_NO_PREFER,
+      body: JSON.stringify({vale_id:_valeData.vale.id, force:!!force})
+    });
+    const res = await r.json();
+    if(res.status==='enviado') setEmailStatus('✓ Comprovante enviado para '+res.para,'#10B981');
+    else if(res.status==='ja_enviado') setEmailStatus('✓ Comprovante já havia sido enviado por e-mail.','#10B981');
+    else if(res.status==='sem_email') setEmailStatus('Cliente sem e-mail cadastrado.','#F59E0B');
+    else if(res.status==='optout') setEmailStatus('Cliente não optou por receber comprovantes por e-mail.','#F59E0B');
+    else setEmailStatus('Falha no envio do e-mail: '+(res.detail||res.error||'erro desconhecido'),'#EF4444');
+  } catch(e){ setEmailStatus('Falha no envio do e-mail: '+e.message,'#EF4444'); }
+}
+function enviarWhatsApp(){
+  if(!_valeData) return;
+  const d = _valeData;
+  const dt = new Date(d.vale.data_hora).toLocaleString('pt-BR');
+  const itensTxt = d.itens.map((it,i)=>
+    `  ${i+1}. ${it.equipamento_nome_snapshot||'—'} — ${fmtVol(it.volume_m3)} m³ — ${it.residuo_nome_snapshot||'—'}`+
+    (it.ctr_mtr?` (CTR/MTR ${it.ctr_mtr})`:'')+(it.numero_cacamba?` [Caçamba ${it.numero_cacamba}]`:'')
+  ).join('\n');
+  const txt =
+`*MULTILIX — COMPROVANTE DE DESCARTE DE RESÍDUO*
+*${d.vale.numero_vale}*
+
+Data/Hora: ${dt}
+Cliente: ${d.clienteNome}`+
+(d.geradorNome?`\nGerador: ${d.geradorNome}`:'')+
+(d.placa?`\nPlaca: ${d.placa}`:'')+
+(d.motorista?`\nMotorista: ${d.motorista}`:'')+`
+
+*Descargas (${d.itens.length}):*
+${itensTxt}
+
+*Volume total: ${fmtVol(d.totalVol)} m³*
+
+Multilix — Gestão de Resíduos da Construção Civil
+(11) 2241-0006 · comercial@multilix.com.br`;
+  const tel = (_parceiroSel && _parceiroSel.telefone||'').replace(/\D/g,'');
+  const dest = tel ? (tel.length<=11 ? '55'+tel : tel) : '';
+  window.open(`https://wa.me/${dest}?text=${encodeURIComponent(txt)}`,'_blank');
 }
 
 function novoVale(){
-  _itens=[]; _valeData=null; _fotoAtual=null;
+  _itens=[]; _valeData=null; _fotoAtual=null; _parceiroSel=null;
+  document.getElementById('sc-email-status').style.display='none';
   ['v-cliente-input','v-cliente-id','v-cliente-razao','v-cliente-doc',
    'v-gerador-input','v-gerador-nome','v-placa','v-motorista','v-obs-geral'].forEach(id=>document.getElementById(id).value='');
   limparItemForm();
@@ -709,36 +776,39 @@ function novoVale(){
 
 // ── COMPROVANTE ──────────────────────────────────────────────────
 function construirComprovante(d){
-  const now = new Date(d.vale.data_hora).toLocaleString('pt-BR',{dateStyle:'long',timeStyle:'short'});
-  const rows = d.itens.map((it,i)=>`<tr>
-    <td>${i+1}</td><td>${esc(it.ctr_mtr||'—')}</td><td>${esc(it.numero_cacamba||'—')}</td>
-    <td>${esc(it.equipamento_nome_snapshot||'—')}</td><td style="text-align:center">${fmtVol(it.volume_m3)}</td>
-    <td>${esc(it.residuo_nome_snapshot||'—')}</td><td>${esc(it.observacoes||'')}</td>
-    <td>${it.imagem_url?`<a href="${it.imagem_url}" target="_blank">Ver foto</a>`:'—'}</td>
-  </tr>`).join('');
+  const now = new Date(d.vale.data_hora).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
+  const kv = (label,valor)=>`<tr><td>${label}:</td><td>${valor}</td></tr>`;
+  const linhas = [
+    kv('Data / Hora', esc(now)),
+    kv('Cliente', esc(d.clienteNome)),
+    d.vale.parceiro_doc_snapshot ? kv('CPF/CNPJ', esc(d.vale.parceiro_doc_snapshot)) : '',
+    d.geradorNome ? kv('Gerador', esc(d.geradorNome)) : '',
+    d.placa ? kv('Placa', esc(d.placa)) : '',
+    d.motorista ? kv('Motorista', esc(d.motorista)) : '',
+    kv('Descargas', d.itens.length),
+    kv('Volume Total', fmtVol(d.totalVol)+' m³'),
+  ].join('');
 
-  const logoSvg = `<svg width="44" height="44" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg" class="cp-logo-svg"><defs><linearGradient id="cpbg1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#4a9e4f"/><stop offset="100%" style="stop-color:#2d7a32"/></linearGradient><linearGradient id="cpbg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#2b4a8c"/><stop offset="100%" style="stop-color:#1a2f5e"/></linearGradient></defs><circle cx="50" cy="52" r="46" fill="url(#cpbg2)" opacity=".9"/><ellipse cx="50" cy="48" rx="34" ry="36" fill="url(#cpbg1)"/><path d="M35 34 L50 56 L65 34 L58 34 L50 48 L42 34Z" fill="#fff" opacity=".95"/></svg>`;
+  const rows = d.itens.map((it,i)=>`<tr>
+    <td style="text-align:center">${i+1}</td><td>${esc(it.ctr_mtr||'—')}</td><td style="text-align:center">${esc(it.numero_cacamba||'—')}</td>
+    <td>${esc(it.equipamento_nome_snapshot||'—')}</td><td style="text-align:center">${fmtVol(it.volume_m3)}</td>
+    <td>${esc(it.residuo_nome_snapshot||'—')}</td>
+  </tr>`).join('');
 
   document.getElementById('comprovante-print').innerHTML = `
 <div class="cp-header">
-  <div class="cp-logo-area">${logoSvg}<div class="cp-title-block"><div class="cp-title">VALE DE DESCARGA</div><div class="cp-subtitle">Resíduos — ATT Multilix</div></div></div>
-  <div><div class="cp-company"><strong>ATT — MULTILIX</strong><br>ÁREA DE TRANSBORDO E TRIAGEM<br>Rodovia Fernão Dias km 88,7 — Vila Itapegica, Guarulhos/SP<br>CEP: 07053-171 | Tel: (11) 2241-0006<br>contato@multilix.com.br</div>
-  <div class="cp-vale-num">${esc(d.vale.numero_vale)}</div></div>
+  <img class="cp-logo" src="assets/logo-25-anos.jpg" alt="Multilix 25 anos"/>
+  <div class="cp-title">COMPROVANTE DE DESCARTE DE RESÍDUO ${esc(d.vale.numero_vale)}</div>
+  <div class="cp-subtitle">Multilix — Gestão de Resíduos da Construção Civil</div>
+  <div class="cp-endereco">ATT — Área de Transbordo e Triagem · Rod. Fernão Dias km 88,7 — Vila Itapegica, Guarulhos/SP · CEP 07053-171 · (11) 2241-0006</div>
 </div>
-<div class="cp-section">Dados do Atendimento</div>
-<div class="cp-grid">
-  <div class="cp-field"><label>Data / Hora</label><p>${now}</p></div>
-  <div class="cp-field"><label>Cliente / Parceiro</label><p>${esc(d.clienteNome)}</p></div>
-  ${d.geradorNome?`<div class="cp-field"><label>Gerador</label><p>${esc(d.geradorNome)}</p></div>`:''}
-  ${d.vale.parceiro_doc_snapshot?`<div class="cp-field"><label>CPF/CNPJ</label><p>${esc(d.vale.parceiro_doc_snapshot)}</p></div>`:''}
-  ${d.placa?`<div class="cp-field"><label>Placa</label><p>${esc(d.placa)}</p></div>`:''}
-  ${d.motorista?`<div class="cp-field"><label>Motorista</label><p>${esc(d.motorista)}</p></div>`:''}
-</div>
+<div class="cp-sep"></div>
+<table class="cp-kv"><tbody>${linhas}</tbody></table>
 <div class="cp-section">Descargas Recebidas</div>
-<table><thead><tr><th>#</th><th>CTR/MTR</th><th>Nº Caçamba</th><th>Equipamento</th><th>Vol. m³</th><th>Resíduo</th><th>Obs</th><th>Foto</th></tr></thead><tbody>${rows}</tbody></table>
-<div class="cp-totais">Total de descargas: <strong>${d.itens.length}</strong> &nbsp;|&nbsp; Volume total: <strong>${fmtVol(d.totalVol)} m³</strong></div>
-${d.obsGeral?`<div class="cp-obs"><strong>Obs. gerais:</strong> ${esc(d.obsGeral)}</div>`:''}
-<div class="cp-assinaturas"><div class="cp-ass-box">Assinatura do Cliente</div><div class="cp-ass-box">Assinatura Resp. Multilix</div></div>`;
+<table class="cp-itens"><thead><tr><th>#</th><th>CTR/MTR</th><th>Caçamba</th><th>Equipamento</th><th>Vol. m³</th><th>Resíduo</th></tr></thead><tbody>${rows}</tbody></table>
+${d.obsGeral?`<div class="cp-obs"><strong>Observações:</strong> ${esc(d.obsGeral)}</div>`:''}
+<div class="cp-assinatura">Responsável / Assinatura</div>
+<div class="cp-footer">Sistema de Gestão de Resíduos — Multilix · comercial@multilix.com.br</div>`;
 }
 
 function imprimirComprovante(){ window.print(); }
