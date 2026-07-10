@@ -35,7 +35,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 .field{margin-bottom:14px}
 label{display:block;font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px}
 label .req{color:var(--red)}
-select,input[type=text],input[type=number],textarea{
+select,input[type=text],input[type=number],input[type=datetime-local],textarea{
   width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);
   border-radius:var(--radius);padding:13px 14px;font-size:15px;outline:none;
   transition:border-color .15s;-webkit-appearance:none;appearance:none;font-family:var(--font)
@@ -306,6 +306,15 @@ textarea{resize:none;height:80px}
   <button class="btn-voltar" onclick="voltarSelecao()">← Voltar</button>
   <div id="alert-msg" class="alert"></div>
 
+  <!-- 0. DATA DO SERVIÇO -->
+  <div class="sec-title">📅 Data do Serviço</div>
+
+  <div class="field">
+    <label>Data e hora do serviço <span class="req">*</span></label>
+    <input type="datetime-local" id="v-data-servico" oninput="avisarDataRetroativa()"/>
+    <div id="v-data-aviso" style="display:none;margin-top:6px;padding:8px 12px;border-radius:8px;background:#F59E0B20;border:1px solid #F59E0B;color:#F59E0B;font-size:12px;font-weight:600">⚠️ Data diferente de hoje — o vale será registrado como serviço retroativo nesta data.</div>
+  </div>
+
   <!-- 1. CLIENTE -->
   <div class="sec-title">📋 Cliente / Parceiro</div>
 
@@ -511,6 +520,7 @@ async function init(){
     selE.innerHTML = '<option value="">Selecione o equipamento...</option>';
     _equipamentos.forEach(e=>{ const o=document.createElement('option'); o.value=e.id; o.dataset.vol=e.volume_m3_padrao||''; o.dataset.tipo=e.tipo||''; o.textContent=e.nome; selE.appendChild(o); });
   } catch(err){ showAlert('Erro ao carregar dados. Verifique a conexão.'); }
+  resetDataServico();
 }
 
 // ── AUTOCOMPLETE GENÉRICO ────────────────────────────────────────
@@ -747,13 +757,37 @@ function atualizarFinalizar(){
   document.getElementById('btn-finalizar').disabled = !(temCliente && temItens);
 }
 
+// ── DATA DO SERVIÇO ──────────────────────────────────────────────
+// Sempre enviar data_hora explícita: sem isso o banco usa now() e vales
+// lançados retroativamente caem na data do cadastro (bug do rel. 10/07/2026).
+function dataServicoAgora(){
+  const d = new Date();
+  d.setMinutes(d.getMinutes()-d.getTimezoneOffset());
+  return d.toISOString().slice(0,16);
+}
+function resetDataServico(){
+  const el = document.getElementById('v-data-servico');
+  if(el){ el.value = dataServicoAgora(); }
+  avisarDataRetroativa();
+}
+function avisarDataRetroativa(){
+  const el = document.getElementById('v-data-servico');
+  const av = document.getElementById('v-data-aviso');
+  if(!el||!av) return;
+  const hoje = new Date().toLocaleDateString('en-CA');
+  const sel  = (el.value||'').slice(0,10);
+  av.style.display = (sel && sel!==hoje) ? 'block' : 'none';
+}
+
 // ── FINALIZAR ────────────────────────────────────────────────────
 async function finalizarVale(){
   const clienteId   = document.getElementById('v-cliente-id').value;
   const clienteNome = document.getElementById('v-cliente-input').value.trim();
   const clienteDoc  = document.getElementById('v-cliente-doc').value.trim();
   const geradorNome = document.getElementById('v-gerador-input').value.trim();
+  const dataServico = document.getElementById('v-data-servico').value;
 
+  if(!dataServico || isNaN(new Date(dataServico).getTime())){ showAlert('Informe a data e hora do serviço.'); return; }
   if(!clienteId){ showAlert('Selecione o cliente/parceiro.'); return; }
   if(!_itens.length){ showAlert('Adicione pelo menos uma descarga.'); return; }
 
@@ -762,6 +796,7 @@ async function finalizarVale(){
     const totalVol = _itens.reduce((a,it)=>a+it.volume_m3,0);
     const totalPreco = _itens.reduce((a,it)=>a+(it.valor_total||0),0);
     const valePayload = {
+      data_hora: new Date(dataServico).toISOString(),
       parceiro_id: clienteId,
       parceiro_nome_snapshot: clienteNome,
       parceiro_doc_snapshot: clienteDoc||null,
@@ -899,6 +934,7 @@ function novoVale(){
   document.getElementById('sc-email-status').style.display='none';
   ['v-cliente-input','v-cliente-id','v-cliente-razao','v-cliente-doc',
    'v-gerador-input','v-gerador-nome','v-placa','v-motorista','v-obs-geral'].forEach(id=>document.getElementById(id).value='');
+  resetDataServico();
   limparItemForm();
   document.getElementById('lista-itens').innerHTML='';
   document.getElementById('resumo-bar').style.display='none';
@@ -923,7 +959,7 @@ function mostrarTela(id){
   window.scrollTo(0,0);
 }
 
-function irParaFormulario(){ mostrarTela('tela-form'); }
+function irParaFormulario(){ resetDataServico(); mostrarTela('tela-form'); }
 function voltarSelecao(){ mostrarTela('tela-selecao'); }
 
 // ── HISTÓRICO ────────────────────────────────────────────────────
