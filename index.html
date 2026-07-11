@@ -2929,8 +2929,8 @@ body { font-size: 13.5px !important; }
     <!-- RECICLÁVEIS > DASHBOARD -->
     <div class="page" id="page-reciclaveis">
       <div class="filterbar">
-        <div class="fg"><label>De</label><input type="date" id="rf-from" onchange="recDashRender()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"/></div>
-        <div class="fg"><label>Até</label><input type="date" id="rf-to" onchange="recDashRender()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"/></div>
+        <div class="fg"><label>De</label><input type="date" id="rf-from" onchange="recDashUpdate()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"/></div>
+        <div class="fg"><label>Até</label><input type="date" id="rf-to" onchange="recDashUpdate()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"/></div>
         <div class="fg"><label>Destino</label><select id="rf-destino" onchange="recDashRender()"><option value="">Todos</option></select></div>
         <div class="fg"><label>Resíduo</label><select id="rf-residuo" onchange="recDashRender()"><option value="">Todos</option></select></div>
         <div class="fg"><label>Status</label><select id="rf-status" onchange="recDashRender()"><option value="">Todos</option><option value="registrado">Registrado</option><option value="conferido">Conferido</option><option value="contestado">Contestado</option></select></div>
@@ -4922,6 +4922,9 @@ async function clearAndReloadDest(){
   document.getElementById('page-data').classList.add('active');
   document.querySelectorAll(".nav-item").forEach(function(n){var o=n.getAttribute("onclick")||"";if(o.indexOf("showPage")>=0&&o.indexOf("data")>=0)n.classList.add("active");});
 }
+
+// Nomes dos meses (gráficos mensais, resumo executivo)
+const MNAMES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
 // ── FILTERS ────────────────────────────────────────────────────
 function applyFilters(){S.filters.mes=(document.getElementById('f-mes')||{}).value||'';S.filters.cliente=(document.getElementById('f-cliente')||{}).value||'';S.filters.pfpj=(document.getElementById('f-pfpj')||{}).value||'';updateAll();}
@@ -8513,7 +8516,11 @@ async function supaFetchAllRows(pathQuery) {
 
 async function destMergeSupabase() {
   try {
-    const vales = await supaFetchAllRows(`vales_destinacao?select=*,freteiros(nome)&status=neq.cancelado&order=data_saida.desc`);
+    // Janela de 12 meses: cobre o gráfico de evolução mensal sem carregar
+    // o histórico inteiro para sempre (o app nunca apaga nada do banco).
+    const j = new Date(); j.setDate(1); j.setMonth(j.getMonth() - 11);
+    const janela = `${j.getFullYear()}-${String(j.getMonth()+1).padStart(2,'0')}-01`;
+    const vales = await supaFetchAllRows(`vales_destinacao?select=*,freteiros(nome)&status=neq.cancelado&data_saida=gte.${janela}&order=data_saida.desc`);
 
     // Remove registros anteriores do Supabase (re-fetch limpo)
     S.raw.destinacao = S.raw.destinacao.filter(r => !r._fromSupabase);
@@ -9189,7 +9196,15 @@ function recValorEfetivo(v) {
 
 async function recDashUpdate() {
   try {
-    const vales = await supaFetchAllRows(`vales_reciclaveis?select=*,destinos_reciclaveis(nome),tipos_residuo_reciclavel(nome)&status=neq.cancelado&order=data_saida.desc`);
+    // Período padrão: mês atual. A busca é escopada no servidor; o limite
+    // inferior nunca passa do 1º dia do mês atual porque a projeção usa
+    // sempre os lançamentos do mês corrente.
+    const inicioMes = new Date().toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'}).slice(0,8)+'01';
+    const fromEl = document.getElementById('rf-from');
+    if(fromEl && !fromEl.value && !_recDashFiltrosPopulados) fromEl.value = inicioMes;
+    const from = fromEl?.value || '';
+    const lowerBound = from ? (from < inicioMes ? from : inicioMes) : null;
+    const vales = await supaFetchAllRows(`vales_reciclaveis?select=*,destinos_reciclaveis(nome),tipos_residuo_reciclavel(nome)&status=neq.cancelado&order=data_saida.desc${lowerBound?`&data_saida=gte.${lowerBound}`:''}`);
     _recDashRows = (Array.isArray(vales) ? vales : []).map(v => ({
       data:    v.data_saida ? (p => new Date(+p[0], +p[1]-1, +p[2]))(v.data_saida.split('-')) : null,
       os:      v.os_numero || '',
@@ -9204,19 +9219,20 @@ async function recDashUpdate() {
       _raw: v
     }));
 
-    // Popula filtros (uma vez)
+    // Popula filtros (uma vez) — a partir dos cadastros, já que as linhas
+    // carregadas agora cobrem só o período selecionado
     if(!_recDashFiltrosPopulados) {
       _recDashFiltrosPopulados = true;
-      const selD = document.getElementById('rf-destino');
-      [...new Set(_recDashRows.map(r => r.destino))].sort().forEach(n => {
-        if(n === '—') return;
-        const o = document.createElement('option'); o.value = n; o.textContent = n; selD.appendChild(o);
-      });
-      const selR = document.getElementById('rf-residuo');
-      [...new Set(_recDashRows.map(r => r.residuo))].sort().forEach(n => {
-        if(n === '—') return;
-        const o = document.createElement('option'); o.value = n; o.textContent = n; selR.appendChild(o);
-      });
+      try {
+        const [dest, res] = await Promise.all([
+          supaFetchAllRows('destinos_reciclaveis?select=nome&order=nome.asc'),
+          supaFetchAllRows('tipos_residuo_reciclavel?select=nome&order=nome.asc'),
+        ]);
+        const selD = document.getElementById('rf-destino');
+        dest.forEach(d => { const o = document.createElement('option'); o.value = d.nome; o.textContent = d.nome; selD.appendChild(o); });
+        const selR = document.getElementById('rf-residuo');
+        res.forEach(r => { const o = document.createElement('option'); o.value = r.nome; o.textContent = r.nome; selR.appendChild(o); });
+      } catch(e) {}
     }
     recDashRender();
   } catch(e) {
@@ -9325,12 +9341,13 @@ function recDashRender() {
 }
 
 function recDashClear() {
-  document.getElementById('rf-from').value = '';
+  const inicioMes = new Date().toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'}).slice(0,8)+'01';
+  document.getElementById('rf-from').value = inicioMes;
   document.getElementById('rf-to').value = '';
   document.getElementById('rf-destino').value = '';
   document.getElementById('rf-residuo').value = '';
   document.getElementById('rf-status').value = '';
-  recDashRender();
+  recDashUpdate();
 }
 
 // ── SIDEBAR TOGGLE ─────────────────────────────────────────────
@@ -9400,22 +9417,43 @@ initNavGroups();
   let _relResidues = [];
   let _relSelectedIds = new Set();  // IDs de vales selecionados
   let _relViewingId = null;         // ID do vale aberto no modal Ver
+  let _relRange = {from:null, to:null}; // período carregado do servidor
+  let _relReloadTimer = null;
+
+  // Período padrão: mês atual. O filtro de data roda na CONSULTA ao banco —
+  // sem isso a tela carregaria o histórico inteiro a cada abertura.
+  function attRelPeriodoPadrao(){
+    const hoje = new Date().toLocaleDateString('en-CA');
+    return { from: hoje.slice(0,8)+'01', to: hoje };
+  }
 
   async function attRelLoad(){
     try {
+      const fromEl = document.getElementById('fat-from');
+      const toEl   = document.getElementById('fat-to');
+      if(fromEl && toEl && !fromEl.value && !toEl.value){
+        const p = attRelPeriodoPadrao();
+        fromEl.value = p.from; toEl.value = p.to;
+      }
+      const from = fromEl?.value||'', to = toEl?.value||'';
+
       _relResidues = await api('tipos_residuo_att?select=id,nome&ativo=eq.true&order=ordem.asc');
       const sel = document.getElementById('fat-residuo');
       if(sel){
         sel.innerHTML = '<option value="">Todos</option>';
         _relResidues.forEach(r=>{ const o=document.createElement('option'); o.value=r.id; o.textContent=r.nome; sel.appendChild(o); });
       }
-      const vales = await apiAll('vales_descarga?select=*,vale_descarga_itens(*)&order=data_hora.desc');
+      let q = 'vales_descarga?select=*,vale_descarga_itens(*)&order=data_hora.desc';
+      if(from) q += `&data_hora=gte.${encodeURIComponent(new Date(from+'T00:00:00').toISOString())}`;
+      if(to)   q += `&data_hora=lte.${encodeURIComponent(new Date(to+'T23:59:59.999').toISOString())}`;
+      const vales = await apiAll(q);
       _relData = [];
       vales.forEach(v=>{
         const itens = v.vale_descarga_itens || [];
         if(!itens.length){ _relData.push({...v, _item:null}); }
         else { itens.forEach(it=>_relData.push({...v, _item:it})); }
       });
+      _relRange = {from, to};
       _relSelectedIds = new Set();
       attRelFiltrar();
     } catch(e){ console.error('attRelLoad',e); }
@@ -9424,6 +9462,13 @@ initNavGroups();
   window.attRelFiltrar = function(){
     const from    = document.getElementById('fat-from')?.value||'';
     const to      = document.getElementById('fat-to')?.value||'';
+
+    // Período mudou? Recarrega do servidor (os demais filtros são locais).
+    if(_relRange.from!==null && (from!==_relRange.from || to!==_relRange.to)){
+      clearTimeout(_relReloadTimer);
+      _relReloadTimer = setTimeout(attRelLoad, 350);
+      return;
+    }
     const cli     = (document.getElementById('fat-cliente')?.value||'').toLowerCase();
     const ger     = (document.getElementById('fat-gerador')?.value||'').toLowerCase();
     const vale    = (document.getElementById('fat-vale')?.value||'').toLowerCase();
@@ -9451,11 +9496,15 @@ initNavGroups();
   };
 
   window.attRelLimpar = function(){
-    ['fat-from','fat-to','fat-cliente','fat-gerador','fat-vale','fat-ctr','fat-cacamba','fat-placa']
+    ['fat-cliente','fat-gerador','fat-vale','fat-ctr','fat-cacamba','fat-placa']
       .forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
     ['fat-residuo','fat-status'].forEach(id=>{ const el=document.getElementById(id); if(el) el.selectedIndex=0; });
-    _relFiltered = [..._relData];
-    attRelRender();
+    // Volta ao período padrão (mês atual) e recarrega do servidor
+    const p = attRelPeriodoPadrao();
+    const fromEl = document.getElementById('fat-from'), toEl = document.getElementById('fat-to');
+    if(fromEl) fromEl.value = p.from;
+    if(toEl)   toEl.value   = p.to;
+    attRelLoad();
   };
 
   function attRelRender(){
