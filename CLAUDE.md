@@ -1,11 +1,14 @@
 # Multilix Dashboard
 
 ## Visão Geral
-Dashboard de vendas da Multilix. Arquivo principal: `index.html` (alias de `dashboard_multilix_v25.html`).
+Dashboard de gestão da Multilix (deploy Vercel a partir do main). Arquivo principal e único do app: `index.html`.
 
 ## Estrutura
-- `index.html` — cópia idêntica ao dashboard_multilix_v25.html (para GitHub Pages)
-- `dashboard_multilix_v25.html` — versão atual (v25)
+- `index.html` — dashboard completo (login Supabase Auth; todos os módulos)
+- `entrada-terceiros.html` — webapp do apontador ATT: lançar vale/O.S. (`vales_descarga` + itens), histórico, edição, comprovante
+- `vale.html` — webapp do apontador de Destinação (frete) e Recicláveis
+- `api/enviar-comprovante.js` — função Vercel: envia comprovante por e-mail via webhook n8n (env `N8N_WEBHOOK_URL`)
+- `dashboard_multilix_v25.html` foi REMOVIDO no v56 (snapshot legado parado no v28; recuperável no histórico git)
 
 ## Módulos implementados
 - ATT (Atendimento)

@@ -1256,24 +1256,34 @@ async function salvarEdicaoOS(){
         volume_m3: parseFloat(block.querySelector('.ed-volume').value)||it.volume_m3,
         observacoes: block.querySelector('.ed-item-obs').value.trim()||null,
       };
+      // Se equipamento ou resíduo mudou, o preço snapshot não vale mais:
+      // rebusca na tabela de preços do cliente (valor_total é coluna gerada no banco).
+      const comboMudou = payload.equipamento_id!==it.equipamento_id || payload.residuo_id!==it.residuo_id;
+      if(comboMudou){
+        const precoRow = _precos.find(p=>p.parceiro_id===v.parceiro_id && p.equipamento_id===payload.equipamento_id && p.residuo_id===payload.residuo_id);
+        payload.preco_unitario = precoRow ? Number(precoRow.preco_m3) : null;
+      }
       const ri = await fetch(`${SUPA_URL}/rest/v1/vale_descarga_itens?id=eq.${encodeURIComponent(it.id)}`,
         {method:'PATCH', headers:HDR, body:JSON.stringify(payload)});
       if(!ri.ok) throw new Error(await ri.text());
     }));
 
-    // Recalcular volume total e atualizar vale
-    const novoVol = Array.from(blocks).reduce((sum,block)=>sum+( parseFloat(block.querySelector('.ed-volume').value)||0),0);
-    await fetch(`${SUPA_URL}/rest/v1/vales_descarga?id=eq.${encodeURIComponent(v.id)}`,
-      {method:'PATCH', headers:HDR, body:JSON.stringify({volume_total_m3:novoVol})});
-
     hideLoading();
     fecharEdicaoOS();
 
-    // Recarregar o detalhe com dados atualizados
+    // Recarregar itens atualizados e recalcular os totais do vale a partir deles
+    // (valor_total é coluna gerada: preco_unitario × volume_m3)
     showLoading('Atualizando...');
     const rAtual = await fetch(`${SUPA_URL}/rest/v1/vales_descarga?id=eq.${encodeURIComponent(v.id)}&select=*,vale_descarga_itens(*)`,
       {headers:HDR_NO_PREFER});
     const [vAtual] = await rAtual.json();
+    const itensAtuais = vAtual.vale_descarga_itens||[];
+    const novoVol   = itensAtuais.reduce((s,it)=>s+Number(it.volume_m3||0),0);
+    const novoTotal = itensAtuais.reduce((s,it)=>s+Number(it.valor_total||0),0);
+    await fetch(`${SUPA_URL}/rest/v1/vales_descarga?id=eq.${encodeURIComponent(v.id)}`,
+      {method:'PATCH', headers:HDR, body:JSON.stringify({volume_total_m3:novoVol, preco_total:novoTotal>0?novoTotal:null})});
+    vAtual.volume_total_m3 = novoVol;
+    vAtual.preco_total = novoTotal>0?novoTotal:null;
     hideLoading();
 
     // Atualizar cache em _histAll

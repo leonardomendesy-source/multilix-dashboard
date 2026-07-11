@@ -532,7 +532,6 @@ function onResiduoChange() {
   const f = _freteiros.find(x => x.id === fid);
   const p = (f?.freteiros_tabela_precos || []).find(x => x.ativo && x.tipo_veiculo === veiculo && x.capacidade_m3 === cap && x.tipo_residuo === residuo);
   _precoSelecionado = p || null;
-  document.getElementById('v-preco-display').textContent = p ? 'R$ ' + Number(p.preco_unitario).toLocaleString('pt-BR') : '—';
 }
 
 function resetCapacidade(){ const s=document.getElementById('v-capacidade'); s.innerHTML='<option value="">—</option>'; }

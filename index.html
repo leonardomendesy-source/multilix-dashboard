@@ -3039,8 +3039,8 @@ body { font-size: 13.5px !important; }
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <div class="fi"><label>Data de Saída *</label><input type="date" id="oe-data"/></div>
           <div class="fi"><label>Hora de Saída</label><input type="time" id="oe-hora"/></div>
-          <div class="fi" style="grid-column:1/-1"><label>Freteiro *</label><select id="oe-freteiro" onchange="osEditOnFreteiro()"></select></div>
-          <div class="fi"><label>Tipo de Veículo *</label><select id="oe-veiculo" onchange="osEditOnVeiculo()"><option value="">—</option><option value="TRUCK">TRUCK</option><option value="CARRETA">CARRETA</option></select></div>
+          <div class="fi" style="grid-column:1/-1"><label>Freteiro *</label><select id="oe-freteiro"></select></div>
+          <div class="fi"><label>Tipo de Veículo *</label><select id="oe-veiculo"><option value="">—</option><option value="TRUCK">TRUCK</option><option value="CARRETA">CARRETA</option></select></div>
           <div class="fi"><label>Capacidade (m³) *</label><input type="number" id="oe-cap" step="0.5"/></div>
           <div class="fi"><label>Tipo de Resíduo *</label><select id="oe-residuo"><option value="">—</option><option value="MIX">MIX</option><option value="RACHÃO SUJO">RACHÃO SUJO</option></select></div>
           <div class="fi"><label>Nº Vale Físico *</label><input type="text" id="oe-vale"/></div>
@@ -4114,7 +4114,7 @@ const S={
   resumoF:{mes:''},
   sourceLinks:{destinacao:'https://docs.google.com/spreadsheets/d/e/2PACX-1vS278GG7a9-4CN8lRlDHffSaAVTFx-OE3t96zATwC8VilUubItshIqvKDse-PXiPw/pubhtml'},
   top10:{att:{col:'fat',dir:'desc'},loc:{col:'fat',dir:'desc'},agr:{col:'fat',dir:'desc'}},
-  cal:{att:{start:null,end:null,vy:new Date().getFullYear(),vm:new Date().getMonth()},loc:{start:null,end:null,vy:new Date().getFullYear(),vm:new Date().getMonth()},agr:{start:null,end:null,vy:new Date().getFullYear(),vm:new Date().getMonth()},dest:{start:null,end:null,vy:new Date().getFullYear(),vm:new Date().getMonth()}}
+
 };
 const STORAGE_KEY='multilix_v5';
 
@@ -4196,13 +4196,6 @@ function parseDt(v){
   return null;
 }
 
-// ── DIAGNÓSTICO DE DATA — mostra formato bruto das primeiras linhas ──
-function diagDateFormat(rows,colKey){
-  if(!rows.length||!colKey)return '—';
-  const samples=rows.slice(0,5).map(r=>JSON.stringify(r[colKey]??'(vazio)')).join(', ');
-  return samples;
-}
-
 // ── NUMBER PARSER (R$ 1.234,56 ou 1234.56) ────────────────────
 function parseNum(v){
   if(v===''||v===null||v===undefined)return 0;
@@ -4270,28 +4263,6 @@ function obterUltimaDataLancamento(rows){
   let max=null;
   rows.forEach(r=>{if(r.data instanceof Date&&!isNaN(r.data)){if(!max||r.data>max)max=r.data;}});
   return max;
-}
-
-// Dias úteis (seg-sex, excluindo feriados) de um mês
-function calcularDiasUteis(ano,mes,feriadosKeys){
-  const last=new Date(ano,mes+1,0).getDate();
-  let n=0;
-  for(let d=1;d<=last;d++){const dt=new Date(ano,mes,d);if(!_isFimSemana(dt)&&!_isFeriado(dt,feriadosKeys))n++;}
-  return n;
-}
-// Blocos de fim de semana (sáb+dom = 1 bloco) de um mês
-function calcularBlocosFinaisSemana(ano,mes){
-  const last=new Date(ano,mes+1,0).getDate();
-  let blocos=0;
-  for(let d=1;d<=last;d++){const dt=new Date(ano,mes,d);if(dt.getDay()===6)blocos++;} // conta sábados = nº de blocos
-  return blocos;
-}
-// Feriados (que não cain em fim de semana) de um mês
-function calcularFeriadosDoMes(ano,mes,feriadosKeys){
-  const last=new Date(ano,mes+1,0).getDate();
-  let lista=[];
-  for(let d=1;d<=last;d++){const dt=new Date(ano,mes,d);if(!_isFimSemana(dt)&&_isFeriado(dt,feriadosKeys))lista.push(dt);}
-  return lista;
 }
 
 // Classifica uma data em 'util' | 'fimsemana' | 'feriado'
@@ -4393,8 +4364,6 @@ function calcularProjecaoLocacao(rows,extractor){
 // Wrappers nomeados conforme prompt
 function calcularProjecaoATT(rows,extractor){return calcularProjecaoSegmentada(rows,extractor);}
 function calcularProjecaoAgregados(rows,extractor){return calcularProjecaoSegmentada(rows,extractor);}
-function calcularProjecaoDestinacao(rows,extractor){return calcularProjecaoSegmentada(rows,extractor);}
-
 // ════════════════════════════════════════════════════════════════
 // PROJEÇÃO CONSOLIDADA + META DE DESTINAÇÃO MIX — utilitárias
 // Regras de negócio:
@@ -4428,9 +4397,6 @@ function getProjectedThirdPartyVolume(mes){
 function getProjectedRentalBuckets(mes){
   const loc=_filtMesGen(_locTrocaRetirada(),mes);
   return calcularProjecaoLocacao(loc,()=>1).projecao;
-}
-function getProjectedRentalVolume(mes){
-  return getProjectedRentalBuckets(mes)*M3_POR_CACAMBA_LOC;
 }
 // ── Projeção consolidada (Terceiros + Locação) ──
 function getConsolidatedProjectedVolume(mes){
@@ -4638,8 +4604,6 @@ function fM(v){return 'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFraction
 function fD(d){return d instanceof Date&&!isNaN(d)?d.toLocaleDateString('pt-BR'):'—';}
 function fDkey(d){return d instanceof Date&&!isNaN(d)?d.toLocaleDateString('pt-BR'):'?';}
 function gM(id){const el=document.getElementById('meta-'+id);return el?parseFloat(el.value)||0:0;}
-function getDU(){return parseInt(document.getElementById('dias-uteis')?.value)||22;}
-function getDR(){return parseInt(document.getElementById('dias-real')?.value)||10;}
 function now(){return new Date().toLocaleString('pt-BR');}
 function getPFPJ(n){if(!n)return 'NÃO CLASSIFICADO';return S.pfpjMap[n.toUpperCase().trim()]||'NÃO CLASSIFICADO';}
 function isTotalRow(r){
@@ -4959,90 +4923,6 @@ async function clearAndReloadDest(){
   document.querySelectorAll(".nav-item").forEach(function(n){var o=n.getAttribute("onclick")||"";if(o.indexOf("showPage")>=0&&o.indexOf("data")>=0)n.classList.add("active");});
 }
 
-// ── CALENDÁRIO ─────────────────────────────────────────────────
-function toggleCal(key,ev){ev.stopPropagation();const p=document.getElementById('cal-popup-'+key);const wasOpen=p.classList.contains('open');document.querySelectorAll('.cal-popup.open').forEach(x=>x.classList.remove('open'));if(!wasOpen){p.classList.add('open');renderCal(key);}}
-document.addEventListener('click',()=>document.querySelectorAll('.cal-popup.open').forEach(p=>p.classList.remove('open')));
-const MNAMES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-const DNAMES=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-function renderCal(key){
-  const c=S.cal[key];const pop=document.getElementById('cal-popup-'+key);
-  const m1=c.vm,y1=c.vy,m2=m1===11?0:m1+1,y2=m1===11?y1+1:y1;
-  const today=new Date();today.setHours(0,0,0,0);
-  const s=c.start,e=c.end;
-  function cell(y,m,d){
-    if(d===null)return`<div class="cal-day empty"></div>`;
-    const dt=new Date(y,m,d);dt.setHours(0,0,0,0);
-    const ds=s?new Date(s.y,s.m,s.d):null;const de=e?new Date(e.y,e.m,e.d):null;
-    let cls='cal-day in-month';
-    if(dt.getTime()===today.getTime())cls+=' today';
-    if(ds&&dt.getTime()===ds.getTime())cls+=' sel-start';
-    if(de&&dt.getTime()===de.getTime())cls+=' sel-end';
-    if(ds&&de&&dt>ds&&dt<de)cls+=' in-range';
-    return`<div class="${cls}" onclick="calClick('${key}',${y},${m},${d})" style="cursor:pointer">${d}</div>`;
-  }
-  function month(y,m){
-    const first=new Date(y,m,1).getDay();const last=new Date(y,m+1,0).getDate();
-    let cells='';for(let i=0;i<first;i++)cells+=cell(y,m,null);
-    for(let d=1;d<=last;d++)cells+=cell(y,m,d);
-    return`<div class="cal-month"><div class="cal-title">${MNAMES[m]} ${y}</div><div class="cal-days-header">${DNAMES.map(d=>`<div class="cal-day-name">${d}</div>`).join('')}</div><div class="cal-days">${cells}</div></div>`;
-  }
-  pop.innerHTML=`
-    <div class="cal-presets" onclick="event.stopPropagation()">
-      <button class="preset-btn" onclick="calPreset('${key}',7)">7 dias</button>
-      <button class="preset-btn" onclick="calPreset('${key}',15)">15 dias</button>
-      <button class="preset-btn" onclick="calPreset('${key}',30)">30 dias</button>
-      <button class="preset-btn" onclick="calPresetMes('${key}',0)">Este mês</button>
-      <button class="preset-btn" onclick="calPresetMes('${key}',-1)">Mês anterior</button>
-      <button class="preset-btn" onclick="calClear('${key}')">Sem filtro</button>
-    </div>
-    <div class="cal-header" onclick="event.stopPropagation()">
-      <button class="cal-nav-btn" onclick="calNav('${key}',-1)">‹</button>
-      <span class="cal-month-label">${MNAMES[m1]} ${y1} — ${MNAMES[m2]} ${y2}</span>
-      <button class="cal-nav-btn" onclick="calNav('${key}',1)">›</button>
-    </div>
-    <div class="cal-grid" onclick="event.stopPropagation()">${month(y1,m1)}${month(y2,m2)}</div>
-    <div class="cal-actions" onclick="event.stopPropagation()">
-      <button class="btn btn-ghost btn-sm" onclick="calClear('${key}')">Limpar</button>
-      <button class="btn btn-primary btn-sm" onclick="calApply('${key}')">Aplicar ${ic('check',12)}</button>
-    </div>`;
-  renderIcons();
-}
-function calNav(key,d){const c=S.cal[key];c.vm+=d;if(c.vm>11){c.vm=0;c.vy++;}if(c.vm<0){c.vm=11;c.vy--;}renderCal(key);}
-function calClick(key,y,m,d){
-  const c=S.cal[key];
-  if(!c.start||c.end){c.start={y,m,d};c.end=null;}
-  else{const ds=new Date(c.start.y,c.start.m,c.start.d),nd=new Date(y,m,d);if(nd<ds){c.end=c.start;c.start={y,m,d};}else{c.end={y,m,d};}}
-  renderCal(key);
-}
-function calPreset(key,days){const c=S.cal[key];const e=new Date(),s=new Date();s.setDate(s.getDate()-days+1);c.start={y:s.getFullYear(),m:s.getMonth(),d:s.getDate()};c.end={y:e.getFullYear(),m:e.getMonth(),d:e.getDate()};calApply(key);}
-function calPresetMes(key,off){const c=S.cal[key];const d=new Date();d.setMonth(d.getMonth()+off);const y=d.getFullYear(),m=d.getMonth(),last=new Date(y,m+1,0).getDate();c.start={y,m,d:1};c.end={y,m,d:last};calApply(key);}
-function calClear(key){
-  const c=S.cal[key];
-  if(c){c.start=null;c.end=null;}
-  const lbl=document.getElementById('cal-label-'+key);
-  const pop=document.getElementById('cal-popup-'+key);
-  if(lbl)lbl.textContent='Selecionar período';
-  if(pop)pop.classList.remove('open');
-  if(key==='att'){S.attF.from=null;S.attF.to=null;updateATT();}
-  if(key==='loc'){S.locF.from=null;S.locF.to=null;updateLocacao();}
-  // dest usa inputs diretos — não usa calendário
-}
-function calApply(key){
-  const c=S.cal[key];
-  if(c&&c.start&&c.end){
-    const from=new Date(c.start.y,c.start.m,c.start.d),to=new Date(c.end.y,c.end.m,c.end.d);
-    if(key==='att'){S.attF.from=from;S.attF.to=to;}
-    if(key==='loc'){S.locF.from=from;S.locF.to=to;}
-    // dest usa inputs diretos — não usa calendário
-    const lbl=document.getElementById('cal-label-'+key);
-    const pop=document.getElementById('cal-popup-'+key);
-    if(lbl)lbl.textContent=fD(from)+' → '+fD(to);
-    if(pop)pop.classList.remove('open');
-  }
-  if(key==='att')updateATT();
-  if(key==='loc')updateLocacao();
-}
-
 // ── FILTERS ────────────────────────────────────────────────────
 function applyFilters(){S.filters.mes=(document.getElementById('f-mes')||{}).value||'';S.filters.cliente=(document.getElementById('f-cliente')||{}).value||'';S.filters.pfpj=(document.getElementById('f-pfpj')||{}).value||'';updateAll();}
 function clearFilters(){['f-mes','f-cliente','f-pfpj'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});S.filters={mes:'',cliente:'',pfpj:''};updateAll();}
@@ -5318,19 +5198,6 @@ function mkBar(id,key,rows,vKey,color,label,maxDays){
   const opts=JSON.parse(JSON.stringify(CHART_OPT));
   S.charts[key]=new Chart(ctx,{type:'bar',data:{labels,datasets:[{label,data:labels.map(l=>byDay[l]),backgroundColor:color+'33',borderColor:color,borderWidth:1.5,borderRadius:6,borderSkipped:false,maxBarThickness:28}]},options:opts});
 }
-function mkLine(id,key,rows,vKey,color,label,maxDays){
-  const ctx=getCanvas(id);if(!ctx)return;
-  if(S.charts[key]){try{S.charts[key].destroy();}catch(e){}S.charts[key]=null;}
-  let src=rows;
-  const cut=dateCut(rows,maxDays);
-  if(cut)src=rows.filter(r=>r.data instanceof Date&&!isNaN(r.data)&&r.data>=cut);
-  const byDay={};
-  src.forEach(r=>{if(r.data instanceof Date&&!isNaN(r.data)){const k=fDkey(r.data);byDay[k]=(byDay[k]||0)+(parseFloat(r[vKey])||0);}});
-  const labels=Object.keys(byDay).sort((a,b)=>{const pa=a.split('/').reverse().join('-'),pb=b.split('/').reverse().join('-');return pa.localeCompare(pb);});
-  if(!labels.length){ctx.parentElement.innerHTML=`<canvas id="${id}" style="display:none"></canvas><div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:12px">Sem dados com datas válidas</div>`;return;}
-  const opts=JSON.parse(JSON.stringify(CHART_OPT));
-  S.charts[key]=new Chart(ctx,{type:'line',data:{labels,datasets:[{label,data:labels.map(l=>byDay[l]),backgroundColor:color+'18',borderColor:color,borderWidth:2,fill:true,tension:.4,pointRadius:0,pointHoverRadius:5,pointHoverBackgroundColor:color,pointHoverBorderColor:'#0B0D11',pointHoverBorderWidth:2}]},options:opts});
-}
 
 // ── TOP 10 ─────────────────────────────────────────────────────
 function sortTop10(src,col){const s=S.top10[src];if(s.col===col)s.dir=s.dir==='desc'?'asc':'desc';else{s.col=col;s.dir='desc';}if(src==='att')updateATT();else if(src==='loc')updateLocacao();else updateAgregados();}
@@ -5355,11 +5222,6 @@ function buildTop10(rows,src){
 
 
 // ── EXCEL SHEET SELECTION ─────────────────────────────────────
-function rowToObj(headers,vals){
-  const obj={};
-  headers.forEach((h,i)=>{if(clean(h))obj[clean(h)]=vals[i]!==undefined?vals[i]:'';});
-  return obj;
-}
 function getBestSheetData(wb,preferredName){
   let best={score:-1,name:wb.SheetNames[0],data:[]};
   for(const name of wb.SheetNames){
@@ -5444,124 +5306,6 @@ function loadFile(e,type){
   };
   reader.onerror=()=>{el.innerHTML=ic('x-circle',12)+' Falha ao ler o arquivo';el.className='ds-file-info';};
   reader.readAsArrayBuffer(file);
-}
-
-// ── GOOGLE SHEETS / DRIVE SOURCE ───────────────────────────────
-function saveSourceLink(type,url){S.sourceLinks[type]=url;saveStorage();}
-function extractSpreadsheetId(url){const m=String(url||'').match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);return m?m[1]:'';}
-function extractPublishedSpreadsheetKey(url){const m=String(url||'').match(/\/spreadsheets\/d\/e\/([a-zA-Z0-9-_]+)/);return m?m[1]:'';}
-function extractGid(url){const m=String(url||'').match(/[?&#]gid=(\d+)/);return m?m[1]:'';}
-
-function normalizeGSUrl(url){
-  // Aceita /pubhtml, /pub?output=csv, /edit, /export?format=xlsx — normaliza para /pub
-  const s=String(url||'').trim();
-  // /edit → remover e retornar base
-  return s.replace(/\/edit[#?].*$/,'').replace(/\/pubhtml[?#].*$/,'/pubhtml').replace(/\/pub\?.*$/,u=>u.startsWith('/pub?output=csv')?u:'/pub');
-}
-
-function googleSourceCandidates(url){
-  const source=String(url||'').trim();
-  const id=extractSpreadsheetId(source),pubKey=extractPublishedSpreadsheetKey(source),gid=extractGid(source),out=[];
-
-  if(pubKey){
-    // Link publicado /pub?output=csv é o mais confiável para planilhas publicadas
-    const base=`https://docs.google.com/spreadsheets/d/e/${pubKey}/pub`;
-    if(gid){
-      out.push({kind:'csv',url:`${base}?gid=${gid}&single=true&output=csv`});
-    }
-    out.push({kind:'csv',url:`${base}?output=csv`});
-    // pubhtml como fallback (parse de HTML)
-    out.push({kind:'pubhtml',url:`${base.replace(/\/pub$/,'/pubhtml')}`});
-    // Proxy CORS como último recurso
-    if(gid){
-      out.push({kind:'csv_proxy',url:`https://api.allorigins.win/raw?url=${encodeURIComponent(`${base}?gid=${gid}&single=true&output=csv`)}`});
-    }
-    out.push({kind:'csv_proxy',url:`https://api.allorigins.win/raw?url=${encodeURIComponent(`${base}?output=csv`)}`});
-  }else if(id){
-    out.push({kind:'jsonp',url:`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=responseHandler:__CB__&sheet=LAN%C3%87AMENTOS`});
-    if(gid)out.push({kind:'jsonp',url:`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=responseHandler:__CB__&gid=${gid}`});
-    out.push({kind:'csv',url:`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=LAN%C3%87AMENTOS`});
-    if(gid)out.push({kind:'csv',url:`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&gid=${gid}`});
-    out.push({kind:'xlsx',url:`https://docs.google.com/spreadsheets/d/${id}/export?format=xlsx`});
-  }else if(source.toLowerCase().endsWith('.csv'))out.push({kind:'csv',url:source});
-  else out.push({kind:'xlsx',url:source});
-  return out;
-}
-
-function rowsFromHtmlTables(html){
-  const doc=new DOMParser().parseFromString(html,'text/html');
-  const tables=[...doc.querySelectorAll('table')];
-  let best={score:-1,rows:[]};
-  for(const table of tables){
-    // Google Sheets pubhtml usa spans dentro de td
-    const matrix=[...table.querySelectorAll('tr')].map(tr=>
-      [...tr.children].map(td=>clean(td.textContent))
-    ).filter(row=>row.some(Boolean));
-    if(!matrix.length)continue;
-    let headerIdx=0,bestScore=-1;
-    for(let i=0;i<Math.min(matrix.length,40);i++){
-      const vals=matrix[i].map(v=>normColName(v));
-      // Palavras-chave das colunas da planilha de frete/destinação
-      const keywords=['data','freteiro','tipo de residuo','qt viagens','qtd total m3','total r','valor unitario','truck','carreta'];
-      const score=keywords.reduce((sum,k)=>sum+(vals.some(v=>v===k||v.includes(k))?1:0),0);
-      const nonEmpty=vals.filter(Boolean).length;
-      if(score*10+nonEmpty>bestScore){bestScore=score*10+nonEmpty;headerIdx=i;}
-    }
-    const headers=matrix[headerIdx].map(v=>clean(v));
-    const rows=matrix.slice(headerIdx+1).filter(row=>row.some(v=>clean(v))).map(row=>rowToObj(headers,row));
-    if(!rows.length)continue;
-    const cm=rows[0]?mapCols(rows[0]):{};
-    // Score: prioriza mapeamento de colunas críticas sobre quantidade de linhas
-    const critCols=['data','freteiro','residuo','qtdViagens','volume','valor'];
-    const colScore=critCols.filter(k=>cm[k]).length*500;
-    const tableScore=colScore+rows.length;
-    if(tableScore>best.score)best={score:tableScore,rows};
-  }
-  return best.rows;
-}
-
-function gvizValue(cell){
-  if(!cell)return '';
-  // cell.f = valor formatado (ex: "05/05/2026"), cell.v = valor interno
-  // Para datas: cell.v é "Date(2026,4,5)" (mês 0-indexed), cell.f é "05/05/2026"
-  // Preferimos cell.f quando disponível (já formatado); senão usamos cell.v que parseDt sabe tratar
-  if(cell.f!==undefined&&cell.f!==null&&cell.f!=='')return String(cell.f);
-  if(cell.v!==undefined&&cell.v!==null&&cell.v!=='')return String(cell.v);
-  return '';
-}
-function rowsFromGvizTable(table){
-  const matrix=(table.rows||[]).map(row=>(row.c||[]).map(gvizValue));
-  if(!matrix.length)return [];
-  let headerIdx=0,bestScore=-1;
-  for(let i=0;i<Math.min(matrix.length,25);i++){
-    const vals=matrix[i].map(v=>normColName(v));
-    const score=['data','freteiro','tipo de residuo','qt viagens','qtd total m3','total r'].reduce((s,k)=>s+(vals.some(v=>v.includes(k))?1:0),0);
-    const nonEmpty=vals.filter(Boolean).length;
-    if(score*10+nonEmpty>bestScore){bestScore=score*10+nonEmpty;headerIdx=i;}
-  }
-  const headers=matrix[headerIdx].map(v=>clean(v));
-  return matrix.slice(headerIdx+1).filter(row=>row.some(v=>clean(v))).map(row=>rowToObj(headers,row));
-}
-function fetchGvizJsonp(url){
-  return new Promise((resolve,reject)=>{
-    const cb='gviz_cb_'+Date.now()+'_'+Math.random().toString(36).slice(2);
-    const script=document.createElement('script');
-    const timer=setTimeout(()=>{cleanup();reject(new Error('Tempo excedido ao tentar ler pelo Google Visualization.'));},15000);
-    function cleanup(){clearTimeout(timer);try{delete window[cb];}catch(e){window[cb]=undefined;}script.remove();}
-    window[cb]=payload=>{cleanup();
-      try{
-        if(!payload||payload.status==='error')throw new Error(payload?.errors?.[0]?.detailed_message||payload?.errors?.[0]?.message||'Erro retornado pelo Google.');
-        resolve(rowsFromGvizTable(payload.table));
-      }catch(err){reject(err);}
-    };
-    script.onerror=()=>{cleanup();reject(new Error('O Google bloqueou o script. Confirme se a planilha está pública.'));};
-    script.src=url.replace('__CB__',cb)+'&cacheBust='+Date.now();
-    document.head.appendChild(script);
-  });
-}
-
-async function loadGoogleSheetSource(type){
-  // Funcionalidade de link removida — use o upload manual
 }
 
 // ── PROCESS DATA ───────────────────────────────────────────────
@@ -6170,9 +5914,6 @@ function mkBarWithLabels(id,key,rows,vKey,color,label,maxDays,isMon){
 
 // ── LOCAÇÃO ───────────────────────────────────────────────────
 // Nomes operacionais: Coleta→Troca, Entrega→Colocação, Retirada→Retirada
-const LOC_DISPLAY={'Coleta':'Troca','Retirada':'Retirada','Entrega':'Colocação'};
-function nomeTipo(t){return LOC_DISPLAY[t]||t||'—';}
-
 // Resíduos a desprezar no gráfico/tabela de resíduos
 const LOC_RES_IGNORAR=['Basculante Entulho','Basculante Rejeito','Basculante Solo'];
 
@@ -8050,10 +7791,7 @@ async function showDestPagamentoPage(){
 
   // Busca vales confirmados do Supabase e mescla com planilha
   try {
-    const r = await fetch(`${SUPA_URL}/rest/v1/vales_destinacao?select=*,freteiros(nome)&status=eq.confirmado&limit=1000`, {
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+(_session?.access_token||SUPA_KEY)}
-    });
-    const vales = await r.json();
+    const vales = await supaFetchAllRows(`vales_destinacao?select=*,freteiros(nome)&status=eq.confirmado&order=data_saida.desc`);
     // Mapeia para o mesmo formato de S.raw.destinacao
     const mapped = vales.map(v => ({
       data:       v.data_saida ? (p => new Date(+p[0],+p[1]-1,+p[2]))(v.data_saida.split('-')) : null,
@@ -8502,7 +8240,7 @@ async function confLoad() {
   const residuo  = document.getElementById('cf-residuo').value;
   const veiculo  = document.getElementById('cf-veiculo').value;
 
-  let params = 'select=*,freteiros(nome)&limit=1000';
+  let params = 'select=*,freteiros(nome)&order=data_saida.desc';
   if(from)     params += `&data_saida=gte.${from}`;
   if(to)       params += `&data_saida=lte.${to}`;
   if(freteiro) params += `&freteiro_id=eq.${freteiro}`;
@@ -8511,10 +8249,7 @@ async function confLoad() {
   if(veiculo)  params += `&tipo_veiculo=eq.${veiculo}`;
 
   try {
-    const r = await fetch(`${SUPA_URL}/rest/v1/vales_destinacao?${params}`, {
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+(_session?.access_token||SUPA_KEY)}
-    });
-    _confRows = await r.json();
+    _confRows = await supaFetchAllRows(`vales_destinacao?${params}`);
     badge.textContent = _confRows.length + ' registro' + (_confRows.length!==1?'s':'');
     confSortAndRender();
   } catch(e) {
@@ -8761,13 +8496,24 @@ async function osEditSalvar() {
 // ── DESTINAÇÃO — MERGE COM VALES SUPABASE ─────────────────────
 let _destSupabaseMerged = false;
 
+// Busca paginada: PostgREST limita cada resposta; sem isso as telas
+// truncariam silenciosamente em 1000 registros quando a base crescer.
+async function supaFetchAllRows(pathQuery) {
+  const out = [], page = 1000;
+  const headers = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + (_session?.access_token || SUPA_KEY) };
+  for (let off = 0; off < 100000; off += page) {
+    const r = await fetch(`${SUPA_URL}/rest/v1/${pathQuery}&limit=${page}&offset=${off}`, { headers });
+    if (!r.ok) throw new Error(await r.text());
+    const chunk = await r.json();
+    out.push(...chunk);
+    if (chunk.length < page) break;
+  }
+  return out;
+}
+
 async function destMergeSupabase() {
   try {
-    const r = await fetch(
-      `${SUPA_URL}/rest/v1/vales_destinacao?select=*,freteiros(nome)&status=neq.cancelado&limit=1000`,
-      { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + (_session?.access_token || SUPA_KEY) } }
-    );
-    const vales = await r.json();
+    const vales = await supaFetchAllRows(`vales_destinacao?select=*,freteiros(nome)&status=neq.cancelado&order=data_saida.desc`);
 
     // Remove registros anteriores do Supabase (re-fetch limpo)
     S.raw.destinacao = S.raw.destinacao.filter(r => !r._fromSupabase);
@@ -8799,54 +8545,6 @@ async function destMergeSupabase() {
     S.raw.destinacao = [...S.raw.destinacao, ...mapeados];
     applyDestFilters();
   } catch(e) { applyDestFilters(); }
-}
-
-// Mescla vales lançados em /entrada-terceiros (vales_descarga + vale_descarga_itens) em
-// S.raw.att, igual destMergeSupabase faz para a Destinação. Sem isso, o lançamento pelo
-// app nunca aparecia em Recebimento de Terceiros/Consolidado/Resumo Executivo.
-// Exclui cancelados e rascunhos (lançamento incompleto, nunca usado por entrada-terceiros.html hoje).
-async function attMergeSupabase() {
-  try {
-    const r = await fetch(
-      `${SUPA_URL}/rest/v1/vales_descarga?select=*,vale_descarga_itens(*)&status=not.in.(cancelado,rascunho)&limit=1000`,
-      { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + (_session?.access_token || SUPA_KEY) } }
-    );
-    const vales = await r.json();
-
-    // Remove registros anteriores do Supabase (re-fetch limpo)
-    S.raw.att = S.raw.att.filter(r => !r._fromSupabase);
-
-    if (!Array.isArray(vales) || !vales.length) return;
-
-    const mapeados = [];
-    vales.forEach(v => {
-      const itens = v.vale_descarga_itens || [];
-      const dataVale = v.data_hora ? new Date(v.data_hora) : null;
-      itens.forEach((it, idx) => {
-        mapeados.push({
-          data: dataVale,
-          os: (v.numero_vale || ('VALE-' + v.id)) + '-' + idx,
-          ctr: it.ctr_mtr || '', cacamba: it.numero_cacamba || '',
-          cliente: v.parceiro_nome_snapshot || '',
-          gerador: it.gerador_nome_snapshot || v.gerador_nome_snapshot || '',
-          nf: '', status: v.status || '',
-          residuo: it.residuo_nome_snapshot || '',
-          volume: Number(it.volume_m3 || 0),
-          eqColoc: '', eqRetir: '',
-          qtdeEq: Number(it.quantidade || 1),
-          qtdCacamba: Number(it.quantidade || 1),
-          geraDoc: '', pfpj: 'NÃO CLASSIFICADO',
-          motorista: v.motorista || '', placa: v.placa || '',
-          tipo: 'att', tipoServico: '',
-          valor: Number(it.preco_unitario || 0),
-          total: Number(it.valor_total || 0),
-          _fromSupabase: true
-        });
-      });
-    });
-
-    S.raw.att = [...S.raw.att, ...mapeados];
-  } catch(e) {}
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -9123,7 +8821,7 @@ async function recConfLoad() {
   const status  = document.getElementById('rcf-status').value;
   const residuo = document.getElementById('rcf-residuo').value;
 
-  let params = 'select=*,destinos_reciclaveis(nome),tipos_residuo_reciclavel(nome)&limit=1000';
+  let params = 'select=*,destinos_reciclaveis(nome),tipos_residuo_reciclavel(nome)&order=data_saida.desc';
   if(from)    params += `&data_saida=gte.${from}`;
   if(to)      params += `&data_saida=lte.${to}`;
   if(destino) params += `&destino_id=eq.${destino}`;
@@ -9131,10 +8829,7 @@ async function recConfLoad() {
   if(residuo) params += `&residuo_id=eq.${residuo}`;
 
   try {
-    const r = await fetch(`${SUPA_URL}/rest/v1/vales_reciclaveis?${params}`, {
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+(_session?.access_token||SUPA_KEY)}
-    });
-    _recConfRows = await r.json();
+    _recConfRows = await supaFetchAllRows(`vales_reciclaveis?${params}`);
     badge.textContent = _recConfRows.length + ' registro' + (_recConfRows.length!==1?'s':'');
     recConfSortAndRender();
   } catch(e) {
@@ -9494,10 +9189,7 @@ function recValorEfetivo(v) {
 
 async function recDashUpdate() {
   try {
-    const r = await fetch(`${SUPA_URL}/rest/v1/vales_reciclaveis?select=*,destinos_reciclaveis(nome),tipos_residuo_reciclavel(nome)&status=neq.cancelado&order=data_saida.desc&limit=1000`, {
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+(_session?.access_token||SUPA_KEY)}
-    });
-    const vales = await r.json();
+    const vales = await supaFetchAllRows(`vales_reciclaveis?select=*,destinos_reciclaveis(nome),tipos_residuo_reciclavel(nome)&status=neq.cancelado&order=data_saida.desc`);
     _recDashRows = (Array.isArray(vales) ? vales : []).map(v => ({
       data:    v.data_saida ? (p => new Date(+p[0], +p[1]-1, +p[2]))(v.data_saida.split('-')) : null,
       os:      v.os_numero || '',
@@ -9679,11 +9371,23 @@ initNavGroups();
     return txt ? JSON.parse(txt) : [];
   }
 
+  // Busca paginada: sem isso o relatório trunca silenciosamente em 1000 vales
+  // quando a base crescer (PostgREST limita cada resposta).
+  async function apiAll(pathQuery){
+    const out = [], page = 1000;
+    for(let off = 0; off < 100000; off += page){
+      const chunk = await api(pathQuery+`&limit=${page}&offset=${off}`);
+      out.push(...chunk);
+      if(chunk.length < page) break;
+    }
+    return out;
+  }
+
   function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function fmtDt(s){ if(!s) return '—'; const d=new Date(s); return d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); }
   function fmtVol(v){ return v!=null ? Number(v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2}) : '—'; }
   function badge(status){
-    const map={'finalizado':['#10B98120','#10B981'],'cancelado':['#EF444420','#EF4444'],'rascunho':['#F59E0B20','#F59E0B']};
+    const map={'ativo':['#10B98120','#10B981'],'inativo':['#EF444420','#EF4444']};
     const [bg,cl]=map[status]||['#ffffff20','#fff'];
     return `<span style="background:${bg};color:${cl};border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600">${esc(status)}</span>`;
   }
@@ -9705,7 +9409,7 @@ initNavGroups();
         sel.innerHTML = '<option value="">Todos</option>';
         _relResidues.forEach(r=>{ const o=document.createElement('option'); o.value=r.id; o.textContent=r.nome; sel.appendChild(o); });
       }
-      const vales = await api('vales_descarga?select=*,vale_descarga_itens(*)&order=data_hora.desc&limit=1000');
+      const vales = await apiAll('vales_descarga?select=*,vale_descarga_itens(*)&order=data_hora.desc');
       _relData = [];
       vales.forEach(v=>{
         const itens = v.vale_descarga_itens || [];
