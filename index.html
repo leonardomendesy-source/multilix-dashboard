@@ -2254,6 +2254,7 @@ body { font-size: 13.5px !important; }
             <input type="hidden" id="em2-id"/>
             <input type="hidden" id="em2-parceiro-id"/>
             <div style="font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;padding-bottom:6px;border-bottom:1px solid var(--border)">Dados do Cabeçalho</div>
+            <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Data / Hora *</label><input type="datetime-local" id="em2-data-hora" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 10px;font-size:13px;outline:none;box-sizing:border-box"/></div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
               <div style="position:relative"><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Cliente *</label><input type="text" id="em2-cliente" autocomplete="off" oninput="attEditClienteInput(this.value)" onblur="attEditClienteBlur()" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 10px;font-size:13px;outline:none;box-sizing:border-box"/><div id="em2-cliente-drop" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;max-height:200px;overflow-y:auto;z-index:999;box-shadow:0 4px 16px #0008"></div></div>
               <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Gerador</label><input type="text" id="em2-gerador" list="em2-gerador-list" autocomplete="off" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 10px;font-size:13px;outline:none"/><datalist id="em2-gerador-list"></datalist></div>
@@ -9784,6 +9785,12 @@ initNavGroups();
     document.getElementById('em2-id').value = v.id;
     document.getElementById('em2-parceiro-id').value = v.parceiro_id||'';
     document.getElementById('em2-cliente').value = v.parceiro_nome_snapshot||'';
+    // Data/Hora — converter para datetime-local (YYYY-MM-DDTHH:MM)
+    if(v.data_hora){
+      const dt=new Date(v.data_hora);
+      const pad=n=>String(n).padStart(2,'0');
+      document.getElementById('em2-data-hora').value=`${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+    }
     document.getElementById('em2-gerador').value = v.gerador_nome_snapshot || itens[0]?.gerador_nome_snapshot || '';
     document.getElementById('em2-placa').value = v.placa||'';
     document.getElementById('em2-motorista').value = v.motorista||'';
@@ -9884,6 +9891,7 @@ initNavGroups();
       err.style.display='block'; return;
     }
     try {
+      const dataHoraVal = document.getElementById('em2-data-hora').value;
       await api(`vales_descarga?id=eq.${id}`,{method:'PATCH',body:JSON.stringify({
         parceiro_id:            parceiroId,
         parceiro_nome_snapshot: document.getElementById('em2-cliente').value.trim(),
@@ -9892,6 +9900,7 @@ initNavGroups();
         motorista:              document.getElementById('em2-motorista').value.trim()||null,
         status:                 document.getElementById('em2-status').value,
         observacoes_gerais:     document.getElementById('em2-obs-geral').value.trim()||null,
+        ...(dataHoraVal ? {data_hora: new Date(dataHoraVal).toISOString()} : {}),
       })});
       const itensIds = JSON.parse(document.getElementById('att-edit-modal').dataset.itens||'[]');
       await Promise.all(itensIds.map(iid=>{
@@ -9912,7 +9921,6 @@ initNavGroups();
           equipamento_id:            eqId||null,
           equipamento_nome_snapshot: eqNome,
           preco_unitario:            preco,
-          valor_total:               total,
         })});
       }));
       const novosIds = JSON.parse(document.getElementById('att-edit-modal').dataset.novosItens||'[]');
@@ -9936,7 +9944,6 @@ initNavGroups();
           equipamento_id:            eqId,
           equipamento_nome_snapshot: eqNome,
           preco_unitario:            preco,
-          valor_total:               total,
           gerador_nome_snapshot:     document.getElementById('em2-gerador').value.trim()||null,
         })});
       }));

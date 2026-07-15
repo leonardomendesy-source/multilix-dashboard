@@ -1397,7 +1397,6 @@ async function salvarEdicaoOS(){
         residuo_nome_snapshot: resid ? resid.nome : null,
         volume_m3: vol,
         preco_unitario: precoVal,
-        valor_total: total,
         observacoes: block.querySelector('.ed-item-obs').value.trim()||null,
         gerador_nome_snapshot: geradorNome,
       };
@@ -1415,7 +1414,6 @@ async function salvarEdicaoOS(){
           if(comboMudou){
             const precoRow = _edParceiroPrecos.find(p=>p.equipamento_id===payload.equipamento_id && p.residuo_id===payload.residuo_id);
             payload.preco_unitario = precoRow ? Number(precoRow.preco_m3) : null;
-            payload.valor_total = payload.preco_unitario ? +(payload.preco_unitario*vol).toFixed(2) : null;
           }
         }
         const ri = await fetch(`${SUPA_URL}/rest/v1/vale_descarga_itens?id=eq.${encodeURIComponent(itemId)}`,
