@@ -2348,6 +2348,7 @@ body { font-size: 13.5px !important; }
             </div>
             <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">E-mail</label><input type="text" id="pm-email" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none" placeholder="contato@empresa.com.br"/></div>
             <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer"><input type="checkbox" id="pm-email-optin" style="width:16px;height:16px;accent-color:var(--accent,#10B981)"/> Enviar comprovante de descarte por e-mail automaticamente</label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer"><input type="checkbox" id="pm-gerador-obrig" style="width:16px;height:16px;accent-color:#F59E0B"/> <span>Gerador obrigatório — exigir preenchimento do gerador ao lançar O.S. <span style="background:#F59E0B20;color:#F59E0B;border:1px solid #F59E0B55;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700;margin-left:4px">obrigatório</span></span></label>
             <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Observações</label><textarea id="pm-obs" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none;resize:none;height:70px;font-family:inherit" placeholder="Informações adicionais"></textarea></div>
 
             <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
@@ -10366,6 +10367,7 @@ initNavGroups();
   window.attParcNovo = function(){
     ['pm-id','pm-nome','pm-razao','pm-doc','pm-tel','pm-email','pm-obs'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
     document.getElementById('pm-email-optin').checked=false;
+    document.getElementById('pm-gerador-obrig').checked=false;
     document.getElementById('pm-tipo-doc').selectedIndex=0;
     document.getElementById('pm-status').value='ativo';
     document.getElementById('parc-modal-title').textContent='Novo Parceiro';
@@ -10385,6 +10387,7 @@ initNavGroups();
     document.getElementById('pm-tel').value = p.telefone||'';
     document.getElementById('pm-email').value = p.email||'';
     document.getElementById('pm-email-optin').checked = !!p.enviar_comprovante_email;
+    document.getElementById('pm-gerador-obrig').checked = !!p.gerador_obrigatorio;
     document.getElementById('pm-obs').value = p.observacoes||'';
     document.getElementById('pm-status').value = p.status||'ativo';
     document.getElementById('parc-modal-title').textContent='Editar Parceiro';
@@ -10414,6 +10417,7 @@ initNavGroups();
       telefone: document.getElementById('pm-tel').value.trim()||null,
       email: document.getElementById('pm-email').value.trim()||null,
       enviar_comprovante_email: document.getElementById('pm-email-optin').checked,
+      gerador_obrigatorio: document.getElementById('pm-gerador-obrig').checked,
       observacoes: document.getElementById('pm-obs').value.trim()||null,
       status: document.getElementById('pm-status').value,
     };

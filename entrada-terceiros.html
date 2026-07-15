@@ -351,7 +351,8 @@ textarea{resize:none;height:80px}
   </div>
 
   <!-- 2. GERADOR -->
-  <div class="sec-title">🏭 Gerador do Resíduo</div>
+  <div id="sec-gerador" style="border-radius:8px;transition:border-color .2s">
+  <div class="sec-title" id="lbl-gerador">🏭 Gerador do Resíduo</div>
 
   <div class="field">
     <label>Gerador</label>
@@ -363,6 +364,7 @@ textarea{resize:none;height:80px}
     </div>
     <input type="hidden" id="v-gerador-nome"/>
   </div>
+  </div><!-- /sec-gerador -->
 
   <!-- 3. DADOS OPCIONAIS -->
   <div class="sec-title">🚛 Dados do Veículo (opcional)</div>
@@ -576,6 +578,7 @@ function onClienteInput(q){
   document.getElementById('v-cliente-razao').value = '';
   document.getElementById('v-cliente-doc').value = '';
   _parceiroSel = null;
+  atualizarLabelGerador();
   atualizarFinalizar();
   buildAc('ac-cliente', _parceiros, q, {
     match: (p,l) => (p.nome_fantasia||'').toLowerCase().includes(l) || (p.razao_social||'').toLowerCase().includes(l) || (p.documento||'').includes(q),
@@ -592,7 +595,21 @@ function selecionarParceiro(el){
   document.getElementById('v-cliente-razao').value = el.dataset.razao;
   document.getElementById('v-cliente-doc').value   = el.dataset.doc;
   _parceiroSel = _parceiros.find(p=>p.id===el.dataset.id) || null;
-  closeAc('ac-cliente'); atualizarFinalizar();
+  closeAc('ac-cliente');
+  atualizarLabelGerador();
+  atualizarFinalizar();
+}
+
+function atualizarLabelGerador(){
+  const obrig = !!(_parceiroSel && _parceiroSel.gerador_obrigatorio);
+  const sec = document.getElementById('sec-gerador');
+  const lbl = document.getElementById('lbl-gerador');
+  if(sec) sec.style.borderColor = obrig ? '#F59E0B' : '';
+  if(lbl){
+    lbl.innerHTML = obrig
+      ? '🏭 Gerador do Resíduo <span style="background:#F59E0B;color:#000;font-size:10px;font-weight:700;border-radius:5px;padding:1px 7px;margin-left:6px;vertical-align:middle">OBRIGATÓRIO</span>'
+      : '🏭 Gerador do Resíduo';
+  }
 }
 
 // ── AUTOCOMPLETE GERADOR ─────────────────────────────────────────
@@ -814,6 +831,7 @@ async function finalizarVale(){
 
   if(!dataServico || isNaN(new Date(dataServico).getTime())){ showAlert('Informe a data e hora do serviço.'); return; }
   if(!clienteId){ showAlert('Selecione o cliente/parceiro.'); return; }
+  if(_parceiroSel && _parceiroSel.gerador_obrigatorio && !geradorNome){ showAlert('O cliente "' + (document.getElementById('v-cliente-input').value.trim()) + '" exige o preenchimento do Gerador. Por favor informe o nome do gerador.'); return; }
   if(!_itens.length){ showAlert('Adicione pelo menos uma descarga.'); return; }
 
   showLoading('Registrando vale...');
