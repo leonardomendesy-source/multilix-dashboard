@@ -264,6 +264,7 @@ textarea{resize:none;height:80px}
   <div class="edit-box">
     <div class="edit-title" id="edit-title">Editar O.S.</div>
     <div id="edit-alert" style="display:none;background:#EF444415;border:1px solid #EF444440;border-radius:8px;padding:10px 13px;font-size:13px;color:var(--red);margin-bottom:12px"></div>
+    <input type="hidden" id="ed-parceiro-id"/>
 
     <div class="edit-sec">Dados Gerais</div>
     <div class="edit-field">
@@ -271,8 +272,22 @@ textarea{resize:none;height:80px}
       <input type="datetime-local" id="ed-data"/>
     </div>
     <div class="edit-field">
+      <label>Cliente / Parceiro *</label>
+      <div style="position:relative">
+        <input type="text" id="ed-cliente" autocomplete="off" placeholder="Digite o nome do cliente..."
+               oninput="onEdClienteInput(this.value)" onblur="onEdClienteBlur()"
+               style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 12px;font-size:14px;outline:none;box-sizing:border-box"/>
+        <div id="ed-cliente-drop" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 16px #0004;z-index:999;max-height:200px;overflow-y:auto"></div>
+      </div>
+    </div>
+    <div class="edit-field">
       <label>Gerador</label>
-      <input type="text" id="ed-gerador" placeholder="Nome do gerador"/>
+      <div style="position:relative">
+        <input type="text" id="ed-gerador" autocomplete="off" placeholder="Nome do gerador do resíduo..."
+               oninput="onEdGeradorInput(this.value)" onblur="onEdGeradorBlur()"
+               style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 12px;font-size:14px;outline:none;box-sizing:border-box"/>
+        <div id="ed-gerador-drop" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 16px #0004;z-index:999;max-height:200px;overflow-y:auto"></div>
+      </div>
     </div>
     <div class="edit-row2">
       <div class="edit-field">
@@ -291,6 +306,10 @@ textarea{resize:none;height:80px}
 
     <div class="edit-sec">Descargas</div>
     <div id="ed-itens"></div>
+    <button type="button" onclick="edAddNovoItem()"
+      style="width:100%;margin-bottom:12px;background:transparent;border:1px dashed var(--border);color:var(--muted);border-radius:8px;padding:10px;font-size:13px;cursor:pointer">
+      + Adicionar Descarga
+    </button>
 
     <div class="edit-actions">
       <button class="btn-cancel-edit" onclick="fecharEdicaoOS()">Cancelar</button>
@@ -1129,73 +1148,160 @@ async function enviarEmailDetalhe(){
 function imprimirComprovanteDetalhe(){ window.print(); }
 
 // ── EDIÇÃO DE O.S. ───────────────────────────────────────────────
+let _edNovoIdx = 0;
+let _edParceiroPrecos = [];
+
+function edItemHtml(itemId, num, it, isNew){
+  const eqOpts = _equipamentos.map(e=>`<option value="${e.id}" data-vol="${e.volume_m3_padrao||''}"${it&&it.equipamento_id===e.id?' selected':''}>${esc(e.nome)}</option>`).join('');
+  const resOpts = _residuos.map(r=>`<option value="${r.id}"${it&&it.residuo_id===r.id?' selected':''}>${esc(r.nome)}</option>`).join('');
+  const total = it&&it.valor_total ? 'R$ '+Number(it.valor_total).toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—';
+  return `<div class="edit-item-block" data-item-id="${itemId}" data-is-new="${isNew?'1':'0'}">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <div class="edit-item-label" style="margin-bottom:0">Descarga #${num}${isNew?' <span style=\"color:var(--muted);font-weight:400\">(nova)</span>':''}</div>
+      ${isNew?`<button type="button" onclick="edRemoverItem(this)" style="background:#EF444420;border:1px solid #EF4444;color:#EF4444;border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer">Remover</button>`:''}
+    </div>
+    <div class="edit-row2">
+      <div class="edit-field">
+        <label>Nº Caçamba</label>
+        <input type="text" class="ed-cacamba" value="${it?esc(it.numero_cacamba||''):''}" placeholder="Ex: 908"/>
+      </div>
+      <div class="edit-field">
+        <label>CTR / MTR</label>
+        <input type="text" class="ed-ctr" value="${it?esc(it.ctr_mtr||''):''}" placeholder="Nº do CTR"/>
+      </div>
+    </div>
+    <div class="edit-field">
+      <label>Equipamento</label>
+      <select class="ed-equip" onchange="onEditEquipChange(this);edAutoPreco(this.closest('.edit-item-block'))">
+        <option value="">Selecione...</option>
+        ${eqOpts}
+      </select>
+    </div>
+    <div class="edit-field">
+      <label>Tipo de Resíduo</label>
+      <select class="ed-residuo" onchange="edAutoPreco(this.closest('.edit-item-block'))">
+        <option value="">Selecione...</option>
+        ${resOpts}
+      </select>
+    </div>
+    <div class="edit-row2">
+      <div class="edit-field">
+        <label>Volume (m³)</label>
+        <input type="number" class="ed-volume" step="0.5" min="0" value="${it?it.volume_m3||0:''}" oninput="edCalcTotal(this.closest('.edit-item-block'))"/>
+      </div>
+      <div class="edit-field">
+        <label>Preço Unit. (R$)</label>
+        <input type="number" class="ed-preco" step="0.01" value="${it&&it.preco_unitario!=null?it.preco_unitario:''}" placeholder="—" oninput="edCalcTotal(this.closest('.edit-item-block'))"/>
+      </div>
+    </div>
+    <div class="edit-field">
+      <label>Observação do Item</label>
+      <input type="text" class="ed-item-obs" value="${it?esc(it.observacoes||''):''}" placeholder="Observação específica"/>
+    </div>
+    <div style="text-align:right;font-size:12px;color:var(--muted)">Valor: <strong class="ed-total" style="color:var(--green,#10B981)">${total}</strong></div>
+    ${it&&it.imagem_url?`<div style="margin-top:8px"><img src="${it.imagem_url}" style="max-height:80px;border-radius:6px;cursor:pointer" onclick="window.open('${it.imagem_url}','_blank')"/></div>`:''}
+  </div>`;
+}
+
+function edAutoPreco(block){
+  if(!block) return;
+  const eqId  = block.querySelector('.ed-equip').value;
+  const resId = block.querySelector('.ed-residuo').value;
+  if(eqId && resId){
+    const row = _edParceiroPrecos.find(p=>p.equipamento_id===eqId && p.residuo_id===resId);
+    if(row){ block.querySelector('.ed-preco').value = row.preco_m3; }
+  }
+  edCalcTotal(block);
+}
+
+function edCalcTotal(block){
+  if(!block) return;
+  const vol   = parseFloat(block.querySelector('.ed-volume').value)||0;
+  const preco = parseFloat(block.querySelector('.ed-preco').value)||0;
+  const total = vol * preco;
+  const el = block.querySelector('.ed-total');
+  if(el) el.textContent = total > 0 ? 'R$ '+total.toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—';
+}
+
+function edAddNovoItem(){
+  _edNovoIdx++;
+  const num = document.querySelectorAll('#ed-itens .edit-item-block').length + 1;
+  const div = document.createElement('div');
+  div.innerHTML = edItemHtml('new-'+_edNovoIdx, num, null, true);
+  document.getElementById('ed-itens').appendChild(div.firstElementChild);
+}
+
+function edRemoverItem(btn){
+  btn.closest('.edit-item-block').remove();
+}
+
+function onEdClienteInput(q){
+  const drop = document.getElementById('ed-cliente-drop');
+  if(!q||q.length<1){ drop.style.display='none'; return; }
+  const matches = _parceiros.filter(p=>p.status==='ativo'&&(p.nome_fantasia||'').toLowerCase().includes(q.toLowerCase())).slice(0,8);
+  if(!matches.length){ drop.style.display='none'; return; }
+  drop.innerHTML = matches.map(p=>{
+    const sn=(p.nome_fantasia||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return `<div style="padding:9px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)" onmousedown="onEdClienteSelect('${p.id}','${sn}')">${esc(p.nome_fantasia)}</div>`;
+  }).join('');
+  drop.style.display='block';
+}
+function onEdClienteBlur(){
+  setTimeout(()=>{ const d=document.getElementById('ed-cliente-drop'); if(d)d.style.display='none'; },200);
+}
+async function onEdClienteSelect(parceiroId, nome){
+  document.getElementById('ed-parceiro-id').value = parceiroId;
+  document.getElementById('ed-cliente').value = nome;
+  document.getElementById('ed-cliente-drop').style.display='none';
+  try{
+    _edParceiroPrecos = await fetch(`${SUPA_URL}/rest/v1/parceiros_att_tabela_precos?parceiro_id=eq.${parceiroId}&ativo=eq.true`,{headers:HDR_NO_PREFER}).then(r=>r.json());
+    document.querySelectorAll('#ed-itens .edit-item-block').forEach(b=>edAutoPreco(b));
+  } catch(e){ _edParceiroPrecos=[]; }
+}
+
+function onEdGeradorInput(q){
+  const drop = document.getElementById('ed-gerador-drop');
+  if(!q||q.length<1){ drop.style.display='none'; return; }
+  const matches = _geradores.filter(g=>(g.nome||'').toLowerCase().includes(q.toLowerCase())).slice(0,8);
+  if(!matches.length){ drop.style.display='none'; return; }
+  drop.innerHTML = matches.map(g=>{
+    const sn=(g.nome||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return `<div style="padding:9px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)" onmousedown="document.getElementById('ed-gerador').value='${sn}';document.getElementById('ed-gerador-drop').style.display='none'">${esc(g.nome)}</div>`;
+  }).join('');
+  drop.style.display='block';
+}
+function onEdGeradorBlur(){
+  setTimeout(()=>{ const d=document.getElementById('ed-gerador-drop'); if(d)d.style.display='none'; },200);
+}
+
 function abrirEdicaoOS(){
   if(!_detVale) return;
   const {vale:v, itens} = _detVale;
+  _edNovoIdx = 0;
 
   document.getElementById('edit-title').textContent = `Editar ${v.numero_vale}`;
   document.getElementById('edit-alert').style.display='none';
 
-  // Converter data_hora para datetime-local (YYYY-MM-DDTHH:MM)
+  // Converter data_hora para datetime-local
   const dt = new Date(v.data_hora);
   const pad = n=>String(n).padStart(2,'0');
   const local = `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
   document.getElementById('ed-data').value = local;
+
+  document.getElementById('ed-parceiro-id').value = v.parceiro_id||'';
+  document.getElementById('ed-cliente').value = v.parceiro_nome_snapshot||'';
   document.getElementById('ed-gerador').value = v.gerador_nome_snapshot||'';
   document.getElementById('ed-placa').value = v.placa||'';
   document.getElementById('ed-motorista').value = v.motorista||'';
   document.getElementById('ed-obs').value = v.observacoes_gerais||'';
 
-  // Montar formulário de itens
-  const eqOpts = _equipamentos.map(e=>`<option value="${e.id}" data-vol="${e.volume_m3_padrao||''}">${esc(e.nome)}</option>`).join('');
-  const resOpts = _residuos.map(r=>`<option value="${r.id}">${esc(r.nome)}</option>`).join('');
+  // Carregar preços do parceiro atual
+  if(v.parceiro_id){
+    _edParceiroPrecos = _precos.filter(p=>p.parceiro_id===v.parceiro_id);
+  } else { _edParceiroPrecos = []; }
 
-  document.getElementById('ed-itens').innerHTML = itens.map((it,i)=>`
-    <div class="edit-item-block" data-item-id="${it.id}">
-      <div class="edit-item-label">Descarga #${i+1}</div>
-      <div class="edit-row2">
-        <div class="edit-field">
-          <label>Nº Caçamba</label>
-          <input type="text" class="ed-cacamba" value="${esc(it.numero_cacamba||'')}" placeholder="Ex: 908"/>
-        </div>
-        <div class="edit-field">
-          <label>CTR / MTR</label>
-          <input type="text" class="ed-ctr" value="${esc(it.ctr_mtr||'')}" placeholder="Nº do CTR"/>
-        </div>
-      </div>
-      <div class="edit-field">
-        <label>Equipamento</label>
-        <select class="ed-equip" onchange="onEditEquipChange(this)">
-          <option value="">Selecione...</option>
-          ${eqOpts}
-        </select>
-      </div>
-      <div class="edit-field">
-        <label>Tipo de Resíduo</label>
-        <select class="ed-residuo">
-          <option value="">Selecione...</option>
-          ${resOpts}
-        </select>
-      </div>
-      <div class="edit-field">
-        <label>Volume (m³)</label>
-        <input type="number" class="ed-volume" step="0.5" min="0" value="${it.volume_m3||0}"/>
-      </div>
-      <div class="edit-field">
-        <label>Observação do Item</label>
-        <input type="text" class="ed-item-obs" value="${esc(it.observacoes||'')}" placeholder="Observação específica"/>
-      </div>
-    </div>
-  `).join('');
-
-  // Preencher selects com valores atuais
-  document.querySelectorAll('#ed-itens .edit-item-block').forEach((block,i)=>{
-    const it = itens[i];
-    const selE = block.querySelector('.ed-equip');
-    const selR = block.querySelector('.ed-residuo');
-    if(it.equipamento_id) selE.value = it.equipamento_id;
-    if(it.residuo_id)     selR.value = it.residuo_id;
-  });
+  // Montar itens
+  document.getElementById('ed-itens').innerHTML = itens.map((it,i)=>edItemHtml(it.id, i+1, it, false)).join('');
 
   document.getElementById('edit-overlay').style.display='block';
   document.body.style.overflow='hidden';
@@ -1223,13 +1329,18 @@ async function salvarEdicaoOS(){
 
   const dataHoraLocal = document.getElementById('ed-data').value;
   if(!dataHoraLocal){ alertEl.textContent='Informe a data/hora.'; alertEl.style.display='block'; return; }
+  const parceiroId = document.getElementById('ed-parceiro-id').value;
+  if(!parceiroId){ alertEl.textContent='Selecione um Cliente cadastrado.'; alertEl.style.display='block'; return; }
 
   showLoading('Salvando alterações...');
   try {
+    const geradorNome = document.getElementById('ed-gerador').value.trim()||null;
     // Patch vale
     const valePayload = {
       data_hora: new Date(dataHoraLocal).toISOString(),
-      gerador_nome_snapshot: document.getElementById('ed-gerador').value.trim()||null,
+      parceiro_id: parceiroId,
+      parceiro_nome_snapshot: document.getElementById('ed-cliente').value.trim()||null,
+      gerador_nome_snapshot: geradorNome,
       placa: document.getElementById('ed-placa').value.trim().toUpperCase()||null,
       motorista: document.getElementById('ed-motorista').value.trim()||null,
       observacoes_gerais: document.getElementById('ed-obs').value.trim()||null,
@@ -1238,35 +1349,54 @@ async function salvarEdicaoOS(){
       {method:'PATCH', headers:HDR, body:JSON.stringify(valePayload)});
     if(!rv.ok) throw new Error(await rv.text());
 
-    // Patch cada item
-    const blocks = document.querySelectorAll('#ed-itens .edit-item-block');
-    await Promise.all(Array.from(blocks).map(async(block,i)=>{
-      const it = itens[i];
+    // Patch itens existentes / POST novos
+    const allBlocks = Array.from(document.querySelectorAll('#ed-itens .edit-item-block'));
+    await Promise.all(allBlocks.map(async(block)=>{
+      const itemId = block.dataset.itemId;
+      const isNew  = block.dataset.isNew === '1';
       const equipId = block.querySelector('.ed-equip').value;
       const residId = block.querySelector('.ed-residuo').value;
       const equip = _equipamentos.find(e=>e.id===equipId);
       const resid = _residuos.find(r=>r.id===residId);
+      const precoVal = parseFloat(block.querySelector('.ed-preco').value)||null;
+      const vol      = parseFloat(block.querySelector('.ed-volume').value)||0;
+      const total    = (precoVal && vol) ? +(precoVal*vol).toFixed(2) : null;
       const payload = {
         numero_cacamba: block.querySelector('.ed-cacamba').value.trim()||null,
         ctr_mtr: block.querySelector('.ed-ctr').value.trim()||null,
-        equipamento_id: equipId||it.equipamento_id,
-        equipamento_nome_snapshot: equip ? equip.nome : it.equipamento_nome_snapshot,
-        residuo_id: residId||it.residuo_id,
-        residuo_nome_snapshot: resid ? resid.nome : it.residuo_nome_snapshot,
-        volume_m3: parseFloat(block.querySelector('.ed-volume').value)||it.volume_m3,
+        equipamento_id: equipId||null,
+        equipamento_nome_snapshot: equip ? equip.nome : null,
+        residuo_id: residId||null,
+        residuo_nome_snapshot: resid ? resid.nome : null,
+        volume_m3: vol,
+        preco_unitario: precoVal,
+        valor_total: total,
         observacoes: block.querySelector('.ed-item-obs').value.trim()||null,
+        gerador_nome_snapshot: geradorNome,
       };
-      // Se equipamento ou resíduo mudou, o preço snapshot não vale mais:
-      // rebusca na tabela de preços do cliente (valor_total é coluna gerada no banco).
-      const comboMudou = payload.equipamento_id!==it.equipamento_id || payload.residuo_id!==it.residuo_id;
-      if(comboMudou){
-        const precoRow = _precos.find(p=>p.parceiro_id===v.parceiro_id && p.equipamento_id===payload.equipamento_id && p.residuo_id===payload.residuo_id);
-        payload.preco_unitario = precoRow ? Number(precoRow.preco_m3) : null;
+      if(isNew){
+        if(!equipId) return;
+        payload.vale_descarga_id = v.id;
+        const ri = await fetch(`${SUPA_URL}/rest/v1/vale_descarga_itens`,
+          {method:'POST', headers:HDR, body:JSON.stringify(payload)});
+        if(!ri.ok) throw new Error(await ri.text());
+      } else {
+        const it = itens.find(x=>x.id===itemId)||{};
+        // Se preço não foi manualmente preenchido e combo mudou, rebusca
+        if(!precoVal){
+          const comboMudou = payload.equipamento_id!==it.equipamento_id || payload.residuo_id!==it.residuo_id;
+          if(comboMudou){
+            const precoRow = _edParceiroPrecos.find(p=>p.equipamento_id===payload.equipamento_id && p.residuo_id===payload.residuo_id);
+            payload.preco_unitario = precoRow ? Number(precoRow.preco_m3) : null;
+            payload.valor_total = payload.preco_unitario ? +(payload.preco_unitario*vol).toFixed(2) : null;
+          }
+        }
+        const ri = await fetch(`${SUPA_URL}/rest/v1/vale_descarga_itens?id=eq.${encodeURIComponent(itemId)}`,
+          {method:'PATCH', headers:HDR, body:JSON.stringify(payload)});
+        if(!ri.ok) throw new Error(await ri.text());
       }
-      const ri = await fetch(`${SUPA_URL}/rest/v1/vale_descarga_itens?id=eq.${encodeURIComponent(it.id)}`,
-        {method:'PATCH', headers:HDR, body:JSON.stringify(payload)});
-      if(!ri.ok) throw new Error(await ri.text());
     }));
+    if(geradorNome) await salvarGerador(geradorNome);
 
     hideLoading();
     fecharEdicaoOS();

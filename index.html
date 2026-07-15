@@ -1788,6 +1788,7 @@ body { font-size: 13.5px !important; }
             <button class="nav-item" onclick="showPage('att-precos',this)" style="padding-left:54px"><span class="icon" data-lucide="tag"></span>Tabela de Preços</button>
             <button class="nav-item" onclick="showPage('att-residuos',this)" style="padding-left:54px"><span class="icon" data-lucide="recycle"></span>Tipos de Resíduo</button>
             <button class="nav-item" onclick="showPage('att-equipamentos',this)" style="padding-left:54px"><span class="icon" data-lucide="truck"></span>Equipamentos</button>
+            <button class="nav-item" onclick="showPage('att-geradores',this)" style="padding-left:54px"><span class="icon" data-lucide="factory"></span>Geradores</button>
           </div></div>
         </div>
       </div></div>
@@ -11033,9 +11034,164 @@ initNavGroups();
     if(page==='att-precos'){ Promise.all([attResLoad(),attEqLoad()]).then(()=>{ if(!_parceiros.length) attParcLoad().then(precosLoad); else precosLoad(); }); }
     if(page==='att-residuos') attResLoad();
     if(page==='att-equipamentos') attEqLoad();
+    if(page==='att-geradores') attGeradoresLoad();
   };
+  // ── GERADORES ATT ──────────────────────────────────────────────────────────
+  let _geradores = [];
+
+  async function attGeradoresLoad(){
+    const list = document.getElementById('att-ger-list');
+    if(!list) return;
+    list.innerHTML = '<div style="color:var(--muted2);font-size:13px;padding:20px 0;text-align:center">Carregando...</div>';
+    try{
+      _geradores = await apiAll('geradores_att?select=id,nome,documento,endereco,cep,cidade,estado,ativo&order=nome.asc');
+      attGeradoresRender(_geradores);
+    } catch(e){ list.innerHTML = '<div style="color:#EF4444;font-size:13px">Erro ao carregar geradores.</div>'; }
+  }
+
+  function attGeradoresFiltrar(q){
+    if(!q) return attGeradoresRender(_geradores);
+    const l = q.toLowerCase();
+    attGeradoresRender(_geradores.filter(g=>(g.nome||'').toLowerCase().includes(l)||(g.cidade||'').toLowerCase().includes(l)||(g.documento||'').toLowerCase().includes(l)));
+  }
+
+  function attGeradoresRender(list){
+    const el = document.getElementById('att-ger-list');
+    if(!el) return;
+    if(!list.length){ el.innerHTML='<div style="color:var(--muted2);font-size:13px;padding:20px 0;text-align:center">Nenhum gerador encontrado.</div>'; return; }
+    el.innerHTML = list.map(g=>`
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px">${esc(g.nome)}</div>
+          ${g.documento?`<div style="font-size:11px;color:var(--muted2)">${esc(g.documento)}</div>`:''}
+          ${g.endereco?`<div style="font-size:11px;color:var(--muted2);margin-top:2px">${esc(g.endereco)}${g.cidade?', '+esc(g.cidade):''}${g.estado?' - '+esc(g.estado):''}</div>`:''}
+          ${!g.ativo?'<span style="font-size:10px;background:#EF444420;color:#EF4444;border:1px solid #EF444440;border-radius:10px;padding:1px 7px;margin-top:4px;display:inline-block">Inativo</span>':''}
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button onclick="attGeradorOpenModal('${g.id}')" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:5px 12px;font-size:12px;cursor:pointer">Editar</button>
+          <button onclick="attGeradorExcluir('${g.id}','${esc(g.nome).replace(/'/g,"\'")}')" style="background:#EF444420;border:1px solid #EF444440;color:#EF4444;border-radius:7px;padding:5px 12px;font-size:12px;cursor:pointer">Excluir</button>
+        </div>
+      </div>`).join('');
+  }
+
+  function attGeradorOpenModal(id){
+    const g = id ? _geradores.find(x=>x.id===id) : null;
+    document.getElementById('att-ger-modal-id').value   = id||'';
+    document.getElementById('att-ger-modal-title').textContent = g ? 'Editar Gerador' : 'Novo Gerador';
+    document.getElementById('att-ger-modal-err').style.display = 'none';
+    document.getElementById('att-ger-nome').value    = g ? g.nome||'' : '';
+    document.getElementById('att-ger-doc').value     = g ? g.documento||'' : '';
+    document.getElementById('att-ger-endereco').value= g ? g.endereco||'' : '';
+    document.getElementById('att-ger-cep').value     = g ? g.cep||'' : '';
+    document.getElementById('att-ger-cidade').value  = g ? g.cidade||'' : '';
+    document.getElementById('att-ger-estado').value  = g ? g.estado||'' : '';
+    document.getElementById('att-ger-ativo').checked = g ? !!g.ativo : true;
+    document.getElementById('att-ger-modal').style.display = 'flex';
+  }
+
+  async function attGeradorSalvar(){
+    const err = document.getElementById('att-ger-modal-err');
+    err.style.display = 'none';
+    const id   = document.getElementById('att-ger-modal-id').value;
+    const nome = document.getElementById('att-ger-nome').value.trim();
+    if(!nome){ err.textContent='O nome é obrigatório.'; err.style.display='block'; return; }
+    const payload = {
+      nome,
+      nome_normalizado: nome.toLowerCase().replace(/\s+/g,' '),
+      documento: document.getElementById('att-ger-doc').value.trim()||null,
+      endereco:  document.getElementById('att-ger-endereco').value.trim()||null,
+      cep:       document.getElementById('att-ger-cep').value.trim()||null,
+      cidade:    document.getElementById('att-ger-cidade').value.trim()||null,
+      estado:    document.getElementById('att-ger-estado').value.trim()||null,
+      ativo:     document.getElementById('att-ger-ativo').checked,
+    };
+    try{
+      if(id){
+        await api(`geradores_att?id=eq.${id}`,{method:'PATCH',body:JSON.stringify(payload)});
+      } else {
+        await api('geradores_att',{method:'POST',body:JSON.stringify(payload)});
+      }
+      document.getElementById('att-ger-modal').style.display='none';
+      await attGeradoresLoad();
+    } catch(e){ err.textContent='Erro ao salvar: '+e.message; err.style.display='block'; }
+  }
+
+  async function attGeradorExcluir(id, nome){
+    if(!confirm(`Excluir o gerador "${nome}"?\n\nEsta ação não pode ser desfeita.`)) return;
+    try{
+      await api(`geradores_att?id=eq.${id}`,{method:'DELETE'});
+      await attGeradoresLoad();
+    } catch(e){ alert('Erro ao excluir: '+e.message); }
+  }
 
 })();
 </script>
+
+    <!-- ══ GERADORES ATT ══════════════════════════════════════════════════════ -->
+    <div class="page" id="page-att-geradores" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-size:16px;font-weight:700">Geradores</div>
+          <div style="font-size:12px;color:var(--muted2)">Cadastro de geradores de resíduos</div>
+        </div>
+        <button onclick="attGeradorOpenModal(null)" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer">+ Novo Gerador</button>
+      </div>
+      <input id="att-ger-search" type="text" placeholder="🔍  Buscar geradores..." oninput="attGeradoresFiltrar(this.value)"
+        style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 14px;font-size:13px;outline:none;box-sizing:border-box;margin-bottom:14px"/>
+      <div id="att-ger-list" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+
+    <!-- Modal Gerador -->
+    <div id="att-ger-modal" style="display:none;position:fixed;inset:0;background:#0007;z-index:2000;align-items:center;justify-content:center">
+      <div style="background:var(--surface);border-radius:14px;padding:24px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px #0008">
+        <div style="font-size:15px;font-weight:700;margin-bottom:16px" id="att-ger-modal-title">Novo Gerador</div>
+        <div id="att-ger-modal-err" style="display:none;background:#EF444415;border:1px solid #EF444440;border-radius:8px;padding:10px 13px;font-size:13px;color:#EF4444;margin-bottom:12px"></div>
+        <input type="hidden" id="att-ger-modal-id"/>
+
+        <div style="display:grid;gap:10px">
+          <div>
+            <label style="font-size:11px;color:var(--muted2);display:block;margin-bottom:4px">Nome *</label>
+            <input type="text" id="att-ger-nome" placeholder="Razão social ou nome fantasia"
+              style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;outline:none;box-sizing:border-box"/>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted2);display:block;margin-bottom:4px">CNPJ / CPF</label>
+            <input type="text" id="att-ger-doc" placeholder="00.000.000/0001-00"
+              style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;outline:none;box-sizing:border-box"/>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted2);display:block;margin-bottom:4px">Endereço</label>
+            <input type="text" id="att-ger-endereco" placeholder="Rua, número, complemento"
+              style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;outline:none;box-sizing:border-box"/>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 2fr 1fr;gap:8px">
+            <div>
+              <label style="font-size:11px;color:var(--muted2);display:block;margin-bottom:4px">CEP</label>
+              <input type="text" id="att-ger-cep" placeholder="00000-000"
+                style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;outline:none;box-sizing:border-box"/>
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--muted2);display:block;margin-bottom:4px">Cidade</label>
+              <input type="text" id="att-ger-cidade" placeholder="São Paulo"
+                style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;outline:none;box-sizing:border-box"/>
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--muted2);display:block;margin-bottom:4px">UF</label>
+              <input type="text" id="att-ger-estado" placeholder="SP" maxlength="2"
+                style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;outline:none;box-sizing:border-box;text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"/>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <label style="font-size:11px;color:var(--muted2)">Ativo</label>
+            <input type="checkbox" id="att-ger-ativo" checked style="width:16px;height:16px;cursor:pointer"/>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:18px">
+          <button onclick="document.getElementById('att-ger-modal').style.display='none'" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px;font-size:13px;cursor:pointer">Cancelar</button>
+          <button onclick="attGeradorSalvar()" style="flex:2;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:600;cursor:pointer">Salvar</button>
+        </div>
+      </div>
+    </div>
 </body>
 </html>
