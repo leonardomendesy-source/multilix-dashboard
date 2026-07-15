@@ -2303,7 +2303,10 @@ body { font-size: 13.5px !important; }
           <div style="font-size:16px;font-weight:700">Parceiros ATT</div>
           <div style="font-size:12px;color:var(--muted);margin-top:2px">Clientes que descarregam resíduos na ATT Multilix</div>
         </div>
-        <button class="btn btn-sm" style="background:var(--green);color:#000;font-weight:700" onclick="attParcNovo()"><i data-lucide="plus" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Novo Parceiro</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-sm" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-weight:600" onclick="attParcExportarXLSX()"><i data-lucide="download" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Exportar Excel</button>
+          <button class="btn btn-sm" style="background:var(--green);color:#000;font-weight:700" onclick="attParcNovo()"><i data-lucide="plus" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Novo Parceiro</button>
+        </div>
       </div>
       <div class="filterbar" style="margin-bottom:16px">
         <input type="text" id="parc-busca" placeholder="Buscar por nome, razão social ou documento..." oninput="attParcFiltrar()" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;outline:none"/>
@@ -10289,6 +10292,40 @@ initNavGroups();
   // PARCEIROS ATT
   // ─────────────────────────────────────────────────────────────
   let _parceiros = [];
+
+  window.attParcExportarXLSX = function(){
+    if(!_parceiros.length){ alert('Nenhum parceiro carregado.'); return; }
+    const q  = (document.getElementById('parc-busca')?.value||'').toLowerCase();
+    const st = document.getElementById('parc-status-f')?.value||'';
+    const lista = _parceiros.filter(p=>{
+      if(st && p.status!==st) return false;
+      if(q && !(p.nome_fantasia||'').toLowerCase().includes(q) &&
+              !(p.razao_social||'').toLowerCase().includes(q) &&
+              !(p.documento||'').includes(q)) return false;
+      return true;
+    });
+    const rows = lista.map(p=>({
+      'Nome Fantasia':          p.nome_fantasia||'',
+      'Razão Social':           p.razao_social||'',
+      'Documento (CNPJ/CPF)':   p.documento||'',
+      'Telefone':               p.telefone||'',
+      'E-mail':                 p.email||'',
+      'Status':                 p.status||'',
+      'Enviar Comprovante E-mail': p.enviar_comprovante_email ? 'Sim' : 'Não',
+      'Endereço':               p.endereco||'',
+      'CEP':                    p.cep||'',
+      'Cidade':                 p.cidade||'',
+      'Estado':                 p.estado||'',
+      'Observações':            p.observacoes||'',
+      'Criado em':              p.created_at ? new Date(p.created_at).toLocaleDateString('pt-BR') : '',
+    }));
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [40,40,24,18,34,10,26,40,14,20,8,30,14].map(w=>({wch:w}));
+    XLSX.utils.book_append_sheet(wb, ws, 'Parceiros ATT');
+    const filtro = st ? `_${st}` : '';
+    XLSX.writeFile(wb, `parceiros_att${filtro}_${new Date().toLocaleDateString('sv-SE')}.xlsx`);
+  };
 
   async function attParcLoad(){
     try {
