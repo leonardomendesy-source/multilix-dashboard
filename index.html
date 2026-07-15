@@ -2251,10 +2251,11 @@ body { font-size: 13.5px !important; }
           </div>
           <div style="padding:20px;display:grid;gap:14px" id="att-edit-body">
             <input type="hidden" id="em2-id"/>
+            <input type="hidden" id="em2-parceiro-id"/>
             <div style="font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;padding-bottom:6px;border-bottom:1px solid var(--border)">Dados do Cabeçalho</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-              <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Cliente</label><input type="text" id="em2-cliente" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 10px;font-size:13px;outline:none"/></div>
-              <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Gerador</label><input type="text" id="em2-gerador" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 10px;font-size:13px;outline:none"/></div>
+              <div style="position:relative"><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Cliente *</label><input type="text" id="em2-cliente" autocomplete="off" oninput="attEditClienteInput(this.value)" onblur="attEditClienteBlur()" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 10px;font-size:13px;outline:none;box-sizing:border-box"/><div id="em2-cliente-drop" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;max-height:200px;overflow-y:auto;z-index:999;box-shadow:0 4px 16px #0008"></div></div>
+              <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Gerador</label><input type="text" id="em2-gerador" list="em2-gerador-list" autocomplete="off" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 10px;font-size:13px;outline:none"/><datalist id="em2-gerador-list"></datalist></div>
               <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Placa</label><input type="text" id="em2-placa" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 10px;font-size:13px;outline:none" oninput="this.value=this.value.toUpperCase()"/></div>
               <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Motorista</label><input type="text" id="em2-motorista" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 10px;font-size:13px;outline:none"/></div>
               <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Status</label>
@@ -2269,6 +2270,7 @@ body { font-size: 13.5px !important; }
             <div style="font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;padding-bottom:6px;border-bottom:1px solid var(--border);margin-top:4px">Itens da O.S.</div>
             <div id="em2-itens-list"></div>
             <div id="em2-error" style="color:var(--red);font-size:12px;display:none"></div>
+            <button type="button" onclick="attEditAddNovoItem()" style="width:100%;padding:10px;background:var(--surface2);border:1px dashed var(--border);color:var(--muted);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">+ Adicionar Caçamba / Item</button>
             <button onclick="attRelSalvarEdicao()" style="width:100%;padding:13px;background:var(--accent,#10B981);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;cursor:pointer">Salvar Alterações</button>
           </div>
         </div>
@@ -9680,13 +9682,61 @@ initNavGroups();
   // ── EDITAR O.S. ──────────────────────────────────────────────
   window.attRelAbrirEditar = function(){ attRelAbrirEditarId(_relViewingId); };
 
-  window.attRelAbrirEditarId = function(id){
+  let _editEquipamentos = [];
+  let _editParceiroPrecos = [];
+  let _editNovoItemIdx = 0;
+
+  function attEditResOpts(selectedId) {
+    return _relResidues.map(r=>`<option value="${r.id}"${r.id===selectedId?' selected':''}>${esc(r.nome)}</option>`).join('');
+  }
+  function attEditEqOpts(selectedId) {
+    return _editEquipamentos.map(e=>`<option value="${e.id}"${e.id===selectedId?' selected':''}>${esc(e.nome)}</option>`).join('');
+  }
+
+  function attEditItemHtml(iid, num, it) {
+    const isNew = String(iid).startsWith('new-');
+    const lbl = 'font-size:10px;color:var(--muted2);display:block;margin-bottom:3px';
+    const inp = 'width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 8px;font-size:12px;outline:none';
+    const sel = 'width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 8px;font-size:12px;outline:none';
+    const total = it?.valor_total ? 'R$ '+Number(it.valor_total).toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—';
+    return `<div id="em2-item-wrap-${iid}" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:11px;font-weight:700;color:var(--accent)">Item ${num}${isNew?' <span style="color:var(--muted)">(novo)</span>':''}</div>
+        ${isNew?`<button type="button" onclick="attEditRemoverItem('${iid}')" style="background:#EF444420;border:1px solid #EF4444;color:#EF4444;border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer">Remover</button>`:''}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div><label style="${lbl}">Equipamento *</label><select id="ei-eq-${iid}" style="${sel}" onchange="attEditAutoPreco('${iid}')"><option value="">— selecione —</option>${attEditEqOpts(it?.equipamento_id||'')}</select></div>
+        <div><label style="${lbl}">Tipo de Resíduo *</label><select id="ei-res-${iid}" style="${sel}" onchange="attEditAutoPreco('${iid}')"><option value="">— selecione —</option>${attEditResOpts(it?.residuo_id||'')}</select></div>
+        <div><label style="${lbl}">CTR/MTR</label><input type="text" value="${esc(it?.ctr_mtr||'')}" id="ei-ctr-${iid}" style="${inp}"/></div>
+        <div><label style="${lbl}">Nº Caçamba</label><input type="text" value="${esc(it?.numero_cacamba||'')}" id="ei-cac-${iid}" style="${inp}"/></div>
+        <div><label style="${lbl}">Volume m³ *</label><input type="number" value="${it?.volume_m3||''}" id="ei-vol-${iid}" step="0.01" oninput="attEditCalcTotal('${iid}')" style="${inp}"/></div>
+        <div><label style="${lbl}">Preço Unit. (R$)</label><input type="number" value="${it?.preco_unitario||''}" id="ei-preco-${iid}" step="0.01" oninput="attEditCalcTotal('${iid}')" style="${inp}"/></div>
+        <div style="grid-column:1/-1"><label style="${lbl}">Observações</label><input type="text" value="${esc(it?.observacoes||'')}" id="ei-obs-${iid}" style="${inp}"/></div>
+      </div>
+      <div style="text-align:right;font-size:12px;color:var(--muted)">Valor: <strong id="ei-total-${iid}" style="color:var(--green,#10B981)">${total}</strong></div>
+      ${!isNew && it?.imagem_url?`<div style="margin-top:8px"><img src="${it.imagem_url}" style="max-height:80px;border-radius:6px;cursor:pointer" onclick="window.open('${it.imagem_url}','_blank')"/></div>`:''}
+    </div>`;
+  }
+
+  window.attRelAbrirEditarId = async function(id){
     _relViewingId = id;
     const rows = _relData.filter(r=>r.id===id);
     if(!rows.length) return;
     const v = rows[0];
     const itens = rows.filter(r=>r._item).map(r=>r._item);
+
+    if(!_parceiros.length) try{ _parceiros = await api('parceiros_att?select=id,nome_fantasia,status&order=nome_fantasia.asc&limit=500'); }catch(e){}
+    if(!_relResidues.length) try{ _relResidues = await api('tipos_residuo_att?select=id,nome&ativo=eq.true&order=ordem.asc'); }catch(e){}
+    if(!_editEquipamentos.length) try{ _editEquipamentos = await api('equipamentos_att?select=id,nome,volume_m3_padrao&ativo=eq.true&order=ordem.asc'); }catch(e){}
+
+    try {
+      const gers = await api('geradores_att?select=nome&ativo=eq.true&order=nome.asc&limit=500');
+      const dl = document.getElementById('em2-gerador-list');
+      if(dl) dl.innerHTML = gers.map(g=>`<option value="${esc(g.nome)}"/>`).join('');
+    } catch(e){}
+
     document.getElementById('em2-id').value = v.id;
+    document.getElementById('em2-parceiro-id').value = v.parceiro_id||'';
     document.getElementById('em2-cliente').value = v.parceiro_nome_snapshot||'';
     document.getElementById('em2-gerador').value = v.gerador_nome_snapshot || itens[0]?.gerador_nome_snapshot || '';
     document.getElementById('em2-placa').value = v.placa||'';
@@ -9695,32 +9745,101 @@ initNavGroups();
     document.getElementById('em2-obs-geral').value = v.observacoes_gerais||'';
     document.getElementById('em2-error').style.display='none';
 
+    if(v.parceiro_id){
+      try{ _editParceiroPrecos = await api(`parceiros_att_tabela_precos?parceiro_id=eq.${v.parceiro_id}&ativo=eq.true`); }
+      catch(e){ _editParceiroPrecos = []; }
+    } else { _editParceiroPrecos = []; }
+
+    _editNovoItemIdx = 0;
     const itensList = document.getElementById('em2-itens-list');
-    itensList.innerHTML = itens.map((it,i)=>`
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px">
-        <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:8px">Item ${i+1} — ${esc(it.equipamento_nome_snapshot||'—')}</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-          <div><label style="font-size:10px;color:var(--muted2);display:block;margin-bottom:3px">CTR/MTR</label><input type="text" value="${esc(it.ctr_mtr||'')}" id="ei-ctr-${it.id}" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 8px;font-size:12px;outline:none"/></div>
-          <div><label style="font-size:10px;color:var(--muted2);display:block;margin-bottom:3px">Nº Caçamba</label><input type="text" value="${esc(it.numero_cacamba||'')}" id="ei-cac-${it.id}" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 8px;font-size:12px;outline:none"/></div>
-          <div><label style="font-size:10px;color:var(--muted2);display:block;margin-bottom:3px">Volume m³</label><input type="number" value="${it.volume_m3||''}" id="ei-vol-${it.id}" step="0.01" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 8px;font-size:12px;outline:none"/></div>
-          <div style="grid-column:1/-1"><label style="font-size:10px;color:var(--muted2);display:block;margin-bottom:3px">Observações</label><input type="text" value="${esc(it.observacoes||'')}" id="ei-obs-${it.id}" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 8px;font-size:12px;outline:none"/></div>
-        </div>
-        ${it.imagem_url?`<div style="margin-top:8px"><img src="${it.imagem_url}" style="max-height:80px;border-radius:6px;cursor:pointer" onclick="window.open('${it.imagem_url}','_blank')"/></div>`:''}
-      </div>
-    `).join('');
+    itensList.innerHTML = itens.map((it,i)=>attEditItemHtml(it.id, i+1, it)).join('');
 
     document.getElementById('att-ver-modal').style.display='none';
     document.getElementById('att-edit-modal').style.display='flex';
-    // store itens ids for save
     document.getElementById('att-edit-modal').dataset.itens = JSON.stringify(itens.map(it=>it.id));
+    document.getElementById('att-edit-modal').dataset.novosItens = '[]';
+  };
+
+  window.attEditClienteInput = function(q){
+    const drop = document.getElementById('em2-cliente-drop');
+    if(!drop) return;
+    if(!q || q.length < 1){ drop.style.display='none'; return; }
+    const matches = _parceiros.filter(p=>p.status==='ativo' && (p.nome_fantasia||'').toLowerCase().includes(q.toLowerCase())).slice(0,8);
+    if(!matches.length){ drop.style.display='none'; return; }
+    drop.innerHTML = matches.map(p=>{
+      const safeName = (p.nome_fantasia||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return `<div style="padding:9px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)" onmousedown="attEditClienteSelect('${p.id}','${safeName}')">${esc(p.nome_fantasia)}</div>`;
+    }).join('');
+    drop.style.display='block';
+  };
+
+  window.attEditClienteBlur = function(){
+    setTimeout(()=>{ const d=document.getElementById('em2-cliente-drop'); if(d)d.style.display='none'; }, 200);
+  };
+
+  window.attEditClienteSelect = async function(parceiroId, nome){
+    document.getElementById('em2-parceiro-id').value = parceiroId;
+    document.getElementById('em2-cliente').value = nome;
+    const d = document.getElementById('em2-cliente-drop');
+    if(d) d.style.display='none';
+    try{
+      _editParceiroPrecos = await api(`parceiros_att_tabela_precos?parceiro_id=eq.${parceiroId}&ativo=eq.true`);
+      const itensIds = JSON.parse(document.getElementById('att-edit-modal').dataset.itens||'[]');
+      const novosIds = JSON.parse(document.getElementById('att-edit-modal').dataset.novosItens||'[]');
+      [...itensIds,...novosIds].forEach(iid=>attEditAutoPreco(iid));
+    } catch(e){ _editParceiroPrecos = []; }
+  };
+
+  window.attEditAutoPreco = function(iid){
+    const resId = document.getElementById('ei-res-'+iid)?.value||'';
+    const eqId  = document.getElementById('ei-eq-'+iid)?.value||'';
+    if(resId && eqId){
+      const p = _editParceiroPrecos.find(x=>x.residuo_id===resId && x.equipamento_id===eqId);
+      const precoEl = document.getElementById('ei-preco-'+iid);
+      if(p && precoEl) precoEl.value = p.preco_m3;
+    }
+    attEditCalcTotal(iid);
+  };
+
+  window.attEditCalcTotal = function(iid){
+    const vol   = parseFloat(document.getElementById('ei-vol-'+iid)?.value)||0;
+    const preco = parseFloat(document.getElementById('ei-preco-'+iid)?.value)||0;
+    const total = vol * preco;
+    const el = document.getElementById('ei-total-'+iid);
+    if(el) el.textContent = total > 0 ? 'R$ '+total.toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—';
+  };
+
+  window.attEditAddNovoItem = function(){
+    _editNovoItemIdx++;
+    const iid = 'new-'+_editNovoItemIdx;
+    const novos = JSON.parse(document.getElementById('att-edit-modal').dataset.novosItens||'[]');
+    const existing = JSON.parse(document.getElementById('att-edit-modal').dataset.itens||'[]');
+    const num = existing.length + novos.length + 1;
+    const div = document.createElement('div');
+    div.innerHTML = attEditItemHtml(iid, num, null);
+    document.getElementById('em2-itens-list').appendChild(div.firstElementChild);
+    document.getElementById('att-edit-modal').dataset.novosItens = JSON.stringify([...novos, iid]);
+  };
+
+  window.attEditRemoverItem = function(iid){
+    const el = document.getElementById('em2-item-wrap-'+iid);
+    if(el) el.remove();
+    const novos = JSON.parse(document.getElementById('att-edit-modal').dataset.novosItens||'[]').filter(x=>x!==iid);
+    document.getElementById('att-edit-modal').dataset.novosItens = JSON.stringify(novos);
   };
 
   window.attRelSalvarEdicao = async function(){
     const id = document.getElementById('em2-id').value;
+    const parceiroId = document.getElementById('em2-parceiro-id').value;
     const err = document.getElementById('em2-error');
     err.style.display='none';
+    if(!parceiroId){
+      err.textContent='Selecione um Cliente cadastrado na lista.';
+      err.style.display='block'; return;
+    }
     try {
       await api(`vales_descarga?id=eq.${id}`,{method:'PATCH',body:JSON.stringify({
+        parceiro_id:            parceiroId,
         parceiro_nome_snapshot: document.getElementById('em2-cliente').value.trim(),
         gerador_nome_snapshot:  document.getElementById('em2-gerador').value.trim()||null,
         placa:                  document.getElementById('em2-placa').value.trim().toUpperCase()||null,
@@ -9729,17 +9848,55 @@ initNavGroups();
         observacoes_gerais:     document.getElementById('em2-obs-geral').value.trim()||null,
       })});
       const itensIds = JSON.parse(document.getElementById('att-edit-modal').dataset.itens||'[]');
-      await Promise.all(itensIds.map(iid=>
-        api(`vale_descarga_itens?id=eq.${iid}`,{method:'PATCH',body:JSON.stringify({
-          ctr_mtr:        document.getElementById('ei-ctr-'+iid)?.value.trim()||null,
-          numero_cacamba: document.getElementById('ei-cac-'+iid)?.value.trim()||null,
-          volume_m3:      parseFloat(document.getElementById('ei-vol-'+iid)?.value||'0')||0,
-          observacoes:    document.getElementById('ei-obs-'+iid)?.value.trim()||null,
-        })})
-      ));
+      await Promise.all(itensIds.map(iid=>{
+        const resId  = document.getElementById('ei-res-'+iid)?.value||null;
+        const eqId   = document.getElementById('ei-eq-'+iid)?.value||null;
+        const resNome = _relResidues.find(r=>r.id===resId)?.nome||null;
+        const eqNome  = _editEquipamentos.find(e=>e.id===eqId)?.nome||null;
+        const vol   = parseFloat(document.getElementById('ei-vol-'+iid)?.value||'0')||0;
+        const preco = parseFloat(document.getElementById('ei-preco-'+iid)?.value||'')||null;
+        const total = (preco && vol) ? +(preco*vol).toFixed(2) : null;
+        return api(`vale_descarga_itens?id=eq.${iid}`,{method:'PATCH',body:JSON.stringify({
+          ctr_mtr:                   document.getElementById('ei-ctr-'+iid)?.value.trim()||null,
+          numero_cacamba:            document.getElementById('ei-cac-'+iid)?.value.trim()||null,
+          volume_m3:                 vol,
+          observacoes:               document.getElementById('ei-obs-'+iid)?.value.trim()||null,
+          residuo_id:                resId||null,
+          residuo_nome_snapshot:     resNome,
+          equipamento_id:            eqId||null,
+          equipamento_nome_snapshot: eqNome,
+          preco_unitario:            preco,
+          valor_total:               total,
+        })});
+      }));
+      const novosIds = JSON.parse(document.getElementById('att-edit-modal').dataset.novosItens||'[]');
+      await Promise.all(novosIds.map(iid=>{
+        const resId  = document.getElementById('ei-res-'+iid)?.value||null;
+        const eqId   = document.getElementById('ei-eq-'+iid)?.value||null;
+        if(!eqId) return Promise.resolve();
+        const resNome = _relResidues.find(r=>r.id===resId)?.nome||null;
+        const eqNome  = _editEquipamentos.find(e=>e.id===eqId)?.nome||null;
+        const vol   = parseFloat(document.getElementById('ei-vol-'+iid)?.value||'0')||0;
+        const preco = parseFloat(document.getElementById('ei-preco-'+iid)?.value||'')||null;
+        const total = (preco && vol) ? +(preco*vol).toFixed(2) : null;
+        return api('vale_descarga_itens',{method:'POST',body:JSON.stringify({
+          vale_descarga_id:          id,
+          ctr_mtr:                   document.getElementById('ei-ctr-'+iid)?.value.trim()||null,
+          numero_cacamba:            document.getElementById('ei-cac-'+iid)?.value.trim()||null,
+          volume_m3:                 vol,
+          observacoes:               document.getElementById('ei-obs-'+iid)?.value.trim()||null,
+          residuo_id:                resId||null,
+          residuo_nome_snapshot:     resNome,
+          equipamento_id:            eqId,
+          equipamento_nome_snapshot: eqNome,
+          preco_unitario:            preco,
+          valor_total:               total,
+          gerador_nome_snapshot:     document.getElementById('em2-gerador').value.trim()||null,
+        })});
+      }));
       document.getElementById('att-edit-modal').style.display='none';
       await attRelLoad();
-    } catch(e){ err.textContent='Erro: '+e.message; err.style.display='block'; }
+    } catch(e){ err.textContent='Erro ao salvar: '+e.message; err.style.display='block'; }
   };
 
   // ── GERAR RELATÓRIO HTML ──────────────────────────────────────
