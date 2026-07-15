@@ -10556,7 +10556,9 @@ initNavGroups();
   async function salvarPrecosParceiro(parceiroId, linhas, origem, motivoGeral, replaceAll=true){
     const hdrs = {'apikey':KEY,'Authorization':'Bearer '+(_session?.access_token||KEY),'Content-Type':'application/json','Prefer':'return=representation'};
     const hdrsNP = {'apikey':KEY,'Authorization':'Bearer '+(_session?.access_token||KEY),'Content-Type':'application/json'};
-    const existing = await api(`parceiros_att_tabela_precos?parceiro_id=eq.${parceiroId}&ativo=eq.true`);
+    // Busca TODOS os registros (ativos e inativos) para evitar violação do unique constraint
+    // ao tentar criar novo registro onde já existe um inativo com a mesma chave
+    const existing = await api(`parceiros_att_tabela_precos?parceiro_id=eq.${parceiroId}&select=*`);
     const existByKey = {};
     existing.forEach(r=>{ existByKey[r.residuo_id+'|'+r.equipamento_id] = r; });
     const newKeys = new Set();
@@ -10567,9 +10569,9 @@ initNavGroups();
       newKeys.add(key);
       const ex = existByKey[key];
       if(ex){
-        const changed = Number(ex.preco_m3)!==Number(l.preco_m3) || Number(ex.preco_carga||0)!==Number(l.preco_carga||0);
+        const changed = !ex.ativo || Number(ex.preco_m3)!==Number(l.preco_m3) || Number(ex.preco_carga||0)!==Number(l.preco_carga||0);
         if(!changed) continue;
-        const r = await fetch(`${SUPA}/rest/v1/parceiros_att_tabela_precos?id=eq.${ex.id}`,{method:'PATCH',headers:hdrsNP,body:JSON.stringify({preco_carga:l.preco_carga??null,preco_m3:l.preco_m3,updated_at:new Date().toISOString()})});
+        const r = await fetch(`${SUPA}/rest/v1/parceiros_att_tabela_precos?id=eq.${ex.id}`,{method:'PATCH',headers:hdrsNP,body:JSON.stringify({preco_carga:l.preco_carga??null,preco_m3:l.preco_m3,ativo:true,updated_at:new Date().toISOString()})});
         if(!r.ok) throw new Error(await r.text());
         await fetch(`${SUPA}/rest/v1/parceiros_att_tabela_precos_historico`,{method:'POST',headers:hdrsNP,body:JSON.stringify({tabela_preco_id:ex.id,parceiro_id:parceiroId,residuo_id:l.residuo_id,equipamento_id:l.equipamento_id,preco_carga_anterior:ex.preco_carga,preco_carga_novo:l.preco_carga??null,preco_m3_anterior:ex.preco_m3,preco_m3_novo:l.preco_m3,motivo:motivoGeral||null,origem})});
       } else {
