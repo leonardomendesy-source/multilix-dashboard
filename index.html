@@ -2561,6 +2561,47 @@ body { font-size: 13.5px !important; }
       </div>
     </div>
 
+    <!-- GERADORES ATT -->
+    <div class="page" id="page-att-geradores" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-size:16px;font-weight:700">Geradores</div>
+          <div style="font-size:12px;color:var(--muted)">Cadastro de geradores de resíduos</div>
+        </div>
+        <button onclick="attGeradorOpenModal(null)" style="background:var(--green);color:#000;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer">+ Novo Gerador</button>
+      </div>
+      <input id="att-ger-search" type="text" placeholder="🔍  Buscar geradores..." oninput="attGeradoresFiltrar(this.value)"
+        style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 14px;font-size:13px;outline:none;box-sizing:border-box;margin-bottom:14px"/>
+      <div id="att-ger-list" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+
+    <!-- Modal Gerador -->
+    <div id="att-ger-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;padding:16px">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div style="font-size:15px;font-weight:700" id="att-ger-modal-title">Novo Gerador</div>
+          <button onclick="document.getElementById('att-ger-modal').style.display='none'" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
+        </div>
+        <div id="att-ger-modal-err" style="display:none;background:#EF444415;border:1px solid #EF444440;border-radius:8px;padding:10px 13px;font-size:13px;color:#EF4444;margin-bottom:12px"></div>
+        <input type="hidden" id="att-ger-modal-id"/>
+        <div style="display:grid;gap:12px">
+          <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Nome *</label><input type="text" id="att-ger-nome" placeholder="Razão social ou nome fantasia" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none;box-sizing:border-box"/></div>
+          <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">CNPJ / CPF</label><input type="text" id="att-ger-doc" placeholder="00.000.000/0001-00" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none;box-sizing:border-box"/></div>
+          <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Endereço</label><input type="text" id="att-ger-endereco" placeholder="Rua, número, complemento" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none;box-sizing:border-box"/></div>
+          <div style="display:grid;grid-template-columns:1fr 2fr 1fr;gap:8px">
+            <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">CEP</label><input type="text" id="att-ger-cep" placeholder="00000-000" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none;box-sizing:border-box"/></div>
+            <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Cidade</label><input type="text" id="att-ger-cidade" placeholder="São Paulo" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none;box-sizing:border-box"/></div>
+            <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">UF</label><input type="text" id="att-ger-estado" placeholder="SP" maxlength="2" oninput="this.value=this.value.toUpperCase()" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none;box-sizing:border-box;text-transform:uppercase"/></div>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer"><input type="checkbox" id="att-ger-ativo" checked style="width:16px;height:16px;accent-color:var(--accent,#10B981)"/> Ativo</label>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:18px">
+          <button onclick="document.getElementById('att-ger-modal').style.display='none'" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:12px;font-size:13px;font-weight:600;cursor:pointer">Cancelar</button>
+          <button onclick="attGeradorSalvar()" style="flex:2;background:var(--green);border:none;color:#000;border-radius:10px;padding:12px;font-size:13px;font-weight:700;cursor:pointer">Salvar Gerador</button>
+        </div>
+      </div>
+    </div>
+
     <!-- LOCAÇÃO -->
     <div class="page" id="page-locacao">
       <!-- FILTROS — modelo igual à Destinação -->
@@ -11168,71 +11209,5 @@ initNavGroups();
 })();
 </script>
 
-    <!-- ══ GERADORES ATT ══════════════════════════════════════════════════════ -->
-    <div class="page" id="page-att-geradores" style="display:none">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px">
-        <div>
-          <div style="font-size:16px;font-weight:700">Geradores</div>
-          <div style="font-size:12px;color:var(--muted2)">Cadastro de geradores de resíduos</div>
-        </div>
-        <button onclick="attGeradorOpenModal(null)" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer">+ Novo Gerador</button>
-      </div>
-      <input id="att-ger-search" type="text" placeholder="🔍  Buscar geradores..." oninput="attGeradoresFiltrar(this.value)"
-        style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 14px;font-size:13px;outline:none;box-sizing:border-box;margin-bottom:14px"/>
-      <div id="att-ger-list" style="display:flex;flex-direction:column;gap:8px"></div>
-    </div>
-
-    <!-- Modal Gerador -->
-    <div id="att-ger-modal" style="display:none;position:fixed;inset:0;background:#0007;z-index:2000;align-items:center;justify-content:center">
-      <div style="background:var(--surface);border-radius:14px;padding:24px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px #0008">
-        <div style="font-size:15px;font-weight:700;margin-bottom:16px" id="att-ger-modal-title">Novo Gerador</div>
-        <div id="att-ger-modal-err" style="display:none;background:#EF444415;border:1px solid #EF444440;border-radius:8px;padding:10px 13px;font-size:13px;color:#EF4444;margin-bottom:12px"></div>
-        <input type="hidden" id="att-ger-modal-id"/>
-
-        <div style="display:grid;gap:10px">
-          <div>
-            <label style="font-size:11px;color:var(--muted2);display:block;margin-bottom:4px">Nome *</label>
-            <input type="text" id="att-ger-nome" placeholder="Razão social ou nome fantasia"
-              style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;outline:none;box-sizing:border-box"/>
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--muted2);display:block;margin-bottom:4px">CNPJ / CPF</label>
-            <input type="text" id="att-ger-doc" placeholder="00.000.000/0001-00"
-              style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;outline:none;box-sizing:border-box"/>
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--muted2);display:block;margin-bottom:4px">Endereço</label>
-            <input type="text" id="att-ger-endereco" placeholder="Rua, número, complemento"
-              style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;outline:none;box-sizing:border-box"/>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 2fr 1fr;gap:8px">
-            <div>
-              <label style="font-size:11px;color:var(--muted2);display:block;margin-bottom:4px">CEP</label>
-              <input type="text" id="att-ger-cep" placeholder="00000-000"
-                style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;outline:none;box-sizing:border-box"/>
-            </div>
-            <div>
-              <label style="font-size:11px;color:var(--muted2);display:block;margin-bottom:4px">Cidade</label>
-              <input type="text" id="att-ger-cidade" placeholder="São Paulo"
-                style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;outline:none;box-sizing:border-box"/>
-            </div>
-            <div>
-              <label style="font-size:11px;color:var(--muted2);display:block;margin-bottom:4px">UF</label>
-              <input type="text" id="att-ger-estado" placeholder="SP" maxlength="2"
-                style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;outline:none;box-sizing:border-box;text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"/>
-            </div>
-          </div>
-          <div style="display:flex;align-items:center;gap:10px">
-            <label style="font-size:11px;color:var(--muted2)">Ativo</label>
-            <input type="checkbox" id="att-ger-ativo" checked style="width:16px;height:16px;cursor:pointer"/>
-          </div>
-        </div>
-
-        <div style="display:flex;gap:10px;margin-top:18px">
-          <button onclick="document.getElementById('att-ger-modal').style.display='none'" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px;font-size:13px;cursor:pointer">Cancelar</button>
-          <button onclick="attGeradorSalvar()" style="flex:2;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:600;cursor:pointer">Salvar</button>
-        </div>
-      </div>
-    </div>
 </body>
 </html>
