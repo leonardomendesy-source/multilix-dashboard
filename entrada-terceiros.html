@@ -571,6 +571,12 @@ function onAcKey(e, listId, selectFn){
 
 // ── AUTOCOMPLETE CLIENTES ────────────────────────────────────────
 function onClienteInput(q){
+  // Limpar seleção anterior ao digitar — obriga re-selecionar da lista
+  document.getElementById('v-cliente-id').value = '';
+  document.getElementById('v-cliente-razao').value = '';
+  document.getElementById('v-cliente-doc').value = '';
+  _parceiroSel = null;
+  atualizarFinalizar();
   buildAc('ac-cliente', _parceiros, q, {
     match: (p,l) => (p.nome_fantasia||'').toLowerCase().includes(l) || (p.razao_social||'').toLowerCase().includes(l) || (p.documento||'').includes(q),
     row: (p,i) => `<div class="ac-item" data-id="${p.id}" data-nome="${esc(p.nome_fantasia)}" data-razao="${esc(p.razao_social||'')}" data-doc="${esc(p.documento||'')}" onmousedown="selecionarParceiro(this)">
@@ -1236,9 +1242,12 @@ function edRemoverItem(btn){
 }
 
 function onEdClienteInput(q){
+  // Limpar parceiro selecionado ao digitar — obriga re-selecionar
+  document.getElementById('ed-parceiro-id').value = '';
+  _edParceiroPrecos = [];
   const drop = document.getElementById('ed-cliente-drop');
   if(!q||q.length<1){ drop.style.display='none'; return; }
-  const matches = _parceiros.filter(p=>p.status==='ativo'&&(p.nome_fantasia||'').toLowerCase().includes(q.toLowerCase())).slice(0,8);
+  const matches = _parceiros.filter(p=>(p.nome_fantasia||'').toLowerCase().includes(q.toLowerCase())).slice(0,8);
   if(!matches.length){ drop.style.display='none'; return; }
   drop.innerHTML = matches.map(p=>{
     const sn=(p.nome_fantasia||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
