@@ -2562,7 +2562,7 @@ body { font-size: 13.5px !important; }
     </div>
 
     <!-- GERADORES ATT -->
-    <div class="page" id="page-att-geradores" style="display:none">
+    <div class="page" id="page-att-geradores">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px">
         <div>
           <div style="font-size:16px;font-weight:700">Geradores</div>
@@ -4701,7 +4701,7 @@ function rankTbl(data,l1,l2,top=10){
 }
 
 // ── NAV ────────────────────────────────────────────────────────
-const TITLES={overview:'Dashboard Executivo',data:'Fontes de Dados',consolidado:'Consolidado — Entrada de Resíduos',att:'Recebimento de Terceiros',locacao:'Locação de Caçambas',agregados:'Agregados Reciclados',destinacao:'Destinação de Resíduos','dest-pagamentos':'Pagamentos de Freteiros','dest-freteiros':'Cadastro de Freteiros','dest-conferencia':'Conferência de Vales',reciclaveis:'Recicláveis — Destinação & Vendas','rec-destinos':'Recicláveis — Destinos & Resíduos','rec-conferencia':'Recicláveis — Conferência',cdf:'Certificado de Destinação Final',crm:'CRM',propostas:'Propostas Comerciais','prop-locacao':'Propostas — Locação','prop-att':'Propostas — Recebimento ATT','prop-agregados':'Propostas — Agregados',contratos:'Contratos',inconsistencias:'Inconsistências',resumo:'Resumo Executivo',config:'Metas & Configurações',usuarios:'Gerenciar Usuários','emails-comercial':'E-mails Comercial'};
+const TITLES={overview:'Dashboard Executivo',data:'Fontes de Dados',consolidado:'Consolidado — Entrada de Resíduos',att:'Recebimento de Terceiros',locacao:'Locação de Caçambas',agregados:'Agregados Reciclados',destinacao:'Destinação de Resíduos','dest-pagamentos':'Pagamentos de Freteiros','dest-freteiros':'Cadastro de Freteiros','dest-conferencia':'Conferência de Vales',reciclaveis:'Recicláveis — Destinação & Vendas','rec-destinos':'Recicláveis — Destinos & Resíduos','rec-conferencia':'Recicláveis — Conferência',cdf:'Certificado de Destinação Final',crm:'CRM',propostas:'Propostas Comerciais','prop-locacao':'Propostas — Locação','prop-att':'Propostas — Recebimento ATT','prop-agregados':'Propostas — Agregados',contratos:'Contratos',inconsistencias:'Inconsistências',resumo:'Resumo Executivo',config:'Metas & Configurações',usuarios:'Gerenciar Usuários','emails-comercial':'E-mails Comercial','att-parceiros':'Parceiros ATT','att-precos':'Tabela de Preços','att-residuos':'Tipos de Resíduo','att-equipamentos':'Equipamentos','att-geradores':'Geradores','att-relatorio':'Relatório de Descartes'};
 function showPage(id,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
