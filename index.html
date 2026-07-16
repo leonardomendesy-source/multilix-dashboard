@@ -10737,7 +10737,7 @@ initNavGroups();
 
   async function precosLoad(){
     try {
-      _precos = await api('parceiros_att_tabela_precos?select=*,parceiros_att(nome_fantasia),tipos_residuo_att(nome),equipamentos_att(nome,volume_m3_padrao)&ativo=eq.true&order=updated_at.desc&limit=2000');
+      _precos = await apiAll('parceiros_att_tabela_precos?select=*,parceiros_att(nome_fantasia),tipos_residuo_att(nome),equipamentos_att(nome,volume_m3_padrao)&ativo=eq.true&order=updated_at.desc');
       precosPopulateFilters();
       _precosSelected = new Set();
       precosFiltrar();
@@ -10991,7 +10991,7 @@ initNavGroups();
   window.precosExportarModelo = async function(){
     if(!window.XLSX){ alert('Biblioteca XLSX não disponível.'); return; }
     let vigentes = [];
-    try { vigentes = await api('parceiros_att_tabela_precos?ativo=eq.true&limit=2000'); } catch(e){}
+    try { vigentes = await apiAll('parceiros_att_tabela_precos?ativo=eq.true'); } catch(e){}
     const vigMap = {};
     vigentes.forEach(v=>{ vigMap[v.parceiro_id+'|'+v.residuo_id+'|'+v.equipamento_id]=v; });
     const rows = [['parceiro_id','Parceiro','residuo_id','Resíduo','equipamento_id','Equipamento','Vol m³ Padrão','Preço Carga R$','Preço R$/m³']];
@@ -11056,7 +11056,7 @@ initNavGroups();
           linhas.push({parceiro_id:pId, residuo_id:rId, equipamento_id:eId, preco_carga:pcarga, preco_m3:pm3});
         }
         if(!linhas.length && !erros.length){ alert('Nenhuma linha com preço encontrada. Preencha os campos e reimporte.'); return; }
-        api('parceiros_att_tabela_precos?ativo=eq.true&limit=2000').then(vigentes=>{
+        apiAll('parceiros_att_tabela_precos?ativo=eq.true').then(vigentes=>{
           const vigMap = {};
           vigentes.forEach(v=>vigMap[v.parceiro_id+'|'+v.residuo_id+'|'+v.equipamento_id]=v);
           let criados=0, atualizados=0;
