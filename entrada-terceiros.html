@@ -716,8 +716,7 @@ function adicionarItem(){
   if(!equipId){ showAlert('Selecione o equipamento/volume.'); return; }
   if(!residuoId){ showAlert('Selecione o tipo de resíduo.'); return; }
   if(!vol||vol<=0){ showAlert('Informe o volume recebido em m³.'); return; }
-  const cacambaVal = document.getElementById('if-cacamba').value.trim();
-  if(!cacambaVal){ showAlert('Informe o número da caçamba antes de adicionar a descarga.'); return; }
+
 
   // Autopreço: busca na tabela de preços do cliente (parceiro+resíduo+equipamento).
   // Valor sempre = R$/m³ cadastrado × m³ realmente lançados (não trava o lançamento se faltar preço).
