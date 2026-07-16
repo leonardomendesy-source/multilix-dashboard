@@ -967,31 +967,103 @@ async function enviarComprovanteEmail(force){
     else setEmailStatus('Falha no envio do e-mail: '+(res.detail||res.error||'erro desconhecido'),'#EF4444');
   } catch(e){ setEmailStatus('Falha no envio do e-mail: '+e.message,'#EF4444'); }
 }
-async function gerarPDFBlob(nomeArquivo){
-  const el = document.getElementById('comprovante-print');
-  const clone = el.cloneNode(true);
-  clone.style.cssText = 'display:block;font-family:Arial,Helvetica,sans-serif;color:#1a2f5e;font-size:10pt;max-width:150mm;margin:0 auto;padding:10mm';
-  document.body.appendChild(clone);
+function construirHTMLParaPDF(d){
+  // Dados podem vir de _valeData (tela sucesso) ou _detVale (tela detalhe)
+  let vale, itens, clienteNome, geradorNome, placa, motorista, obsGeral, totalVol;
+  if(d.vale){
+    vale       = d.vale;
+    itens      = d.itens      || [];
+    clienteNome= d.clienteNome|| vale.parceiro_nome_snapshot||'—';
+    geradorNome= d.geradorNome|| vale.gerador_nome_snapshot ||null;
+    placa      = d.placa      || vale.placa                 ||null;
+    motorista  = d.motorista  || vale.motorista             ||null;
+    obsGeral   = d.obsGeral   || vale.observacoes_gerais    ||null;
+    totalVol   = d.totalVol   != null ? d.totalVol : (vale.volume_total_m3||0);
+  } else {
+    vale={}; itens=[]; clienteNome='—';
+  }
+  const dt = vale.data_hora ? new Date(vale.data_hora).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}) : '—';
+  const fv = v => Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2});
+  const e  = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  const kvRow = (label, val) => `<tr>
+    <td style="padding:5px 3px;border-bottom:1px dashed #b9bfcc;font-size:9.5pt;color:#555;width:38%">${label}:</td>
+    <td style="padding:5px 3px;border-bottom:1px dashed #b9bfcc;font-size:9.5pt;font-weight:700;text-align:right;color:#1a2f5e">${val}</td></tr>`;
+
+  const kvRows = [
+    kvRow('Data / Hora', e(dt)),
+    kvRow('Cliente', e(clienteNome)),
+    vale.parceiro_doc_snapshot ? kvRow('CPF/CNPJ', e(vale.parceiro_doc_snapshot)) : '',
+    geradorNome ? kvRow('Gerador', e(geradorNome)) : '',
+    placa       ? kvRow('Placa', e(placa)) : '',
+    motorista   ? kvRow('Motorista', e(motorista)) : '',
+    kvRow('Descargas', itens.length),
+    kvRow('Volume Total', fv(totalVol)+' m³'),
+  ].join('');
+
+  const itenRows = itens.map((it,i)=>`<tr>
+    <td style="padding:4px 5px;border:1px solid #c9ced8;text-align:center">${i+1}</td>
+    <td style="padding:4px 5px;border:1px solid #c9ced8">${e(it.ctr_mtr||'—')}</td>
+    <td style="padding:4px 5px;border:1px solid #c9ced8;text-align:center">${e(it.numero_cacamba||'—')}</td>
+    <td style="padding:4px 5px;border:1px solid #c9ced8">${e(it.equipamento_nome_snapshot||'—')}</td>
+    <td style="padding:4px 5px;border:1px solid #c9ced8;text-align:center">${fv(it.volume_m3)}</td>
+    <td style="padding:4px 5px;border:1px solid #c9ced8">${e(it.residuo_nome_snapshot||'—')}</td>
+  </tr>`).join('');
+
+  const logoUrl = new URL('assets/logo-25-anos.jpg', window.location.href).href;
+
+  return `<div style="font-family:Arial,Helvetica,sans-serif;color:#1a2f5e;font-size:10pt;max-width:150mm;margin:0 auto">
+  <div style="text-align:center;padding-bottom:10px">
+    <img src="${logoUrl}" alt="Multilix" style="max-width:52mm;height:auto;display:block;margin:0 auto"/>
+    <div style="font-size:14pt;font-weight:900;color:#1a2f5e;margin-top:10px;letter-spacing:.3pt">COMPROVANTE DE DESCARTE DE RESÍDUO ${e(vale.numero_vale||'')}</div>
+    <div style="font-size:8.5pt;color:#666;margin-top:2px">Multilix — Gestão de Resíduos da Construção Civil</div>
+    <div style="font-size:7.5pt;color:#888;margin-top:2px">ATT — Área de Transbordo e Triagem · Rod. Fernão Dias km 88,7 — Vila Itapegica, Guarulhos/SP · CEP 07053-171 · (11) 2241-0006</div>
+  </div>
+  <div style="border-top:2px solid #1a2f5e;margin:8px 0 4px"></div>
+  <table style="width:100%;border-collapse:collapse"><tbody>${kvRows}</tbody></table>
+  <div style="margin:12px 0 5px;font-weight:800;font-size:9pt;text-transform:uppercase;letter-spacing:.5px;color:#1a2f5e">Descargas Recebidas</div>
+  <table style="width:100%;border-collapse:collapse;font-size:8.5pt">
+    <thead><tr>
+      <th style="background:#eef1f6;font-weight:700;padding:4px 5px;border:1px solid #c9ced8;text-align:left;color:#1a2f5e">#</th>
+      <th style="background:#eef1f6;font-weight:700;padding:4px 5px;border:1px solid #c9ced8;text-align:left;color:#1a2f5e">CTR/MTR</th>
+      <th style="background:#eef1f6;font-weight:700;padding:4px 5px;border:1px solid #c9ced8;text-align:left;color:#1a2f5e">Caçamba</th>
+      <th style="background:#eef1f6;font-weight:700;padding:4px 5px;border:1px solid #c9ced8;text-align:left;color:#1a2f5e">Equipamento</th>
+      <th style="background:#eef1f6;font-weight:700;padding:4px 5px;border:1px solid #c9ced8;text-align:left;color:#1a2f5e">Vol. m³</th>
+      <th style="background:#eef1f6;font-weight:700;padding:4px 5px;border:1px solid #c9ced8;text-align:left;color:#1a2f5e">Resíduo</th>
+    </tr></thead>
+    <tbody>${itenRows}</tbody>
+  </table>
+  ${obsGeral?`<div style="margin-top:10px;font-size:9pt"><strong>Observações:</strong> ${e(obsGeral)}</div>`:''}
+  <div style="margin-top:30px;border-top:1px solid #1a2f5e;padding-top:6px;font-size:9pt;color:#1a2f5e">Responsável / Assinatura</div>
+  <div style="margin-top:16px;text-align:center;font-size:8pt;color:#888;border-top:1px dashed #ccc;padding-top:8px">Sistema de Gestão de Resíduos — Multilix · comercial@multilix.com.br</div>
+</div>`;
+}
+
+async function gerarPDFBlob(nomeArquivo, dadosComprovante){
+  const container = document.createElement('div');
+  container.style.cssText = 'position:fixed;left:-9999px;top:0;width:210mm;background:#fff;padding:14mm';
+  container.innerHTML = construirHTMLParaPDF(dadosComprovante);
+  document.body.appendChild(container);
   try {
     const blob = await html2pdf().set({
-      margin: [10,10,10,10],
+      margin: 0,
       filename: nomeArquivo,
-      image: {type:'jpeg', quality:0.95},
-      html2canvas: {scale:2, useCORS:true},
+      image: {type:'jpeg', quality:0.97},
+      html2canvas: {scale:2, useCORS:true, backgroundColor:'#ffffff'},
       jsPDF: {unit:'mm', format:'a4', orientation:'portrait'},
       pagebreak: {mode:'avoid-all'}
-    }).from(clone).outputPdf('blob');
+    }).from(container).outputPdf('blob');
     return blob;
   } finally {
-    document.body.removeChild(clone);
+    document.body.removeChild(container);
   }
 }
 
-async function compartilharWhatsApp(txt, nomeArquivo){
+async function compartilharWhatsApp(txt, nomeArquivo, dadosComprovante){
   // Tenta gerar PDF e compartilhar via Web Share API (mobile)
   if(typeof html2pdf !== 'undefined'){
     try {
-      const blob = await gerarPDFBlob(nomeArquivo);
+      const blob = await gerarPDFBlob(nomeArquivo, dadosComprovante);
       const file = new File([blob], nomeArquivo, {type:'application/pdf'});
       if(navigator.canShare && navigator.canShare({files:[file]})){
         await navigator.share({title: nomeArquivo, text: txt, files:[file]});
@@ -1036,7 +1108,7 @@ ${itensTxt}
 
 Multilix — Gestão de Resíduos da Construção Civil
 (11) 2241-0006 · comercial@multilix.com.br`;
-  await compartilharWhatsApp(txt, `comprovante-${d.vale.numero_vale}.pdf`);
+  await compartilharWhatsApp(txt, `comprovante-${d.vale.numero_vale}.pdf`, d);
 }
 
 function novoVale(){
@@ -1211,7 +1283,7 @@ ${itensTxt}
 
 Multilix — Gestão de Resíduos da Construção Civil
 (11) 2241-0006 · comercial@multilix.com.br`;
-  await compartilharWhatsApp(txt, `comprovante-${v.numero_vale}.pdf`);
+  await compartilharWhatsApp(txt, `comprovante-${v.numero_vale}.pdf`, _detVale);
 }
 
 async function cancelarOS(){
