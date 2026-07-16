@@ -8,6 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <title>Multilix — Vale de Descarga</title>
 <link rel="icon" type="image/png" href="assets/logo-icone.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
 :root{
   --bg:#0B0D11;--surface:#151922;--surface2:#1c212d;--border:#262D3D;
@@ -255,6 +256,7 @@ textarea{resize:none;height:80px}
     <button class="btn btn-primary" onclick="imprimirComprovanteDetalhe()">🖨️ Imprimir Comprovante</button>
     <button class="btn-secondary" id="det-btn-email" onclick="enviarEmailDetalhe()">📧 Enviar por E-mail</button>
     <button class="btn-secondary" onclick="enviarWhatsAppDetalhe()">💬 Enviar por WhatsApp</button>
+    <button class="btn-secondary" onclick="cancelarOS()" style="border-color:#EF4444;color:#EF4444;margin-top:6px">🚫 Cancelar O.S.</button>
   </div>
   <div style="height:30px"></div>
 </div>
@@ -342,7 +344,7 @@ textarea{resize:none;height:80px}
     <div class="ac-wrap">
       <input type="text" id="v-cliente-input" placeholder="Digite o nome do cliente..." autocomplete="off"
              oninput="onClienteInput(this.value)" onfocus="onClienteInput(this.value)"
-             onblur="setTimeout(()=>closeAc('ac-cliente'),180)" onkeydown="onAcKey(event,'ac-cliente',selecionarParceiro)"/>
+             onblur="setTimeout(()=>{closeAc('ac-cliente');validarClienteBlur();},180)" onkeydown="onAcKey(event,'ac-cliente',selecionarParceiro)"/>
       <div class="ac-list" id="ac-cliente"></div>
     </div>
     <input type="hidden" id="v-cliente-id"/>
@@ -810,6 +812,16 @@ function atualizarFinalizar(){
   document.getElementById('btn-finalizar').disabled = !(temCliente && temItens);
 }
 
+function validarClienteBlur(){
+  const inp = document.getElementById('v-cliente-input');
+  const id  = document.getElementById('v-cliente-id').value;
+  if(inp.value.trim() && !id){
+    showAlert('⚠️ Cliente não encontrado no cadastro. Selecione um cliente da lista de sugestões.');
+    inp.value = '';
+    atualizarFinalizar();
+  }
+}
+
 // ── DATA DO SERVIÇO ──────────────────────────────────────────────
 // Sempre enviar data_hora explícita: sem isso o banco usa now() e vales
 // lançados retroativamente caem na data do cadastro (bug do rel. 10/07/2026).
@@ -955,7 +967,51 @@ async function enviarComprovanteEmail(force){
     else setEmailStatus('Falha no envio do e-mail: '+(res.detail||res.error||'erro desconhecido'),'#EF4444');
   } catch(e){ setEmailStatus('Falha no envio do e-mail: '+e.message,'#EF4444'); }
 }
-function enviarWhatsApp(){
+async function gerarPDFBlob(nomeArquivo){
+  const el = document.getElementById('comprovante-print');
+  const clone = el.cloneNode(true);
+  clone.style.cssText = 'display:block;font-family:Arial,Helvetica,sans-serif;color:#1a2f5e;font-size:10pt;max-width:150mm;margin:0 auto;padding:10mm';
+  document.body.appendChild(clone);
+  try {
+    const blob = await html2pdf().set({
+      margin: [10,10,10,10],
+      filename: nomeArquivo,
+      image: {type:'jpeg', quality:0.95},
+      html2canvas: {scale:2, useCORS:true},
+      jsPDF: {unit:'mm', format:'a4', orientation:'portrait'},
+      pagebreak: {mode:'avoid-all'}
+    }).from(clone).outputPdf('blob');
+    return blob;
+  } finally {
+    document.body.removeChild(clone);
+  }
+}
+
+async function compartilharWhatsApp(txt, nomeArquivo){
+  // Tenta gerar PDF e compartilhar via Web Share API (mobile)
+  if(typeof html2pdf !== 'undefined'){
+    try {
+      const blob = await gerarPDFBlob(nomeArquivo);
+      const file = new File([blob], nomeArquivo, {type:'application/pdf'});
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        await navigator.share({title: nomeArquivo, text: txt, files:[file]});
+        return;
+      }
+      // Desktop ou navegador sem suporte a share de arquivos: baixa PDF + abre WhatsApp
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = nomeArquivo; a.click();
+      setTimeout(()=>URL.revokeObjectURL(url), 5000);
+      setTimeout(()=>window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`,'_blank'), 800);
+      return;
+    } catch(e){
+      if(e.name !== 'AbortError') console.warn('PDF share falhou, usando texto:', e);
+    }
+  }
+  window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`,'_blank');
+}
+
+async function enviarWhatsApp(){
   if(!_valeData) return;
   const d = _valeData;
   const dt = new Date(d.vale.data_hora).toLocaleString('pt-BR');
@@ -980,7 +1036,7 @@ ${itensTxt}
 
 Multilix — Gestão de Resíduos da Construção Civil
 (11) 2241-0006 · comercial@multilix.com.br`;
-  window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`,'_blank');
+  await compartilharWhatsApp(txt, `comprovante-${d.vale.numero_vale}.pdf`);
 }
 
 function novoVale(){
@@ -1129,7 +1185,7 @@ function abrirDetalhe(id){
 }
 
 // ── WHATSAPP / E-MAIL DO DETALHE ─────────────────────────────────
-function enviarWhatsAppDetalhe(){
+async function enviarWhatsAppDetalhe(){
   if(!_detVale) return;
   const {vale:v, itens} = _detVale;
   const dt = new Date(v.data_hora).toLocaleString('pt-BR');
@@ -1155,7 +1211,20 @@ ${itensTxt}
 
 Multilix — Gestão de Resíduos da Construção Civil
 (11) 2241-0006 · comercial@multilix.com.br`;
-  window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`,'_blank');
+  await compartilharWhatsApp(txt, `comprovante-${v.numero_vale}.pdf`);
+}
+
+async function cancelarOS(){
+  if(!_detVale) return;
+  const {vale:v} = _detVale;
+  if(!confirm(`Cancelar a O.S. ${v.numero_vale}?\n\nEsta ação marca o vale como cancelado. O registro é preservado no histórico.`)) return;
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/vales_descarga?id=eq.${encodeURIComponent(v.id)}`,
+      {method:'PATCH', headers:HDR, body:JSON.stringify({status:'cancelado'})});
+    if(!r.ok) throw new Error(await r.text());
+    voltarHistorico();
+    await carregarHistorico();
+  } catch(e){ alert('Erro ao cancelar: '+e.message); }
 }
 
 function setDetEmailStatus(msg, cor){

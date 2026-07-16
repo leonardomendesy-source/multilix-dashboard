@@ -10407,7 +10407,8 @@ initNavGroups();
       <td style="padding:9px 10px">${badge(p.status)}</td>
       <td style="padding:9px 10px;white-space:nowrap">
         <button onclick="attParcEditar('${p.id}')" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;margin-right:4px">Editar</button>
-        <button onclick="attParcToggle('${p.id}','${p.status}')" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">${p.status==='ativo'?'Inativar':'Ativar'}</button>
+        <button onclick="attParcToggle('${p.id}','${p.status}')" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;margin-right:4px">${p.status==='ativo'?'Inativar':'Ativar'}</button>
+        <button onclick="attParcExcluir('${p.id}','${esc(p.nome_fantasia).replace(/'/g,"\\'")}')" style="background:#EF444415;border:1px solid #EF444440;color:#EF4444;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">Excluir</button>
       </td>
     </tr>`).join('');
   };
@@ -10502,6 +10503,16 @@ initNavGroups();
     const novo = status==='ativo' ? 'inativo' : 'ativo';
     try { await api(`parceiros_att?id=eq.${id}`,{method:'PATCH',body:JSON.stringify({status:novo})}); await attParcLoad(); }
     catch(e){ alert('Erro: '+e.message); }
+  };
+
+  window.attParcExcluir = async function(id, nome){
+    if(!confirm(`Excluir permanentemente "${nome}"?\n\nIsso também excluirá todos os preços e histórico deste cliente.\nEsta ação NÃO PODE ser desfeita.`)) return;
+    try {
+      await api(`parceiros_att_tabela_precos_historico?parceiro_id=eq.${id}`,{method:'DELETE'});
+      await api(`parceiros_att_tabela_precos?parceiro_id=eq.${id}`,{method:'DELETE'});
+      await api(`parceiros_att?id=eq.${id}`,{method:'DELETE'});
+      await attParcLoad();
+    } catch(e){ alert('Erro ao excluir: '+e.message); }
   };
 
   // ─────────────────────────────────────────────────────────────
