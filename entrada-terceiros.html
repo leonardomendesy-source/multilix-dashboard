@@ -998,7 +998,7 @@ async function gerarPDFBlob(nomeArquivo, d){
   const totalVol    = d.totalVol != null ? d.totalVol : (vale.volume_total_m3||0);
   const dt = vale.data_hora ? new Date(vale.data_hora).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}) : '—';
   const fv = v => Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2});
-  const tx = s => String(s||'').replace(/[ -]/g,'');  // limpa chars de controle
+  const tx = s => String(s||'').replace(/[-]/g,'');  // limpa chars de controle
 
   const doc = new jsPDF({unit:'mm', format:'a4', orientation:'portrait'});
   const PW = 210, ML = 14, MR = 14, W = PW - ML - MR;
