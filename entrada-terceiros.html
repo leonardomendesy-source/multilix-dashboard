@@ -1277,8 +1277,12 @@ function renderHistorico(lista){
     const dt = new Date(v.data_hora).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
     const itens = v.vale_descarga_itens||[];
     const cacambas = itens.map(it=>it.numero_cacamba).filter(Boolean).join(', ');
-    return `<div class="hist-item" onclick="abrirDetalhe('${v.id}')">
-      <div class="hist-item-num">${esc(v.numero_vale)}</div>
+    const cancelado = v.status === 'cancelado';
+    return `<div class="hist-item" onclick="abrirDetalhe('${v.id}')" style="${cancelado?'opacity:.55':''}">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="hist-item-num">${esc(v.numero_vale)}</div>
+        ${cancelado?'<span style="background:#EF444420;color:#EF4444;border:1px solid #EF444440;border-radius:6px;font-size:10px;font-weight:700;padding:1px 7px;letter-spacing:.3px">CANCELADA</span>':''}
+      </div>
       <div class="hist-item-cli">${esc(v.parceiro_nome_snapshot||'—')}</div>
       <div class="hist-item-meta">
         ${dt} · ${itens.length} descarga(s) · ${fmtVol(v.volume_total_m3||0)} m³
