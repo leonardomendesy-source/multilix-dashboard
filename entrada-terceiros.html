@@ -517,21 +517,32 @@ function updateClock(){
 }
 setInterval(updateClock, 1000); updateClock();
 
+// Busca paginada para tabelas grandes (PostgREST limita 1000/resposta)
+async function fetchAll(path){
+  const out = [], page = 1000;
+  for(let off = 0; off < 200000; off += page){
+    const r = await fetch(`${SUPA_URL}/rest/v1/${path}${path.includes('?')?'&':'?'}limit=${page}&offset=${off}`,{headers:HDR_NO_PREFER});
+    const chunk = await r.json();
+    out.push(...chunk);
+    if(chunk.length < page) break;
+  }
+  return out;
+}
+
 // ── INIT ─────────────────────────────────────────────────────────
 async function init(){
   try {
-    const [rP, rR, rE, rG, rPr] = await Promise.all([
+    const [rP, rR, rE, rG] = await Promise.all([
       fetch(`${SUPA_URL}/rest/v1/parceiros_att?select=id,nome_fantasia,razao_social,documento,email,telefone,enviar_comprovante_email,gerador_obrigatorio&status=eq.ativo&order=nome_fantasia.asc&limit=500`,{headers:HDR_NO_PREFER}),
       fetch(`${SUPA_URL}/rest/v1/tipos_residuo_att?select=id,nome&ativo=eq.true&order=ordem.asc`,{headers:HDR_NO_PREFER}),
       fetch(`${SUPA_URL}/rest/v1/equipamentos_att?select=id,nome,tipo,volume_m3_padrao&ativo=eq.true&order=ordem.asc`,{headers:HDR_NO_PREFER}),
       fetch(`${SUPA_URL}/rest/v1/geradores_att?select=id,nome&ativo=eq.true&order=nome.asc&limit=500`,{headers:HDR_NO_PREFER}),
-      fetch(`${SUPA_URL}/rest/v1/parceiros_att_tabela_precos?select=parceiro_id,residuo_id,equipamento_id,preco_m3&ativo=eq.true`,{headers:HDR_NO_PREFER}),
     ]);
     _parceiros   = await rP.json();
     _residuos    = await rR.json();
     _equipamentos= await rE.json();
     _geradores   = await rG.json();
-    _precos      = await rPr.json();
+    _precos      = await fetchAll('parceiros_att_tabela_precos?select=parceiro_id,residuo_id,equipamento_id,preco_m3&ativo=eq.true');
 
     const selR = document.getElementById('if-residuo');
     selR.innerHTML = '<option value="">Selecione o resíduo...</option>';
