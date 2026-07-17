@@ -1806,6 +1806,7 @@ body { font-size: 13.5px !important; }
         <button class="nav-item" onclick="showPage('dest-freteiros',this)"><span class="icon" data-lucide="users"></span>Freteiros</button>
         <button class="nav-item" onclick="showPage('dest-residuos',this)"><span class="icon" data-lucide="package"></span>Tipos de Resíduo</button>
         <button class="nav-item" onclick="showPage('dest-conferencia',this)"><span class="icon" data-lucide="clipboard-check"></span>Conferência</button>
+        <button class="nav-item" onclick="showPage('dest-vales',this)"><span class="icon" data-lucide="landmark"></span>Aterros & Vales</button>
         <button class="nav-item" onclick="showPage('reciclaveis',this)"><span class="icon" data-lucide="leaf"></span>Recicláveis</button>
         <button class="nav-item" onclick="showPage('rec-destinos',this)"><span class="icon" data-lucide="store"></span>Rec. — Destinos</button>
         <button class="nav-item" onclick="showPage('rec-conferencia',this)"><span class="icon" data-lucide="scale"></span>Rec. — Conferência</button>
@@ -2866,6 +2867,7 @@ body { font-size: 13.5px !important; }
         <div class="fg"><label>Veículo</label><select id="f-veic-dest" onchange="applyDestFilters()"><option value="">Todos</option></select></div>
         <button class="btn btn-ghost btn-sm" onclick="clearDestFilters()"><i data-lucide="rotate-ccw" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Limpar</button>
         <button class="btn btn-sm" style="background:var(--green);color:#fff;border:none;margin-left:auto" onclick="exportDestinacaoExcel()"><i data-lucide="file-spreadsheet" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Exportar Excel</button>
+        <button class="btn btn-sm" style="background:#8B5CF6;color:#fff;border:none" onclick="gerarRelatorioDestinacao()"><i data-lucide="file-down" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Relatório PDF</button>
       </div>
 
       <div id="dest-diag-alert"></div>
@@ -3075,6 +3077,38 @@ body { font-size: 13.5px !important; }
       </div>
     </div>
 
+    <!-- ATERROS & VALES DE DESTINAÇÃO -->
+    <div class="page" id="page-dest-vales">
+      <div class="sec green"><i data-lucide="landmark" style="width:13px;height:13px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Cadastro de Aterros</div>
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">Aterros de Destinação</span><span class="panel-badge" id="av-aterros-badge">0</span></div>
+        <div style="display:flex;gap:10px;padding:14px 16px 0 16px">
+          <input id="av-novo-aterro" placeholder="Ex: ITAQUAREIA" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 12px;font-size:13px;outline:none;text-transform:uppercase"/>
+          <button class="btn btn-primary btn-sm" onclick="avAddAterro()">+ Adicionar Aterro</button>
+        </div>
+        <div class="tbl-wrap" id="tbl-av-aterros"></div>
+      </div>
+
+      <div class="sec" style="margin-top:24px"><i data-lucide="shopping-cart" style="width:13px;height:13px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Registrar Compra de Vales</div>
+      <div class="panel">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:16px">
+          <div class="fi"><label>Aterro *</label><select id="av-compra-aterro" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 12px;font-size:13px;outline:none"><option value="">Selecione...</option></select></div>
+          <div class="fi"><label>Tipo de Resíduo *</label><select id="av-compra-residuo" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 12px;font-size:13px;outline:none"><option value="">Selecione...</option></select></div>
+          <div class="fi"><label>Quantidade *</label><input type="number" id="av-compra-qtd" placeholder="30" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 12px;font-size:13px;outline:none"/></div>
+          <div class="fi"><label>Valor Unitário (R$) *</label><input type="number" id="av-compra-valor" step="0.01" placeholder="150.00" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 12px;font-size:13px;outline:none"/></div>
+          <div class="fi"><label>Data da Compra</label><input type="date" id="av-compra-data" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 12px;font-size:13px;outline:none"/></div>
+          <div class="fi"><label>Observações</label><input type="text" id="av-compra-obs" placeholder="Opcional" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 12px;font-size:13px;outline:none"/></div>
+        </div>
+        <div style="padding:0 16px 16px;text-align:right"><button class="btn btn-primary btn-sm" onclick="avRegistrarCompra()">Registrar Compra</button></div>
+      </div>
+
+      <div class="sec" style="margin-top:24px"><i data-lucide="wallet" style="width:13px;height:13px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Saldo de Vales</div>
+      <div class="panel"><div class="tbl-wrap" id="tbl-av-saldo"></div></div>
+
+      <div class="sec" style="margin-top:24px"><i data-lucide="history" style="width:13px;height:13px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Histórico de Compras</div>
+      <div class="panel"><div class="panel-head"><span class="panel-title">Compras Registradas</span><span class="panel-badge" id="av-compras-badge">0</span></div><div class="tbl-wrap" id="tbl-av-compras"></div></div>
+    </div>
+
     <!-- RECICLÁVEIS > CONFERÊNCIA -->
     <div class="page" id="page-rec-conferencia">
       <div class="filterbar">
@@ -3128,6 +3162,8 @@ body { font-size: 13.5px !important; }
           <div class="fi"><label>Tipo de Resíduo *</label><select id="oe-residuo"><option value="">—</option></select></div>
           <div class="fi"><label>Nº Vale Físico *</label><input type="text" id="oe-vale"/></div>
           <div class="fi"><label>Preço Unitário (R$)</label><input type="number" id="oe-preco" step="0.01"/></div>
+          <div class="fi"><label>Aterro (Vale)</label><select id="oe-aterro"><option value="">— Sem vale —</option></select></div>
+          <div class="fi"><label>Valor Vale (R$)</label><input type="number" id="oe-valor-vale" step="0.01"/></div>
           <div class="fi"><label>Status</label>
             <select id="oe-status">
               <option value="registrado">Registrado</option>
@@ -4736,7 +4772,7 @@ function rankTbl(data,l1,l2,top=10){
 }
 
 // ── NAV ────────────────────────────────────────────────────────
-const TITLES={overview:'Dashboard Executivo',data:'Fontes de Dados',consolidado:'Consolidado — Entrada de Resíduos',att:'Recebimento de Terceiros',locacao:'Locação de Caçambas',agregados:'Agregados Reciclados',destinacao:'Destinação de Resíduos','dest-pagamentos':'Pagamentos de Freteiros','dest-freteiros':'Cadastro de Freteiros','dest-residuos':'Tipos de Resíduo — Destinação','dest-conferencia':'Conferência de Vales',reciclaveis:'Recicláveis — Destinação & Vendas','rec-destinos':'Recicláveis — Destinos & Resíduos','rec-conferencia':'Recicláveis — Conferência',cdf:'Certificado de Destinação Final',crm:'CRM',propostas:'Propostas Comerciais','prop-locacao':'Propostas — Locação','prop-att':'Propostas — Recebimento ATT','prop-agregados':'Propostas — Agregados',contratos:'Contratos',inconsistencias:'Inconsistências',resumo:'Resumo Executivo',config:'Metas & Configurações',usuarios:'Gerenciar Usuários','emails-comercial':'E-mails Comercial','att-parceiros':'Parceiros ATT','att-precos':'Tabela de Preços','att-residuos':'Tipos de Resíduo','att-equipamentos':'Equipamentos','att-geradores':'Geradores','att-relatorio':'Relatório de Descartes'};
+const TITLES={overview:'Dashboard Executivo',data:'Fontes de Dados',consolidado:'Consolidado — Entrada de Resíduos',att:'Recebimento de Terceiros',locacao:'Locação de Caçambas',agregados:'Agregados Reciclados',destinacao:'Destinação de Resíduos','dest-pagamentos':'Pagamentos de Freteiros','dest-freteiros':'Cadastro de Freteiros','dest-residuos':'Tipos de Resíduo — Destinação','dest-conferencia':'Conferência de Vales','dest-vales':'Aterros & Vales de Destinação',reciclaveis:'Recicláveis — Destinação & Vendas','rec-destinos':'Recicláveis — Destinos & Resíduos','rec-conferencia':'Recicláveis — Conferência',cdf:'Certificado de Destinação Final',crm:'CRM',propostas:'Propostas Comerciais','prop-locacao':'Propostas — Locação','prop-att':'Propostas — Recebimento ATT','prop-agregados':'Propostas — Agregados',contratos:'Contratos',inconsistencias:'Inconsistências',resumo:'Resumo Executivo',config:'Metas & Configurações',usuarios:'Gerenciar Usuários','emails-comercial':'E-mails Comercial','att-parceiros':'Parceiros ATT','att-precos':'Tabela de Preços','att-residuos':'Tipos de Resíduo','att-equipamentos':'Equipamentos','att-geradores':'Geradores','att-relatorio':'Relatório de Descartes'};
 function showPage(id,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -4756,6 +4792,7 @@ function showPage(id,el){
   if(id==='dest-freteiros') freteiroLoadPage();
   if(id==='dest-residuos') destResiduosLoadPage();
   if(id==='dest-conferencia') confInit();
+  if(id==='dest-vales') avLoadPage();
   if(id==='destinacao') destMergeSupabase();
   if(id==='resumo') resumoInit();
   if(id==='emails-comercial') emailsInit();
@@ -7018,7 +7055,7 @@ function updateDestinacao(){
 
   // ── Totais e subconjuntos ─────────────────────────────────────
   const tVol=rows.reduce((s,r)=>s+r.volume,0);
-  const tFat=rows.reduce((s,r)=>s+r.valor,0);
+  const tFat=rows.reduce((s,r)=>s+(r.valor||0)+(r.valorVale||0),0);
   const tViag=tVol>0?Math.ceil(tVol/17):0;
   const custoMed=tVol>0?tFat/tVol:0;
   const custoViag=tViag>0?tFat/tViag:0;
@@ -7027,8 +7064,8 @@ function updateDestinacao(){
   const rach=rows.filter(r=>r.residuo==='RACHÃO SUJO');
   const vMix=mix.reduce((s,r)=>s+r.volume,0);
   const vRach=rach.reduce((s,r)=>s+r.volume,0);
-  const fatMix=mix.reduce((s,r)=>s+r.valor,0);
-  const fatRach=rach.reduce((s,r)=>s+r.valor,0);
+  const fatMix=mix.reduce((s,r)=>s+(r.valor||0)+(r.valorVale||0),0);
+  const fatRach=rach.reduce((s,r)=>s+(r.valor||0)+(r.valorVale||0),0);
   const viagMix=vMix>0?Math.ceil(vMix/17):0;
   const viagRach=vRach>0?Math.ceil(vRach/17):0;
   const custoMedMix=vMix>0?fatMix/vMix:0;
@@ -7083,7 +7120,7 @@ function updateDestinacao(){
   mkRankingBar('cDestFreteiro','destFreteiro',byFreteiroGeral,'#10B981','m³');
   // Resumo por Classe
   const byClass={};
-  rows.forEach(r=>{const k=r.residuo||'—';if(!byClass[k])byClass[k]={classe:k,m3:0,total:0};byClass[k].m3+=r.volume;byClass[k].total+=r.valor;});
+  rows.forEach(r=>{const k=r.residuo||'—';if(!byClass[k])byClass[k]={classe:k,m3:0,total:0};byClass[k].m3+=r.volume;byClass[k].total+=(r.valor||0)+(r.valorVale||0);});
   Object.values(byClass).forEach(c=>{c.viagens=c.m3>0?Math.ceil(c.m3/17):0;c.custoM3=c.m3>0?c.total/c.m3:0;c.custoViagem=c.viagens>0?c.total/c.viagens:0;});
   const arrClass=Object.values(byClass).sort((a,b)=>b.m3-a.m3);
   document.getElementById('rk-dest').innerHTML=arrClass.length?
@@ -7870,8 +7907,7 @@ async function showDestPagamentoPage(){
 
   // Busca vales confirmados do Supabase e mescla com planilha
   try {
-    const vales = await supaFetchAllRows(`vales_destinacao?select=*,freteiros(nome)&status=eq.confirmado&order=data_saida.desc`);
-    // Mapeia para o mesmo formato de S.raw.destinacao
+    const vales = await supaFetchAllRows(`vales_destinacao?select=*,freteiros(nome),aterros_destinacao(nome)&status=eq.confirmado&order=data_saida.desc`);
     const mapped = vales.map(v => ({
       data:       v.data_saida ? (p => new Date(+p[0],+p[1]-1,+p[2]))(v.data_saida.split('-')) : null,
       pedido:     v.os_numero || '',
@@ -7884,6 +7920,8 @@ async function showDestPagamentoPage(){
       valor:      Number(v.preco_unitario || 0),
       total:      Number(v.preco_unitario || 0),
       valorUnit:  Number(v.preco_unitario || 0),
+      valorVale:  Number(v.valor_vale || 0),
+      aterro:     v.aterros_destinacao?.nome || '',
       pago: '', tipoDia: '', bloco: '',
       tipo: 'destinacao', cliente: v.freteiros?.nome || '',
       _fromSupabase: true
@@ -8004,7 +8042,7 @@ function renderPagamentosFreteiro(rows,freteiro){
     return `<div style="font-size:11px;font-weight:700;color:var(--text);margin:14px 0 6px;text-transform:uppercase;letter-spacing:.6px">${g.residuo}</div>
     <table class="dest-mini-table"><thead><tr>
       <th>Data</th><th>Tipo de Resíduo</th><th style="text-align:right">Valor Unit. Frete (R$)</th><th>Truck/Carreta</th>
-      <th style="text-align:right">QT Viagens</th><th style="text-align:right">QTD Total m³</th><th style="text-align:right">Total (R$)</th>
+      <th style="text-align:right">QT Viagens</th><th style="text-align:right">QTD Total m³</th><th>Vale</th><th style="text-align:right">Total (R$)</th>
     </tr></thead><tbody>${linhas.map(r=>`<tr>
       <td>${fD(r.data)}</td>
       <td>${r.residuo||'—'}</td>
@@ -8012,11 +8050,12 @@ function renderPagamentosFreteiro(rows,freteiro){
       <td>${r.veiculo||'—'}</td>
       <td style="text-align:right">${fN(_pagViagens(r),0)}</td>
       <td style="text-align:right">${fN(r.volume||0,1)}</td>
+      <td style="color:var(--muted);font-size:11px">${r.aterro||'—'}</td>
       <td style="text-align:right">${fM(r._totalLinha)}</td>
     </tr>`).join('')}<tr style="font-weight:700;background:var(--surface2)">
-      <td colspan="4">TOTAL ${g.residuo}</td>
-      <td style="text-align:right">${fN(g.viagens,0)}</td>
+      <td colspan="5">TOTAL ${g.residuo}</td>
       <td style="text-align:right">${fN(g.m3,1)}</td>
+      <td></td>
       <td style="text-align:right">${fM(g.total)}</td>
     </tr></tbody></table>`;
   }).join('')+`<div style="text-align:right;font-size:13px;font-weight:700;color:var(--text);margin-top:14px;padding-top:10px;border-top:1px solid var(--border)">TOTAL GERAL: ${fM(totGeral)}</div>`;
@@ -8035,13 +8074,14 @@ function _pagBuildReportHTML(){
     return `<div style="font-size:11px;font-weight:bold;color:#1a1a1a;margin:14px 0 4px">${g.residuo}</div>
     <table style="width:100%;border-collapse:collapse;table-layout:fixed">
       <thead><tr>
-        <th style="${th};width:11%">DATA</th>
-        <th style="${th};width:17%">TIPO DE RESÍDUO</th>
-        <th style="${th};width:14%">VALOR UNIT. FRETE (R$)</th>
-        <th style="${th};width:13%">TRUCK/CARRETA</th>
-        <th style="${th};width:11%">QT VIAGENS</th>
-        <th style="${th};width:13%">QTD TOTAL M³</th>
-        <th style="${th};width:13%">TOTAL (R$)</th>
+        <th style="${th};width:10%">DATA</th>
+        <th style="${th};width:15%">TIPO DE RESÍDUO</th>
+        <th style="${th};width:12%">VALOR UNIT. FRETE (R$)</th>
+        <th style="${th};width:11%">TRUCK/CARRETA</th>
+        <th style="${th};width:9%">QT VIAGENS</th>
+        <th style="${th};width:11%">QTD TOTAL M³</th>
+        <th style="${th};width:13%">VALE</th>
+        <th style="${th};width:11%">TOTAL (R$)</th>
       </tr></thead>
       <tbody>${linhas.map(r=>`<tr>
         <td style="${td}">${fD(r.data)}</td>
@@ -8050,11 +8090,12 @@ function _pagBuildReportHTML(){
         <td style="${td}">${r.veiculo||'—'}</td>
         <td style="${td}">${fN(_pagViagens(r),0)}</td>
         <td style="${td}">${fN(r.volume||0,1)}</td>
+        <td style="${td};font-size:8px">${r.aterro||'—'}</td>
         <td style="${td}">${fM(r._totalLinha)}</td>
       </tr>`).join('')}<tr style="font-weight:bold">
-        <td style="${td}" colspan="4">TOTAL ${g.residuo}</td>
-        <td style="${td}">${fN(g.viagens,0)}</td>
+        <td style="${td}" colspan="5">TOTAL ${g.residuo}</td>
         <td style="${td}">${fN(g.m3,1)}</td>
+        <td style="${td}"></td>
         <td style="${td}">${fM(g.total)}</td>
       </tr></tbody>
     </table>`;
@@ -8147,7 +8188,7 @@ function freteiroRenderTable(rows) {
   let html = '<table style="width:100%;border-collapse:collapse"><thead><tr><th>Nome</th><th>Documento</th><th>Telefone</th><th>Veículos / Preços</th><th>Status</th><th></th></tr></thead><tbody>';
   rows.forEach(f => {
     const precos = (f.freteiros_tabela_precos || []).filter(p => p.ativo);
-    const resumo = precos.map(p => `${p.tipo_veiculo} ${p.capacidade_m3}m³ ${p.tipo_residuo} — R$${Number(p.preco_unitario).toLocaleString('pt-BR')}`).join('<br>') || '<span style="color:var(--muted2)">—</span>';
+    const resumo = precos.map(p => `${p.tipo_veiculo} ${p.capacidade_m3}m³ ${p.tipo_residuo} — R$${Number(p.preco_unitario).toLocaleString('pt-BR')}${p.tem_vale?' <span style="background:#F59E0B30;color:#F59E0B;border-radius:4px;padding:1px 5px;font-size:9px;font-weight:700">VALE</span>':''}`).join('<br>') || '<span style="color:var(--muted2)">—</span>';
     const badge = f.ativo
       ? '<span style="background:#10B98120;color:#10B981;border:1px solid #10B98140;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:700">ATIVO</span>'
       : '<span style="background:#EF444420;color:#EF4444;border:1px solid #EF444440;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:700">INATIVO</span>';
@@ -8196,7 +8237,7 @@ function freteiroCloseModal() {
 function freteiroAddPrecoRow(p = {}) {
   const c = document.getElementById('fm-precos-container');
   const div = document.createElement('div');
-  div.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:8px;margin-bottom:8px;align-items:center';
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto auto;gap:8px;margin-bottom:8px;align-items:center';
   div.innerHTML = `
     <select class="fp-veiculo" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 10px;font-size:12px;outline:none">
       <option value="TRUCK" ${p.tipo_veiculo==='TRUCK'?'selected':''}>TRUCK</option>
@@ -8207,6 +8248,7 @@ function freteiroAddPrecoRow(p = {}) {
       ${destResiduoOptionsHTML(p.tipo_residuo)}
     </select>
     <input class="fp-preco" type="number" placeholder="R$ preço" value="${p.preco_unitario||''}" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 10px;font-size:12px;outline:none"/>
+    <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);white-space:nowrap;cursor:pointer"><input type="checkbox" class="fp-vale" ${p.tem_vale?'checked':''} style="accent-color:var(--accent);width:14px;height:14px"/> Vale</label>
     <button onclick="this.closest('div').remove()" style="background:#EF444420;border:1px solid #EF4444;color:#EF4444;border-radius:6px;padding:6px 10px;cursor:pointer">✕</button>
   `;
   if(p.id) div.dataset.precoId = p.id;
@@ -8262,6 +8304,7 @@ async function freteiroSalvar() {
       capacidade_m3:  parseFloat(row.querySelector('.fp-cap').value) || null,
       tipo_residuo:   row.querySelector('.fp-residuo').value,
       preco_unitario: parseFloat(row.querySelector('.fp-preco').value) || null,
+      tem_vale:       row.querySelector('.fp-vale')?.checked || false,
       ativo: true
     })).filter(p => p.capacidade_m3 && p.preco_unitario);
 
@@ -8438,7 +8481,7 @@ function renderDestDynSections(rows){
   nomes.forEach((nome,i)=>{
     const slug=destResSlug(nome), color=hex[i%hex.length], kb=kbCls[i%kbCls.length], col=kpiCol[i%kpiCol.length];
     const sub=rows.filter(r=>r.residuo===nome);
-    const v=sub.reduce((s,r)=>s+r.volume,0), fat=sub.reduce((s,r)=>s+r.valor,0);
+    const v=sub.reduce((s,r)=>s+r.volume,0), fat=sub.reduce((s,r)=>s+(r.valor||0)+(r.valorVale||0),0);
     const viag=v>0?Math.ceil(v/17):0, custoMed=v>0?fat/v:0, custoViag=viag>0?fat/viag:0;
     const el=document.getElementById('kpi-destdyn-'+slug);
     if(el) el.innerHTML=[
@@ -8453,6 +8496,274 @@ function renderDestDynSections(rows){
     mkRankingBar('cDestFret_'+slug,'destDyn_'+slug+'_fret',byFret,color,'m³ '+nome);
   });
   if(window.lucide&&lucide.createIcons) try{lucide.createIcons();}catch(e){}
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MÓDULO ATERROS & VALES DE DESTINAÇÃO
+// ═══════════════════════════════════════════════════════════════
+
+let _avAterros=[], _avCompras=[], _avConsumo=[];
+
+async function avLoadPage(){
+  try{
+    await destCarregarTiposResiduo();
+    const hdr={headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+(_session?.access_token||SUPA_KEY)}};
+    const [rA,rC,rV]=await Promise.all([
+      fetch(`${SUPA_URL}/rest/v1/aterros_destinacao?select=*&order=nome.asc`,hdr),
+      fetch(`${SUPA_URL}/rest/v1/aterros_vales_compra?select=*,aterros_destinacao(nome)&order=data_compra.desc`,hdr),
+      fetch(`${SUPA_URL}/rest/v1/vales_destinacao?select=aterro_id,tipo_residuo,valor_vale,status&aterro_id=not.is.null`,hdr)
+    ]);
+    _avAterros=await rA.json(); _avCompras=await rC.json(); _avConsumo=await rV.json();
+    avRenderAterros(); avPopulateSelects(); avRenderCompras(); avRenderSaldo();
+    renderIcons();
+  }catch(e){ console.error('avLoadPage',e); }
+}
+
+function avRenderAterros(){
+  const badge=document.getElementById('av-aterros-badge');
+  if(badge) badge.textContent=_avAterros.length+' aterro'+((_avAterros.length!==1)?'s':'');
+  const tbl=document.getElementById('tbl-av-aterros');
+  if(!_avAterros.length){ tbl.innerHTML='<div style="padding:20px;color:var(--muted);text-align:center">Nenhum aterro cadastrado.</div>'; return; }
+  let html='<table style="width:100%;border-collapse:collapse"><thead><tr><th>Nome</th><th>Status</th><th style="text-align:right">Ações</th></tr></thead><tbody>';
+  _avAterros.forEach(a=>{
+    const bg=a.ativo?'<span style="background:#10B98120;color:#10B981;border:1px solid #10B98140;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:700">ATIVO</span>':'<span style="background:#EF444420;color:#EF4444;border:1px solid #EF444440;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:700">INATIVO</span>';
+    html+=`<tr><td style="font-weight:600">${a.nome}</td><td>${bg}</td><td style="text-align:right;white-space:nowrap">
+      <button onclick="avToggleAterro('${a.id}',${a.ativo?'false':'true'})" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px">${a.ativo?'Desativar':'Reativar'}</button>
+      <button onclick="avDeleteAterro('${a.id}','${a.nome.replace(/'/g,"\\'")}')" style="background:#EF444420;border:1px solid #EF444440;color:#EF4444;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;margin-left:6px">Excluir</button>
+    </td></tr>`;
+  });
+  tbl.innerHTML=html+'</tbody></table>';
+}
+
+async function avAddAterro(){
+  const input=document.getElementById('av-novo-aterro');
+  const nome=input.value.trim().toUpperCase();
+  if(!nome){ alert('Informe o nome do aterro.'); return; }
+  if(!_session){ alert('É necessário estar logado.'); return; }
+  try{
+    const r=await fetch(`${SUPA_URL}/rest/v1/aterros_destinacao`,{method:'POST',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+_session.access_token,'Content-Type':'application/json','Prefer':'return=representation'},
+      body:JSON.stringify({nome})});
+    if(!r.ok){ const e=await r.json(); throw new Error(JSON.stringify(e)); }
+    input.value=''; await avLoadPage();
+  }catch(e){ alert('Erro ao adicionar aterro (nome duplicado?):\n'+e.message); }
+}
+
+async function avToggleAterro(id,ativo){
+  if(!_session) return;
+  try{
+    await fetch(`${SUPA_URL}/rest/v1/aterros_destinacao?id=eq.${id}`,{method:'PATCH',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+_session.access_token,'Content-Type':'application/json'},
+      body:JSON.stringify({ativo})});
+    await avLoadPage();
+  }catch(e){ alert('Erro ao atualizar aterro.'); }
+}
+
+async function avDeleteAterro(id,nome){
+  if(!_session){ alert('É necessário estar logado.'); return; }
+  const hdr={'apikey':SUPA_KEY,'Authorization':'Bearer '+_session.access_token};
+  try{
+    const [rc,rv]=await Promise.all([
+      fetch(`${SUPA_URL}/rest/v1/aterros_vales_compra?select=id&aterro_id=eq.${id}&limit=1`,{headers:hdr}),
+      fetch(`${SUPA_URL}/rest/v1/vales_destinacao?select=id&aterro_id=eq.${id}&limit=1`,{headers:hdr})
+    ]);
+    if(((await rc.json())||[]).length+((await rv.json())||[]).length>0){
+      alert(`"${nome}" já possui compras ou viagens vinculadas.\nUse "Desativar" em vez de excluir.`); return;
+    }
+    if(!confirm(`Excluir o aterro "${nome}"? Esta ação não pode ser desfeita.`)) return;
+    await fetch(`${SUPA_URL}/rest/v1/aterros_destinacao?id=eq.${id}`,{method:'DELETE',headers:hdr});
+    await avLoadPage();
+  }catch(e){ alert('Erro ao excluir aterro.'); }
+}
+
+function avPopulateSelects(){
+  const selA=document.getElementById('av-compra-aterro');
+  selA.innerHTML='<option value="">Selecione...</option>';
+  _avAterros.filter(a=>a.ativo).forEach(a=>{ const o=document.createElement('option'); o.value=a.id; o.textContent=a.nome; selA.appendChild(o); });
+  const selR=document.getElementById('av-compra-residuo');
+  destPopulateResiduoSelect(selR,{placeholder:'Selecione...'});
+  const hoje=new Date().toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'});
+  document.getElementById('av-compra-data').value=hoje;
+}
+
+async function avRegistrarCompra(){
+  const aterroId=document.getElementById('av-compra-aterro').value;
+  const residuo=document.getElementById('av-compra-residuo').value;
+  const qtd=parseInt(document.getElementById('av-compra-qtd').value);
+  const valor=parseFloat(document.getElementById('av-compra-valor').value);
+  const data=document.getElementById('av-compra-data').value;
+  const obs=document.getElementById('av-compra-obs').value.trim();
+  if(!aterroId){ alert('Selecione o aterro.'); return; }
+  if(!residuo){ alert('Selecione o tipo de resíduo.'); return; }
+  if(!qtd||qtd<=0){ alert('Informe a quantidade.'); return; }
+  if(!valor||valor<=0){ alert('Informe o valor unitário.'); return; }
+  if(!_session){ alert('É necessário estar logado.'); return; }
+  try{
+    const r=await fetch(`${SUPA_URL}/rest/v1/aterros_vales_compra`,{method:'POST',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+_session.access_token,'Content-Type':'application/json','Prefer':'return=representation'},
+      body:JSON.stringify({aterro_id:aterroId,tipo_residuo:residuo,quantidade:qtd,valor_unitario:valor,data_compra:data||null,observacoes:obs||null})});
+    if(!r.ok){ const e=await r.json(); throw new Error(JSON.stringify(e)); }
+    document.getElementById('av-compra-qtd').value='';
+    document.getElementById('av-compra-valor').value='';
+    document.getElementById('av-compra-obs').value='';
+    await avLoadPage();
+  }catch(e){ alert('Erro ao registrar compra:\n'+e.message); }
+}
+
+async function avDeleteCompra(id){
+  if(!_session){ alert('É necessário estar logado.'); return; }
+  if(!confirm('Excluir esta compra de vales?')) return;
+  try{
+    await fetch(`${SUPA_URL}/rest/v1/aterros_vales_compra?id=eq.${id}`,{method:'DELETE',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+_session.access_token}});
+    await avLoadPage();
+  }catch(e){ alert('Erro ao excluir compra.'); }
+}
+
+function avComputarSaldo(){
+  const compras={}, consumo={};
+  _avCompras.forEach(c=>{
+    const k=c.aterro_id+'|'+c.tipo_residuo;
+    if(!compras[k]) compras[k]={aterroId:c.aterro_id,aterro:c.aterros_destinacao?.nome||'?',residuo:c.tipo_residuo,qtdComprada:0,valorComprado:0};
+    compras[k].qtdComprada+=c.quantidade;
+    compras[k].valorComprado+=c.quantidade*Number(c.valor_unitario);
+  });
+  _avConsumo.filter(v=>v.status!=='cancelado').forEach(v=>{
+    const k=v.aterro_id+'|'+v.tipo_residuo;
+    if(!consumo[k]) consumo[k]={usado:0,valorUsado:0};
+    consumo[k].usado++;
+    consumo[k].valorUsado+=Number(v.valor_vale||0);
+  });
+  const saldo=[];
+  Object.keys(compras).forEach(k=>{
+    const c=compras[k], u=consumo[k]||{usado:0,valorUsado:0};
+    saldo.push({aterro:c.aterro,residuo:c.residuo,comprados:c.qtdComprada,utilizados:u.usado,saldoQtd:c.qtdComprada-u.usado,saldoRS:c.valorComprado-u.valorUsado});
+  });
+  return saldo.sort((a,b)=>a.aterro.localeCompare(b.aterro)||a.residuo.localeCompare(b.residuo));
+}
+
+function avRenderSaldo(){
+  const saldo=avComputarSaldo();
+  const tbl=document.getElementById('tbl-av-saldo');
+  if(!saldo.length){ tbl.innerHTML='<div style="padding:20px;color:var(--muted);text-align:center">Nenhuma compra registrada.</div>'; return; }
+  let html='<table style="width:100%;border-collapse:collapse"><thead><tr><th>Aterro</th><th>Resíduo</th><th style="text-align:right">Comprados</th><th style="text-align:right">Utilizados</th><th style="text-align:right">Saldo (qtd)</th><th style="text-align:right">Saldo (R$)</th></tr></thead><tbody>';
+  saldo.forEach(s=>{
+    const cor=s.saldoQtd>0?'#10B981':'#EF4444';
+    html+=`<tr><td style="font-weight:600">${s.aterro}</td><td>${s.residuo}</td><td style="text-align:right">${s.comprados}</td><td style="text-align:right">${s.utilizados}</td><td style="text-align:right;font-weight:700;color:${cor}">${s.saldoQtd}</td><td style="text-align:right;font-weight:700;color:${cor}">${fM(s.saldoRS)}</td></tr>`;
+  });
+  tbl.innerHTML=html+'</tbody></table>';
+}
+
+function avRenderCompras(){
+  const badge=document.getElementById('av-compras-badge');
+  if(badge) badge.textContent=_avCompras.length+' compra'+(_avCompras.length!==1?'s':'');
+  const tbl=document.getElementById('tbl-av-compras');
+  if(!_avCompras.length){ tbl.innerHTML='<div style="padding:20px;color:var(--muted);text-align:center">Nenhuma compra registrada.</div>'; return; }
+  let html='<table style="width:100%;border-collapse:collapse"><thead><tr><th>Data</th><th>Aterro</th><th>Resíduo</th><th style="text-align:right">Qtd</th><th style="text-align:right">Valor Unit.</th><th style="text-align:right">Total</th><th>Obs</th><th></th></tr></thead><tbody>';
+  _avCompras.forEach(c=>{
+    const total=c.quantidade*Number(c.valor_unitario);
+    const dataFmt=c.data_compra?c.data_compra.split('-').reverse().join('/'):'—';
+    html+=`<tr><td>${dataFmt}</td><td style="font-weight:600">${c.aterros_destinacao?.nome||'?'}</td><td>${c.tipo_residuo}</td><td style="text-align:right">${c.quantidade}</td><td style="text-align:right">${fM(Number(c.valor_unitario))}</td><td style="text-align:right;font-weight:600">${fM(total)}</td><td style="color:var(--muted);font-size:11px">${c.observacoes||'—'}</td><td><button onclick="avDeleteCompra('${c.id}')" style="background:#EF444420;border:1px solid #EF444440;color:#EF4444;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px">Excluir</button></td></tr>`;
+  });
+  tbl.innerHTML=html+'</tbody></table>';
+}
+
+// ── RELATÓRIO PDF DE DESTINAÇÃO ───────────────────────────────
+
+function _destBuildReportHTML(rows,filters){
+  const byFret={};
+  rows.forEach(r=>{
+    const k=normalizarFreteiroPagamento(r.freteiro||r.cliente);
+    if(!byFret[k]) byFret[k]={freteiro:k,rows:[],viagens:0,m3:0,frete:0,vale:0};
+    byFret[k].rows.push(r);
+    byFret[k].viagens+=r.viagens||1;
+    byFret[k].m3+=r.volume||0;
+    byFret[k].frete+=(r.valor||0);
+    byFret[k].vale+=(r.valorVale||0);
+  });
+  const grupos=Object.values(byFret).sort((a,b)=>a.freteiro.localeCompare(b.freteiro));
+  const totFrete=grupos.reduce((s,g)=>s+g.frete,0);
+  const totVale=grupos.reduce((s,g)=>s+g.vale,0);
+  const totM3=grupos.reduce((s,g)=>s+g.m3,0);
+  const totViag=grupos.reduce((s,g)=>s+g.viagens,0);
+
+  const th='padding:5px 6px;border:1px solid #1a1a1a;font-size:9px;color:#1a1a1a;background:#f0f0f0;text-align:center;font-weight:bold';
+  const td='padding:4px 6px;border:1px solid #1a1a1a;font-size:9px;color:#1a1a1a;background:#ffffff;text-align:center';
+
+  const blocos=grupos.map(g=>{
+    const linhas=[...g.rows].sort((a,b)=>(a.data?.getTime?.()||0)-(b.data?.getTime?.()||0));
+    return `<div style="font-size:11px;font-weight:bold;color:#1a1a1a;margin:14px 0 4px">${g.freteiro}</div>
+    <table style="width:100%;border-collapse:collapse;table-layout:fixed"><thead><tr>
+      <th style="${th};width:10%">DATA</th><th style="${th};width:14%">RESÍDUO</th><th style="${th};width:10%">VEÍCULO</th>
+      <th style="${th};width:8%">M³</th><th style="${th};width:12%">FRETE (R$)</th><th style="${th};width:14%">VALE</th>
+      <th style="${th};width:12%">VALOR VALE (R$)</th><th style="${th};width:12%">TOTAL (R$)</th>
+    </tr></thead><tbody>${linhas.map(r=>`<tr>
+      <td style="${td}">${fD(r.data)}</td><td style="${td}">${r.residuo||'—'}</td><td style="${td}">${r.veiculo||'—'}</td>
+      <td style="${td}">${fN(r.volume||0,1)}</td><td style="${td}">${fM(r.valor||0)}</td>
+      <td style="${td};font-size:8px">${r.aterro||'—'}</td><td style="${td}">${r.valorVale?fM(r.valorVale):'—'}</td>
+      <td style="${td}">${fM((r.valor||0)+(r.valorVale||0))}</td>
+    </tr>`).join('')}<tr style="font-weight:bold">
+      <td style="${td}" colspan="3">TOTAL ${g.freteiro}</td><td style="${td}">${fN(g.m3,1)}</td>
+      <td style="${td}">${fM(g.frete)}</td><td style="${td}"></td><td style="${td}">${fM(g.vale)}</td>
+      <td style="${td}">${fM(g.frete+g.vale)}</td>
+    </tr></tbody></table>`;
+  }).join('');
+
+  return `<div id="dest-render" style="width:794px;background:#ffffff;font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;box-sizing:border-box;padding:40px 36px">
+    <div style="display:flex;align-items:center;gap:16px;border-bottom:2px solid #1a1a1a;padding-bottom:14px;margin-bottom:14px">
+      <img src="${MULTILIX_LOGO_B64}" style="width:70px"/>
+      <div>
+        <div style="font-size:16px;font-weight:bold">RELATÓRIO DE DESTINAÇÃO DE RESÍDUOS</div>
+        <div style="font-size:10px;color:#555">Multilix — Gestão de Resíduos da Construção Civil</div>
+      </div>
+    </div>
+    <div style="font-size:11px;line-height:1.7;margin-bottom:10px">
+      <div><b>Período:</b> ${filters.from||'—'} a ${filters.to||'—'}</div>
+      ${filters.freteiro?`<div><b>Freteiro:</b> ${filters.freteiro}</div>`:''}
+      ${filters.residuo?`<div><b>Resíduo:</b> ${filters.residuo}</div>`:''}
+      ${filters.veiculo?`<div><b>Veículo:</b> ${filters.veiculo}</div>`:''}
+      <div><b>Data de emissão:</b> ${fD(new Date())}</div>
+    </div>
+    ${blocos}
+    <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:bold;margin:16px 0;padding-top:8px;border-top:2px solid #1a1a1a">
+      <span>Total Viagens: ${fN(totViag,0)} · Total m³: ${fN(totM3,1)}</span>
+      <span>Frete: ${fM(totFrete)} · Vale: ${fM(totVale)} · TOTAL: ${fM(totFrete+totVale)}</span>
+    </div>
+    <div style="margin-top:54px;font-size:11px">Conferido por: ______________________________________</div>
+    <div style="margin-top:24px;font-size:9px;color:#777;text-align:center;border-top:1px solid #ccc;padding-top:8px">Multilix — Gestão de Resíduos da Construção Civil</div>
+  </div>`;
+}
+
+async function gerarRelatorioDestinacao(){
+  const rows=filtDest(S.raw.destinacao);
+  if(!rows.length){ alert('Nenhum dado no filtro atual para gerar relatório.'); return; }
+  const filters={
+    from:fD(S.destF.from)||'início',
+    to:fD(S.destF.to)||'hoje',
+    freteiro:S.destF.freteiro||'',
+    residuo:S.destF.residuo||'',
+    veiculo:S.destF.veiculo||''
+  };
+  const container=document.createElement('div');
+  container.style.position='fixed'; container.style.left='-9999px'; container.style.top='0';
+  container.innerHTML=_destBuildReportHTML(rows,filters);
+  document.body.appendChild(container);
+  try{
+    const target=container.querySelector('#dest-render');
+    const canvas=await html2canvas(target,{scale:2,useCORS:true,backgroundColor:'#ffffff'});
+    const {jsPDF}=window.jspdf;
+    const pdf=new jsPDF('p','pt','a4');
+    const pageW=pdf.internal.pageSize.getWidth(), pageH=pdf.internal.pageSize.getHeight();
+    const imgW=pageW, imgH=canvas.height*imgW/canvas.width;
+    const imgData=canvas.toDataURL('image/jpeg',0.92);
+    let heightLeft=imgH, position=0;
+    pdf.addImage(imgData,'JPEG',0,position,imgW,imgH);
+    heightLeft-=pageH;
+    while(heightLeft>0){ position=heightLeft-imgH; pdf.addPage(); pdf.addImage(imgData,'JPEG',0,position,imgW,imgH); heightLeft-=pageH; }
+    const fmtD=d=>d?String(d.getDate()).padStart(2,'0')+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+d.getFullYear():'';
+    pdf.save(`Destinacao_${fmtD(S.destF.from||new Date())}_a_${fmtD(S.destF.to||new Date())}.pdf`);
+  }catch(e){ alert('Erro ao gerar PDF: '+e.message);
+  }finally{ document.body.removeChild(container); }
 }
 
 async function confInit() {
@@ -8491,7 +8802,7 @@ async function confLoad() {
   const residuo  = document.getElementById('cf-residuo').value;
   const veiculo  = document.getElementById('cf-veiculo').value;
 
-  let params = 'select=*,freteiros(nome)&order=data_saida.desc';
+  let params = 'select=*,freteiros(nome),aterros_destinacao(nome)&order=data_saida.desc';
   if(from)     params += `&data_saida=gte.${from}`;
   if(to)       params += `&data_saida=lte.${to}`;
   if(freteiro) params += `&freteiro_id=eq.${freteiro}`;
@@ -8553,7 +8864,7 @@ function confRenderTable(rows) {
       <th style="width:36px"><input type="checkbox" id="cf-chk-all" onchange="confToggleAll(this.checked)" style="accent-color:var(--accent)"/></th>
       ${th('os_numero','O.S.')}${th('data_saida','Data')}${th('created_at','Hora')}${th('freteiros','Freteiro')}
       ${th('tipo_veiculo','Veículo')}${th('tipo_residuo','Resíduo')}${th('numero_vale_fisico','Nº Vale')}
-      ${th('capacidade_m3','m³')}${th('total','Valor')}${th('status','Status')}
+      ${th('capacidade_m3','m³')}${th('total','Valor')}<th>Vale</th>${th('status','Status')}
       <th>Observações</th><th>Fotos</th><th>Ação</th>
     </tr></thead><tbody>`;
 
@@ -8596,6 +8907,7 @@ function confRenderTable(rows) {
       <td style="font-weight:600">${v.numero_vale_fisico||'—'}</td>
       <td>${v.capacidade_m3||'—'}</td>
       <td style="font-weight:600">${valor}</td>
+      <td style="color:var(--muted);font-size:11px">${v.aterros_destinacao?.nome||'—'}</td>
       <td>${statusBadge(v.status)}</td>
       <td style="max-width:160px">${obs}</td>
       <td><div style="display:flex;gap:4px">${btnCaminhao} ${btnVale}</div></td>
@@ -8711,6 +9023,17 @@ async function osEditOpen(id) {
   document.getElementById('oe-residuo').value  = v.tipo_residuo || '';
   document.getElementById('oe-vale').value     = v.numero_vale_fisico || '';
   document.getElementById('oe-preco').value    = v.preco_unitario || '';
+  // Aterro (vale)
+  try {
+    const ra = await fetch(`${SUPA_URL}/rest/v1/aterros_destinacao?select=id,nome&ativo=eq.true&order=nome.asc`, {
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+(_session?.access_token||SUPA_KEY)}
+    });
+    const aterros = await ra.json();
+    const selAt = document.getElementById('oe-aterro');
+    selAt.innerHTML = '<option value="">— Sem vale —</option>';
+    aterros.forEach(a => { const o=document.createElement('option'); o.value=a.id; o.textContent=a.nome; if(a.id===v.aterro_id) o.selected=true; selAt.appendChild(o); });
+  } catch(e){}
+  document.getElementById('oe-valor-vale').value = v.valor_vale || '';
   document.getElementById('oe-status').value   = v.status || 'registrado';
   document.getElementById('oe-obs').value      = v.observacoes || '';
   document.getElementById('os-edit-overlay').style.display = 'block';
@@ -8731,6 +9054,8 @@ async function osEditSalvar() {
     tipo_residuo:       document.getElementById('oe-residuo').value || null,
     numero_vale_fisico: document.getElementById('oe-vale').value || null,
     preco_unitario:     parseFloat(document.getElementById('oe-preco').value) || null,
+    aterro_id:          document.getElementById('oe-aterro').value || null,
+    valor_vale:         parseFloat(document.getElementById('oe-valor-vale').value) || null,
     status:             document.getElementById('oe-status').value,
     observacoes:        document.getElementById('oe-obs').value.trim() || null,
   };
@@ -8771,7 +9096,7 @@ async function destMergeSupabase() {
     // o histórico inteiro para sempre (o app nunca apaga nada do banco).
     const j = new Date(); j.setDate(1); j.setMonth(j.getMonth() - 11);
     const janela = `${j.getFullYear()}-${String(j.getMonth()+1).padStart(2,'0')}-01`;
-    const vales = await supaFetchAllRows(`vales_destinacao?select=*,freteiros(nome)&status=neq.cancelado&data_saida=gte.${janela}&order=data_saida.desc`);
+    const vales = await supaFetchAllRows(`vales_destinacao?select=*,freteiros(nome),aterros_destinacao(nome)&status=neq.cancelado&data_saida=gte.${janela}&order=data_saida.desc`);
 
     // Remove registros anteriores do Supabase (re-fetch limpo)
     S.raw.destinacao = S.raw.destinacao.filter(r => !r._fromSupabase);
@@ -8797,6 +9122,8 @@ async function destMergeSupabase() {
         fotoCaminhao: v.foto_caminhao_url || '',
         fotoVale:     v.foto_vale_url || '',
         observacoes:  v.observacoes || '',
+        valorVale:    Number(v.valor_vale || 0),
+        aterro:       v.aterros_destinacao?.nome || '',
         _fromSupabase: true
       }));
 

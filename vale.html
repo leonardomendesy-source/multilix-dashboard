@@ -221,6 +221,14 @@
     </select>
   </div>
 
+  <div id="v-vale-dest-wrap" class="field" style="display:none">
+    <label>Vale de Destinação *</label>
+    <select id="v-aterro" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);padding:13px 14px;font-size:15px;outline:none">
+      <option value="">Selecione o aterro...</option>
+    </select>
+    <small id="v-aterro-saldo" style="display:block;margin-top:4px;font-size:12px;color:var(--muted)"></small>
+  </div>
+
   <div class="field">
     <label>Nº Vale Físico *</label>
     <input type="number" id="v-vale" placeholder="0000" inputmode="numeric"/>
@@ -437,6 +445,10 @@
       <div class="ve-field"><label>Preço Unitário</label><div class="ve-preco-badge" id="ve-preco-badge">—</div></div>
       <div class="ve-field"><label>Nº Vale Físico *</label><input type="text" id="ve-vale"/></div>
     </div>
+    <div id="ve-aterro-wrap" class="ve-field" style="display:none">
+      <label>Aterro (Vale)</label>
+      <div id="ve-aterro-info" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;font-size:13px;color:var(--accent);font-weight:600"></div>
+    </div>
     <div class="ve-field"><label>Observações</label><textarea id="ve-obs" rows="2" style="resize:none;height:70px"></textarea></div>
     <div style="display:flex;gap:10px;margin-top:4px">
       <button onclick="fecharEditVale()" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:12px;font-size:13px;font-weight:600;cursor:pointer">Cancelar</button>
@@ -545,11 +557,60 @@ function onResiduoChange() {
   const f = _freteiros.find(x => x.id === fid);
   const p = (f?.freteiros_tabela_precos || []).find(x => x.ativo && x.tipo_veiculo === veiculo && x.capacidade_m3 === cap && x.tipo_residuo === residuo);
   _precoSelecionado = p || null;
+  const wrap = document.getElementById('v-vale-dest-wrap');
+  if(p && p.tem_vale){
+    wrap.style.display='block';
+    carregarAterrosComSaldo(residuo);
+  } else {
+    wrap.style.display='none';
+    document.getElementById('v-aterro').value='';
+    document.getElementById('v-aterro-saldo').textContent='';
+  }
 }
 
 function resetCapacidade(){ const s=document.getElementById('v-capacidade'); s.innerHTML='<option value="">—</option>'; }
-function resetResiduo(){ const s=document.getElementById('v-residuo'); s.innerHTML='<option value="">—</option>'; resetPreco(); }
+function resetResiduo(){ const s=document.getElementById('v-residuo'); s.innerHTML='<option value="">—</option>'; resetPreco(); document.getElementById('v-vale-dest-wrap').style.display='none'; document.getElementById('v-aterro').value=''; document.getElementById('v-aterro-saldo').textContent=''; }
 function resetPreco(){ _precoSelecionado=null; }
+
+async function carregarAterrosComSaldo(tipoResiduo){
+  const sel=document.getElementById('v-aterro');
+  const info=document.getElementById('v-aterro-saldo');
+  sel.innerHTML='<option value="">Carregando...</option>';
+  info.textContent='';
+  try{
+    const H={'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY};
+    const [rA,rC,rV]=await Promise.all([
+      fetch(`${SUPA_URL}/rest/v1/aterros_destinacao?select=id,nome&ativo=eq.true&order=nome.asc`,{headers:H}),
+      fetch(`${SUPA_URL}/rest/v1/aterros_vales_compra?select=aterro_id,quantidade,valor_unitario&tipo_residuo=eq.${encodeURIComponent(tipoResiduo)}`,{headers:H}),
+      fetch(`${SUPA_URL}/rest/v1/vales_destinacao?select=aterro_id&tipo_residuo=eq.${encodeURIComponent(tipoResiduo)}&aterro_id=not.is.null&status=neq.cancelado`,{headers:H})
+    ]);
+    const aterros=await rA.json(), compras=await rC.json(), consumos=await rV.json();
+    const compraMap={}, consumoMap={}, precoMap={};
+    compras.forEach(c=>{
+      compraMap[c.aterro_id]=(compraMap[c.aterro_id]||0)+c.quantidade;
+      precoMap[c.aterro_id]=Number(c.valor_unitario);
+    });
+    consumos.forEach(v=>{ consumoMap[v.aterro_id]=(consumoMap[v.aterro_id]||0)+1; });
+    sel.innerHTML='<option value="">Selecione o aterro...</option>';
+    aterros.forEach(a=>{
+      const comprado=compraMap[a.id]||0, usado=consumoMap[a.id]||0, saldo=comprado-usado;
+      const o=document.createElement('option');
+      o.value=a.id;
+      o.textContent=saldo>0?`${a.nome} (${saldo} vales)`:`${a.nome} (0 — ESGOTADO)`;
+      o.dataset.saldo=saldo;
+      o.dataset.preco=precoMap[a.id]||0;
+      sel.appendChild(o);
+    });
+    sel.onchange=function(){
+      const opt=sel.selectedOptions[0];
+      if(!opt||!opt.value){ info.textContent=''; return; }
+      const s=parseInt(opt.dataset.saldo);
+      const p=parseFloat(opt.dataset.preco);
+      if(s<=0) info.innerHTML='<span style="color:#EF4444;font-weight:700">Saldo esgotado!</span>';
+      else info.textContent=`Saldo: ${s} vales · R$ ${(s*p).toLocaleString('pt-BR')} (R$ ${p.toLocaleString('pt-BR')}/vale)`;
+    };
+  }catch(e){ sel.innerHTML='<option value="">Erro ao carregar</option>'; }
+}
 
 // ── FOTOS ─────────────────────────────────────────────────────
 function onFoto(tipo, input) {
@@ -599,6 +660,16 @@ async function registrarSaida() {
   if(!_fotos.caminhao) return showAlert('Foto do caminhão é obrigatória.');
   if(!_fotos.vale)     return showAlert('Foto do vale é obrigatória.');
 
+  let aterroId=null, valorVale=null;
+  if(_precoSelecionado && _precoSelecionado.tem_vale){
+    aterroId=document.getElementById('v-aterro').value;
+    if(!aterroId) return showAlert('Selecione o aterro de destinação (vale).');
+    const opt=document.getElementById('v-aterro').selectedOptions[0];
+    const saldo=parseInt(opt?.dataset?.saldo||0);
+    valorVale=parseFloat(opt?.dataset?.preco||0)||null;
+    if(saldo<=0 && !confirm('Saldo de vales ESGOTADO para este aterro.\nDeseja registrar mesmo assim?')) return;
+  }
+
   const freteiro = _freteiros.find(x => x.id === fid);
   const hoje = new Date().toLocaleDateString('sv-SE', {timeZone:'America/Sao_Paulo'}); // YYYY-MM-DD
 
@@ -624,6 +695,8 @@ async function registrarSaida() {
       foto_caminhao_url:  urlCaminhao,
       foto_vale_url:      urlVale,
       observacoes:        document.getElementById('v-obs').value.trim() || null,
+      aterro_id:          aterroId || null,
+      valor_vale:         valorVale || null,
       status:             'registrado'
     };
 
@@ -679,6 +752,9 @@ function novoRegistro() {
   document.getElementById('v-obs').value = '';
   _fotos = { caminhao: null, vale: null };
   _precoSelecionado = null;
+  document.getElementById('v-vale-dest-wrap').style.display='none';
+  document.getElementById('v-aterro').value='';
+  document.getElementById('v-aterro-saldo').textContent='';
   ['caminhao','vale'].forEach(t => {
     document.getElementById('btn-foto-'+t).classList.remove('ok');
     document.querySelector('#btn-foto-'+t+' .foto-btn-label').textContent = t==='caminhao' ? 'Fotografar Caminhão' : 'Fotografar Vale';
@@ -804,6 +880,15 @@ async function abrirEditVale(id) {
   document.getElementById('ve-obs').value      = v.observacoes || '';
   _vePrecoAtual = v.preco_unitario || null;
   document.getElementById('ve-preco-badge').textContent = _vePrecoAtual ? 'R$ ' + Number(_vePrecoAtual).toLocaleString('pt-BR') : '—';
+  const aterroWrap = document.getElementById('ve-aterro-wrap');
+  if(v.aterro_id){
+    aterroWrap.style.display='block';
+    try{
+      const ra=await fetch(`${SUPA_URL}/rest/v1/aterros_destinacao?select=nome&id=eq.${v.aterro_id}`,{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+      const ad=await ra.json();
+      document.getElementById('ve-aterro-info').textContent=(ad[0]?.nome||'—')+(v.valor_vale?' · R$ '+Number(v.valor_vale).toLocaleString('pt-BR'):'');
+    }catch(e){ document.getElementById('ve-aterro-info').textContent='—'; }
+  } else { aterroWrap.style.display='none'; }
   document.getElementById('vale-edit-overlay').style.display = 'block';
 }
 
