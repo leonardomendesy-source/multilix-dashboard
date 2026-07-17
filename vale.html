@@ -459,10 +459,23 @@ const HDR = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Conten
 let _freteiros = [];
 let _fotos = { caminhao: null, vale: null }; // blobs comprimidos
 let _precoSelecionado = null;
+let _tiposDest = []; // tipos de resíduo de destinação (parametrizados)
+
+async function carregarTiposDest() {
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/tipos_residuo_destinacao?select=nome,ativo,ordem&order=ordem.asc,nome.asc`, {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+    });
+    const data = await r.json();
+    if(Array.isArray(data)) _tiposDest = data;
+  } catch(e) { /* mantém cache */ }
+  return _tiposDest;
+}
 
 // ── INIT ──────────────────────────────────────────────────────
 async function init() {
   try {
+    await carregarTiposDest();
     const r = await fetch(`${SUPA_URL}/rest/v1/freteiros?select=*,freteiros_tabela_precos(*)&ativo=eq.true&order=nome.asc&limit=200`, {
       headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
     });
@@ -778,7 +791,15 @@ async function abrirEditVale(id) {
   document.getElementById('ve-os-num').textContent = v.os_numero || '';
   document.getElementById('ve-veiculo').value  = v.tipo_veiculo || '';
   document.getElementById('ve-cap').value      = v.capacidade_m3 || '';
-  document.getElementById('ve-residuo').value  = v.tipo_residuo || '';
+  // opções de resíduo dinâmicas (parametrização)
+  if(!_tiposDest.length) await carregarTiposDest();
+  const selRes = document.getElementById('ve-residuo');
+  const curRes = v.tipo_residuo || '';
+  let nomesRes = _tiposDest.filter(t=>t.ativo).map(t=>t.nome);
+  if(!nomesRes.length) nomesRes = ['MIX','RACHÃO SUJO'];
+  if(curRes && !nomesRes.includes(curRes)) nomesRes.push(curRes);
+  selRes.innerHTML = '<option value="">—</option>' + nomesRes.map(n=>`<option value="${n}"${n===curRes?' selected':''}>${n}</option>`).join('');
+  selRes.value = curRes;
   document.getElementById('ve-vale').value     = v.numero_vale_fisico || '';
   document.getElementById('ve-obs').value      = v.observacoes || '';
   _vePrecoAtual = v.preco_unitario || null;
@@ -893,6 +914,7 @@ function _diasUteis(ano, mes, ate) {
 
 async function carregarDashboard(mes) {
   document.getElementById('dash-content').innerHTML = '<div class="dash-loading">Carregando...</div>';
+  if(!_tiposDest.length) await carregarTiposDest();
   const [ano, mesNum] = mes.split('-').map(Number);
   const inicio = `${mes}-01`;
   const ultimoDia = new Date(ano, mesNum, 0).getDate();
@@ -915,13 +937,15 @@ async function carregarDashboard(mes) {
     const decorrDU = esMesAtual ? _diasUteis(ano, mesNum, hoje) : totalDU;
     const fator    = totalDU / decorrDU;
 
-    // ── Frete MIX / RACHÃO ──
-    const mixD  = dest.filter(v => v.tipo_residuo === 'MIX');
-    const rachD = dest.filter(v => v.tipo_residuo === 'RACHÃO SUJO');
-    const mixVg  = mixD.length,  mixM3  = mixD.reduce((s,v)=>s+Number(v.capacidade_m3||0),0);
-    const rachVg = rachD.length, rachM3 = rachD.reduce((s,v)=>s+Number(v.capacidade_m3||0),0);
-    const mixProjVg  = esMesAtual ? Math.round(mixVg  * fator) : null;
-    const rachProjVg = esMesAtual ? Math.round(rachVg * fator) : null;
+    // ── Frete Destinação — lista dinâmica de resíduos (parametrização) ──
+    const ordemDest = {}; _tiposDest.forEach(t => { ordemDest[t.nome] = t.ordem; });
+    const tiposFrete = [...new Set([
+      ..._tiposDest.filter(t => t.ativo).map(t => t.nome),
+      ...dest.map(v => v.tipo_residuo).filter(Boolean)
+    ])].sort((a,b) => {
+      if(a==='MIX') return -1; if(b==='MIX') return 1;       // MIX sempre primeiro
+      return ((ordemDest[a]??999)-(ordemDest[b]??999)) || a.localeCompare(b);
+    });
 
     // Meta localStorage
     let metaMixVg = null;
@@ -969,8 +993,13 @@ async function carregarDashboard(mes) {
     document.getElementById('dash-content').innerHTML = `
       <div class="dash-sec">🚛 Frete Destinação</div>
       <div class="dash-cards">
-        ${dashCard('MIX', mixVg, mixM3, mixProjVg, metaMixVg, false)}
-        ${dashCard('Rachão Sujo', rachVg, rachM3, rachProjVg, null, true)}
+        ${tiposFrete.map(nome => {
+          const d = dest.filter(v => v.tipo_residuo === nome);
+          const vg = d.length, m3 = d.reduce((s,v)=>s+Number(v.capacidade_m3||0),0);
+          const projVg = esMesAtual ? Math.round(vg * fator) : null;
+          const isMix = nome === 'MIX';
+          return dashCard(nome, vg, m3, projVg, isMix?metaMixVg:null, !isMix);
+        }).join('') || '<p style="font-size:12px;color:var(--muted2);text-align:center;grid-column:1/-1">Nenhum resíduo cadastrado</p>'}
       </div>
       ${semFreteMsg}
       <div class="dash-sec">♻️ Recicláveis</div>

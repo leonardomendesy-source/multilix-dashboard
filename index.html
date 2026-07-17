@@ -1804,6 +1804,7 @@ body { font-size: 13.5px !important; }
       <div class="nav-group-children"><div>
         <button class="nav-item" onclick="showPage('dest-pagamentos',this)"><span class="icon" data-lucide="receipt"></span>Pagamentos</button>
         <button class="nav-item" onclick="showPage('dest-freteiros',this)"><span class="icon" data-lucide="users"></span>Freteiros</button>
+        <button class="nav-item" onclick="showPage('dest-residuos',this)"><span class="icon" data-lucide="package"></span>Tipos de Resíduo</button>
         <button class="nav-item" onclick="showPage('dest-conferencia',this)"><span class="icon" data-lucide="clipboard-check"></span>Conferência</button>
         <button class="nav-item" onclick="showPage('reciclaveis',this)"><span class="icon" data-lucide="leaf"></span>Recicláveis</button>
         <button class="nav-item" onclick="showPage('rec-destinos',this)"><span class="icon" data-lucide="store"></span>Rec. — Destinos</button>
@@ -2877,13 +2878,8 @@ body { font-size: 13.5px !important; }
         <div class="panel"><div class="panel-head"><span class="panel-title">Ranking por Freteiro — MIX</span></div><div class="chart-wrap-tall" data-chart-id="cDestFreteiroMix"><canvas id="cDestFreteiroMix"></canvas></div></div>
       </div>
 
-      <!-- SEÇÃO 3: RACHÃO SUJO -->
-      <div class="sec"><i data-lucide="circle" style="width:13px;height:13px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Rachão Sujo</div>
-      <div class="kpi-grid" id="kpi-dest-rach"></div>
-      <div class="g2" style="margin-bottom:18px">
-        <div class="panel"><div class="panel-head"><span class="panel-title">Evolução Diária — Rachão m³</span></div><div class="chart-wrap-tall" data-chart-id="cDestDiaRach"><canvas id="cDestDiaRach"></canvas></div></div>
-        <div class="panel"><div class="panel-head"><span class="panel-title">Ranking por Freteiro — Rachão</span></div><div class="chart-wrap-tall" data-chart-id="cDestFreteiroRach"><canvas id="cDestFreteiroRach"></canvas></div></div>
-      </div>
+      <!-- SEÇÃO 3+: DEMAIS RESÍDUOS (dinâmico — Rachão Sujo, Entulho Limpo, etc.) -->
+      <div id="dest-dyn-sections"></div>
 
       <!-- SEÇÃO 4: EVOLUÇÃO MENSAL DESTINAÇÃO -->
       <div class="sec blue" style="margin-top:8px"><i data-lucide="trending-up" style="width:13px;height:13px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Evolução Mensal — Destinação</div>
@@ -2947,7 +2943,7 @@ body { font-size: 13.5px !important; }
         <div class="fg"><label>Até</label><input type="date" id="cf-to" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"/></div>
         <div class="fg"><label>Freteiro</label><select id="cf-freteiro" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"><option value="">Todos</option></select></div>
         <div class="fg"><label>Status</label><select id="cf-status" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"><option value="">Todos</option><option value="registrado">Registrado</option><option value="confirmado">Confirmado</option><option value="contestado">Contestado</option><option value="cancelado">Cancelado</option></select></div>
-        <div class="fg"><label>Resíduo</label><select id="cf-residuo" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"><option value="">Todos</option><option value="MIX">MIX</option><option value="RACHÃO SUJO">RACHÃO SUJO</option></select></div>
+        <div class="fg"><label>Resíduo</label><select id="cf-residuo" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"><option value="">Todos</option></select></div>
         <div class="fg"><label>Veículo</label><select id="cf-veiculo" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"><option value="">Todos</option><option value="TRUCK">TRUCK</option><option value="CARRETA">CARRETA</option></select></div>
         <div class="fg"><label>Nº Vale</label><input type="text" id="cf-vale" placeholder="Ex: 505" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none;width:100px"/></div>
         <div class="fg"><label>Observações</label><input type="text" id="cf-obs" placeholder="Buscar..." style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none;width:160px"/></div>
@@ -3041,6 +3037,25 @@ body { font-size: 13.5px !important; }
       </div>
     </div>
 
+    <!-- DESTINAÇÃO > TIPOS DE RESÍDUO -->
+    <div class="page" id="page-dest-residuos">
+      <div class="sec">Tipos de Resíduo de Destinação</div>
+      <div style="background:#3B82F612;border:1px solid #3B82F630;border-radius:10px;padding:12px 16px;margin-bottom:18px;font-size:11px;color:#9abfff;line-height:1.7">
+        Resíduos usados nos <b>fretes de destinação</b> (envio para aterro). Aparecem no cadastro da tabela de preços dos freteiros, no app <b>/vale</b> e nos dashboards de destinação. <b>Inative</b> um resíduo para escondê-lo de novos lançamentos sem afetar o histórico; <b>exclua</b> apenas os que nunca foram usados.
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Resíduos Cadastrados</span>
+          <span class="panel-badge" id="dest-residuos-count-badge">0 resíduos</span>
+        </div>
+        <div style="display:flex;gap:10px;padding:14px 16px 0 16px">
+          <input id="dr-novo-nome" placeholder="Ex: ENTULHO LIMPO" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 12px;font-size:13px;outline:none;text-transform:uppercase"/>
+          <button class="btn btn-primary btn-sm" onclick="destResiduoAdd()">+ Adicionar Resíduo</button>
+        </div>
+        <div class="tbl-wrap" id="tbl-dest-residuos"></div>
+      </div>
+    </div>
+
     <!-- RECICLÁVEIS > CONFERÊNCIA -->
     <div class="page" id="page-rec-conferencia">
       <div class="filterbar">
@@ -3091,7 +3106,7 @@ body { font-size: 13.5px !important; }
           <div class="fi" style="grid-column:1/-1"><label>Freteiro *</label><select id="oe-freteiro"></select></div>
           <div class="fi"><label>Tipo de Veículo *</label><select id="oe-veiculo"><option value="">—</option><option value="TRUCK">TRUCK</option><option value="CARRETA">CARRETA</option></select></div>
           <div class="fi"><label>Capacidade (m³) *</label><input type="number" id="oe-cap" step="0.5"/></div>
-          <div class="fi"><label>Tipo de Resíduo *</label><select id="oe-residuo"><option value="">—</option><option value="MIX">MIX</option><option value="RACHÃO SUJO">RACHÃO SUJO</option></select></div>
+          <div class="fi"><label>Tipo de Resíduo *</label><select id="oe-residuo"><option value="">—</option></select></div>
           <div class="fi"><label>Nº Vale Físico *</label><input type="text" id="oe-vale"/></div>
           <div class="fi"><label>Preço Unitário (R$)</label><input type="number" id="oe-preco" step="0.01"/></div>
           <div class="fi"><label>Status</label>
@@ -4702,7 +4717,7 @@ function rankTbl(data,l1,l2,top=10){
 }
 
 // ── NAV ────────────────────────────────────────────────────────
-const TITLES={overview:'Dashboard Executivo',data:'Fontes de Dados',consolidado:'Consolidado — Entrada de Resíduos',att:'Recebimento de Terceiros',locacao:'Locação de Caçambas',agregados:'Agregados Reciclados',destinacao:'Destinação de Resíduos','dest-pagamentos':'Pagamentos de Freteiros','dest-freteiros':'Cadastro de Freteiros','dest-conferencia':'Conferência de Vales',reciclaveis:'Recicláveis — Destinação & Vendas','rec-destinos':'Recicláveis — Destinos & Resíduos','rec-conferencia':'Recicláveis — Conferência',cdf:'Certificado de Destinação Final',crm:'CRM',propostas:'Propostas Comerciais','prop-locacao':'Propostas — Locação','prop-att':'Propostas — Recebimento ATT','prop-agregados':'Propostas — Agregados',contratos:'Contratos',inconsistencias:'Inconsistências',resumo:'Resumo Executivo',config:'Metas & Configurações',usuarios:'Gerenciar Usuários','emails-comercial':'E-mails Comercial','att-parceiros':'Parceiros ATT','att-precos':'Tabela de Preços','att-residuos':'Tipos de Resíduo','att-equipamentos':'Equipamentos','att-geradores':'Geradores','att-relatorio':'Relatório de Descartes'};
+const TITLES={overview:'Dashboard Executivo',data:'Fontes de Dados',consolidado:'Consolidado — Entrada de Resíduos',att:'Recebimento de Terceiros',locacao:'Locação de Caçambas',agregados:'Agregados Reciclados',destinacao:'Destinação de Resíduos','dest-pagamentos':'Pagamentos de Freteiros','dest-freteiros':'Cadastro de Freteiros','dest-residuos':'Tipos de Resíduo — Destinação','dest-conferencia':'Conferência de Vales',reciclaveis:'Recicláveis — Destinação & Vendas','rec-destinos':'Recicláveis — Destinos & Resíduos','rec-conferencia':'Recicláveis — Conferência',cdf:'Certificado de Destinação Final',crm:'CRM',propostas:'Propostas Comerciais','prop-locacao':'Propostas — Locação','prop-att':'Propostas — Recebimento ATT','prop-agregados':'Propostas — Agregados',contratos:'Contratos',inconsistencias:'Inconsistências',resumo:'Resumo Executivo',config:'Metas & Configurações',usuarios:'Gerenciar Usuários','emails-comercial':'E-mails Comercial','att-parceiros':'Parceiros ATT','att-precos':'Tabela de Preços','att-residuos':'Tipos de Resíduo','att-equipamentos':'Equipamentos','att-geradores':'Geradores','att-relatorio':'Relatório de Descartes'};
 function showPage(id,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -4720,6 +4735,7 @@ function showPage(id,el){
   if(id==='consolidado') updateConsolidado();
   if(id==='config') initMetaMixForm();
   if(id==='dest-freteiros') freteiroLoadPage();
+  if(id==='dest-residuos') destResiduosLoadPage();
   if(id==='dest-conferencia') confInit();
   if(id==='destinacao') destMergeSupabase();
   if(id==='resumo') resumoInit();
@@ -5369,6 +5385,7 @@ function normalizeDestResidue(v){
   if(n.includes('MIX'))return 'MIX';
   // RACHAO, RACHÃO, RACH?O, RACH O — todas as variações por encoding
   if(/RACH[^A-Z]*O/.test(n)||n.includes('RACHAO'))return 'RACHÃO SUJO';
+  if(n.includes('ENTULHO'))return 'ENTULHO LIMPO';
   if(n==='VALE')return 'VALE';
   if(n==='GESSO')return 'GESSO';
   return String(v||'').replace(/\ufffd/g,'').trim().toUpperCase()||'NÃO CLASSIFICADO';
@@ -7066,17 +7083,8 @@ function updateDestinacao(){
   const byFreteiroMix=groupBy(mix.map(r=>({...r,freteiro:normalizarFreteiroPagamento(r.freteiro||r.cliente)})),'freteiro','volume').filter(r=>r.value>0).slice(0,10);
   mkRankingBar('cDestFreteiroMix','destFreteiroMix',byFreteiroMix,'#3B82F6','m³ MIX');
 
-  // ══ SEÇÃO 3: RACHÃO SUJO ═══════════════════════════════════
-  document.getElementById('kpi-dest-rach').innerHTML=[
-    kpi('Rachão — Total m³',fN(vRach,1)+' m³',rach.length+' lançamentos','','kb-orange','orange'),
-    kpi('Viagens Rachão',fN(viagRach,0),'Math.ceil(m³ ÷ 17)','','kb-orange','orange'),
-    kpi('Custo Total Rachão',fatRach>0?fM(fatRach):'—','','','kb-green','green'),
-    kpi('Custo Médio/m³ Rachão',custoMedRach>0?fM(custoMedRach):'—','','','kb-yellow','yellow'),
-    kpi('Custo Médio/Viagem Rachão',custoViagRach>0?fM(custoViagRach):'—','','','kb-yellow','yellow'),
-  ].join('');
-  mkBar('cDestDiaRach','destDiaRach',rach,'volume','#F59E0B','m³/dia Rachão');
-  const byFreteiroRach=groupBy(rach.map(r=>({...r,freteiro:normalizarFreteiroPagamento(r.freteiro||r.cliente)})),'freteiro','volume').filter(r=>r.value>0).slice(0,10);
-  mkRankingBar('cDestFreteiroRach','destFreteiroRach',byFreteiroRach,'#F59E0B','m³ Rachão');
+  // ══ SEÇÕES 3+: DEMAIS RESÍDUOS (Rachão Sujo, Entulho Limpo, etc.) — dinâmico ══
+  renderDestDynSections(rows);
 
   // ══ TABELA DE LANÇAMENTOS ══════════════════════════════════
   document.getElementById('dest-count-badge').textContent=rows.length+' registros';
@@ -8101,6 +8109,7 @@ async function freteiroLoadPage() {
   const tbl = document.getElementById('tbl-freteiros');
   tbl.innerHTML = '<div style="padding:20px;color:var(--muted);text-align:center">Carregando...</div>';
   try {
+    await destCarregarTiposResiduo(true);
     const r = await fetch(`${SUPA_URL}/rest/v1/freteiros?select=*,freteiros_tabela_precos(*)&order=nome.asc&limit=500`, {
       headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + (_session?.access_token || SUPA_KEY) }
     });
@@ -8176,8 +8185,7 @@ function freteiroAddPrecoRow(p = {}) {
     </select>
     <input class="fp-cap" type="number" placeholder="m³" value="${p.capacidade_m3||''}" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 10px;font-size:12px;outline:none"/>
     <select class="fp-residuo" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 10px;font-size:12px;outline:none">
-      <option value="MIX" ${p.tipo_residuo==='MIX'?'selected':''}>MIX</option>
-      <option value="RACHÃO SUJO" ${p.tipo_residuo==='RACHÃO SUJO'?'selected':''}>RACHÃO SUJO</option>
+      ${destResiduoOptionsHTML(p.tipo_residuo)}
     </select>
     <input class="fp-preco" type="number" placeholder="R$ preço" value="${p.preco_unitario||''}" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 10px;font-size:12px;outline:none"/>
     <button onclick="this.closest('div').remove()" style="background:#EF444420;border:1px solid #EF4444;color:#EF4444;border-radius:6px;padding:6px 10px;cursor:pointer">✕</button>
@@ -8258,6 +8266,176 @@ let _confInicializado = false;
 let _confRows = [];
 let _confSort = {col:'os_numero', dir:'asc'};
 
+// ══ TIPOS DE RESÍDUO DE DESTINAÇÃO (parametrização) ═══════════════
+let _destTipos = [];
+async function destCarregarTiposResiduo(force){
+  if(_destTipos.length && !force) return _destTipos;
+  try{
+    const r = await fetch(`${SUPA_URL}/rest/v1/tipos_residuo_destinacao?select=*&order=ordem.asc,nome.asc`, {
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+(_session?.access_token||SUPA_KEY)}
+    });
+    const data = await r.json();
+    if(Array.isArray(data)) _destTipos = data;
+  }catch(e){ /* mantém cache anterior */ }
+  return _destTipos;
+}
+
+// Retorna <option>s (ativos + o valor atual, mesmo se inativo). Fallback p/ MIX/RACHÃO SUJO.
+function destResiduoOptionsHTML(current){
+  const cur = current || '';
+  let nomes = _destTipos.filter(t=>t.ativo).map(t=>t.nome);
+  if(!nomes.length) nomes = ['MIX','RACHÃO SUJO'];
+  if(cur && !nomes.includes(cur)) nomes.push(cur);
+  return nomes.map(n=>`<option value="${n}"${n===cur?' selected':''}>${n}</option>`).join('');
+}
+
+// Popula um <select>. opts: {includeAll, allLabel, current, placeholder}
+function destPopulateResiduoSelect(sel, opts={}){
+  if(!sel) return;
+  const cur = opts.current!=null ? opts.current : sel.value;
+  let head = '';
+  if(opts.includeAll) head = `<option value="">${opts.allLabel||'Todos'}</option>`;
+  else if(opts.placeholder!==false) head = `<option value="">${opts.placeholder||'—'}</option>`;
+  sel.innerHTML = head + destResiduoOptionsHTML(cur);
+  if(cur) sel.value = cur;
+}
+
+async function destResiduosLoadPage(){
+  const tbl = document.getElementById('tbl-dest-residuos');
+  if(tbl) tbl.innerHTML = '<div style="padding:20px;color:var(--muted);text-align:center">Carregando...</div>';
+  try{
+    await destCarregarTiposResiduo(true);
+    destResiduosRenderTable(_destTipos);
+  }catch(e){
+    if(tbl) tbl.innerHTML = '<div style="padding:20px;color:#EF4444">Erro ao carregar resíduos.</div>';
+  }
+}
+
+function destResiduosRenderTable(rows){
+  const badge = document.getElementById('dest-residuos-count-badge');
+  if(badge) badge.textContent = rows.length + ' resíduo' + (rows.length!==1?'s':'');
+  const tbl = document.getElementById('tbl-dest-residuos');
+  if(!tbl) return;
+  if(!rows.length){ tbl.innerHTML='<div style="padding:20px;color:var(--muted);text-align:center">Nenhum resíduo cadastrado.</div>'; return; }
+  let html = '<table style="width:100%;border-collapse:collapse"><thead><tr><th>Nome</th><th>Status</th><th style="text-align:right">Ações</th></tr></thead><tbody>';
+  rows.forEach(t=>{
+    const badgeAtivo = t.ativo
+      ? '<span style="background:#10B98120;color:#10B981;border:1px solid #10B98140;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:700">ATIVO</span>'
+      : '<span style="background:#EF444420;color:#EF4444;border:1px solid #EF444440;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:700">INATIVO</span>';
+    const btnLabel = t.ativo ? 'Desativar' : 'Reativar';
+    const nomeEsc = String(t.nome||'').replace(/'/g,"\\'");
+    html += `<tr>
+      <td style="font-weight:600">${t.nome}</td>
+      <td>${badgeAtivo}</td>
+      <td style="text-align:right;white-space:nowrap">
+        <button onclick="destResiduoToggleAtivo('${t.id}',${t.ativo?'false':'true'})" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px">${btnLabel}</button>
+        <button onclick="destResiduoDelete('${t.id}','${nomeEsc}')" style="background:#EF444420;border:1px solid #EF444440;color:#EF4444;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;margin-left:6px">Excluir</button>
+      </td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  tbl.innerHTML = html;
+}
+
+async function destResiduoAdd(){
+  const input = document.getElementById('dr-novo-nome');
+  const nome = input.value.trim().toUpperCase();
+  if(!nome){ alert('Informe o nome do resíduo.'); return; }
+  if(!_session){ alert('É necessário estar logado para cadastrar resíduos.'); return; }
+  try{
+    const ordem = _destTipos.reduce((m,t)=>Math.max(m,t.ordem||0),0)+1;
+    const r = await fetch(`${SUPA_URL}/rest/v1/tipos_residuo_destinacao`, {
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+_session.access_token,'Content-Type':'application/json','Prefer':'return=representation'},
+      body: JSON.stringify({ nome, ordem })
+    });
+    if(!r.ok){ const e=await r.json(); throw new Error(JSON.stringify(e)); }
+    input.value='';
+    await destResiduosLoadPage();
+  }catch(e){ alert('Erro ao adicionar resíduo (nome duplicado?):\n'+e.message); }
+}
+
+async function destResiduoToggleAtivo(id, ativo){
+  if(!_session){ alert('É necessário estar logado.'); return; }
+  try{
+    const r = await fetch(`${SUPA_URL}/rest/v1/tipos_residuo_destinacao?id=eq.${id}`, {
+      method:'PATCH',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+_session.access_token,'Content-Type':'application/json'},
+      body: JSON.stringify({ ativo })
+    });
+    if(!r.ok) throw new Error();
+    await destResiduosLoadPage();
+  }catch(e){ alert('Erro ao atualizar resíduo.'); }
+}
+
+async function destResiduoDelete(id, nome){
+  if(!_session){ alert('É necessário estar logado.'); return; }
+  try{
+    const hdr = {'apikey':SUPA_KEY,'Authorization':'Bearer '+_session.access_token};
+    // Bloqueia exclusão se o resíduo já foi usado (preserva histórico)
+    const [rp, rv] = await Promise.all([
+      fetch(`${SUPA_URL}/rest/v1/freteiros_tabela_precos?select=id&tipo_residuo=eq.${encodeURIComponent(nome)}&limit=1`, {headers:hdr}),
+      fetch(`${SUPA_URL}/rest/v1/vales_destinacao?select=id&tipo_residuo=eq.${encodeURIComponent(nome)}&limit=1`, {headers:hdr})
+    ]);
+    const emUso = ((await rp.json())||[]).length + ((await rv.json())||[]).length;
+    if(emUso>0){
+      alert(`"${nome}" já está em uso em tabelas de preço de freteiros e/ou lançamentos.\n\nPara preservar o histórico, use "Desativar" em vez de excluir.`);
+      return;
+    }
+    if(!confirm(`Excluir o resíduo "${nome}"? Esta ação não pode ser desfeita.`)) return;
+    const r = await fetch(`${SUPA_URL}/rest/v1/tipos_residuo_destinacao?id=eq.${id}`, { method:'DELETE', headers:hdr });
+    if(!r.ok) throw new Error();
+    await destResiduosLoadPage();
+  }catch(e){ alert('Erro ao excluir resíduo.'); }
+}
+
+// Slug estável p/ ids de canvas/charts das seções dinâmicas
+function destResSlug(nome){ return String(nome).normalize('NFD').replace(/[^A-Za-z0-9]/g,'') || 'x'; }
+
+// Renderiza uma seção por resíduo ativo (exceto MIX, que tem seção fixa) no dashboard de Destinação
+function renderDestDynSections(rows){
+  const cont = document.getElementById('dest-dyn-sections');
+  if(!cont) return;
+  // limpa charts dinâmicos anteriores
+  Object.keys(S.charts).filter(k=>k.startsWith('destDyn_')).forEach(k=>{ try{S.charts[k].destroy();}catch(e){} delete S.charts[k]; });
+  const fromTipos = _destTipos.filter(t=>t.ativo && t.nome!=='MIX').map(t=>t.nome);
+  const fromData  = [...new Set(rows.map(r=>r.residuo).filter(x=>x && x!=='MIX' && x!=='NÃO CLASSIFICADO'))];
+  const nomes = [...new Set([...fromTipos, ...fromData])];
+  const ordemMap = {}; _destTipos.forEach(t=>{ ordemMap[t.nome]=t.ordem; });
+  nomes.sort((a,b)=>((ordemMap[a]??999)-(ordemMap[b]??999))||a.localeCompare(b));
+  if(!nomes.length){ cont.innerHTML=''; return; }
+  const hex   = ['#F59E0B','#8B5CF6','#06B6D4','#EC4899','#EAB308','#10B981'];
+  const kbCls = ['kb-orange','kb-purple','kb-blue','kb-red','kb-yellow','kb-green'];
+  const kpiCol= ['orange','purple','blue','red','yellow','green'];
+  cont.innerHTML = nomes.map((nome,i)=>{
+    const slug = destResSlug(nome);
+    return `<div class="sec"><i data-lucide="circle" style="width:13px;height:13px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>${nome}</div>
+      <div class="kpi-grid" id="kpi-destdyn-${slug}"></div>
+      <div class="g2" style="margin-bottom:18px">
+        <div class="panel"><div class="panel-head"><span class="panel-title">Evolução Diária — ${nome} m³</span></div><div class="chart-wrap-tall"><canvas id="cDestDia_${slug}"></canvas></div></div>
+        <div class="panel"><div class="panel-head"><span class="panel-title">Ranking por Freteiro — ${nome}</span></div><div class="chart-wrap-tall"><canvas id="cDestFret_${slug}"></canvas></div></div>
+      </div>`;
+  }).join('');
+  nomes.forEach((nome,i)=>{
+    const slug=destResSlug(nome), color=hex[i%hex.length], kb=kbCls[i%kbCls.length], col=kpiCol[i%kpiCol.length];
+    const sub=rows.filter(r=>r.residuo===nome);
+    const v=sub.reduce((s,r)=>s+r.volume,0), fat=sub.reduce((s,r)=>s+r.valor,0);
+    const viag=v>0?Math.ceil(v/17):0, custoMed=v>0?fat/v:0, custoViag=viag>0?fat/viag:0;
+    const el=document.getElementById('kpi-destdyn-'+slug);
+    if(el) el.innerHTML=[
+      kpi(nome+' — Total m³',fN(v,1)+' m³',sub.length+' lançamentos','',kb,col),
+      kpi('Viagens (÷17)',fN(viag,0),'Math.ceil(m³ ÷ 17)','',kb,col),
+      kpi('Custo Total',fat>0?fM(fat):'—','','','kb-green','green'),
+      kpi('Custo Médio/m³',custoMed>0?fM(custoMed):'—','','',kb,col),
+      kpi('Custo Médio/Viagem',custoViag>0?fM(custoViag):'—','','',kb,col),
+    ].join('');
+    mkBar('cDestDia_'+slug,'destDyn_'+slug+'_dia',sub,'volume',color,'m³/dia '+nome);
+    const byFret=groupBy(sub.map(r=>({...r,freteiro:normalizarFreteiroPagamento(r.freteiro||r.cliente)})),'freteiro','volume').filter(r=>r.value>0).slice(0,10);
+    mkRankingBar('cDestFret_'+slug,'destDyn_'+slug+'_fret',byFret,color,'m³ '+nome);
+  });
+  if(window.lucide&&lucide.createIcons) try{lucide.createIcons();}catch(e){}
+}
+
 async function confInit() {
   if(!_confInicializado) {
     _confInicializado = true;
@@ -8274,6 +8452,8 @@ async function confInit() {
         const o = document.createElement('option');
         o.value = f.id; o.textContent = f.nome; sel.appendChild(o);
       });
+      await destCarregarTiposResiduo();
+      destPopulateResiduoSelect(document.getElementById('cf-residuo'), {includeAll:true, allLabel:'Todos'});
     } catch(e) {}
   }
   confLoad();
@@ -8507,6 +8687,8 @@ async function osEditOpen(id) {
   document.getElementById('oe-hora').value     = v.hora_saida || '';
   document.getElementById('oe-veiculo').value  = v.tipo_veiculo || '';
   document.getElementById('oe-cap').value      = v.capacidade_m3 || '';
+  await destCarregarTiposResiduo();
+  destPopulateResiduoSelect(document.getElementById('oe-residuo'), {current:v.tipo_residuo||'', placeholder:'—'});
   document.getElementById('oe-residuo').value  = v.tipo_residuo || '';
   document.getElementById('oe-vale').value     = v.numero_vale_fisico || '';
   document.getElementById('oe-preco').value    = v.preco_unitario || '';
@@ -8565,6 +8747,7 @@ async function supaFetchAllRows(pathQuery) {
 
 async function destMergeSupabase() {
   try {
+    await destCarregarTiposResiduo();
     // Janela de 12 meses: cobre o gráfico de evolução mensal sem carregar
     // o histórico inteiro para sempre (o app nunca apaga nada do banco).
     const j = new Date(); j.setDate(1); j.setMonth(j.getMonth() - 11);
