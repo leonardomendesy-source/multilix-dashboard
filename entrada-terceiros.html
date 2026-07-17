@@ -410,7 +410,7 @@ textarea{resize:none;height:80px}
 
     <div class="row2">
       <div class="field">
-        <label>Nº CTR ou MTR</label>
+        <label id="lbl-ctr">Nº CTR ou MTR</label>
         <input type="text" id="if-ctr" placeholder="Ex: 12345" inputmode="numeric"/>
       </div>
       <div class="field">
@@ -535,7 +535,7 @@ async function fetchAll(path){
 async function init(){
   try {
     const [rP, rR, rE, rG] = await Promise.all([
-      fetch(`${SUPA_URL}/rest/v1/parceiros_att?select=id,nome_fantasia,razao_social,documento,email,telefone,enviar_comprovante_email,gerador_obrigatorio&status=eq.ativo&order=nome_fantasia.asc&limit=500`,{headers:HDR_NO_PREFER}),
+      fetch(`${SUPA_URL}/rest/v1/parceiros_att?select=id,nome_fantasia,razao_social,documento,email,telefone,enviar_comprovante_email,gerador_obrigatorio,ctr_obrigatorio&status=eq.ativo&order=nome_fantasia.asc&limit=500`,{headers:HDR_NO_PREFER}),
       fetch(`${SUPA_URL}/rest/v1/tipos_residuo_att?select=id,nome&ativo=eq.true&order=ordem.asc`,{headers:HDR_NO_PREFER}),
       fetch(`${SUPA_URL}/rest/v1/equipamentos_att?select=id,nome,tipo,volume_m3_padrao&ativo=eq.true&order=ordem.asc`,{headers:HDR_NO_PREFER}),
       fetch(`${SUPA_URL}/rest/v1/geradores_att?select=id,nome&ativo=eq.true&order=nome.asc&limit=500`,{headers:HDR_NO_PREFER}),
@@ -592,6 +592,7 @@ function onClienteInput(q){
   document.getElementById('v-cliente-doc').value = '';
   _parceiroSel = null;
   atualizarLabelGerador();
+  atualizarLabelCtr();
   atualizarFinalizar();
   buildAc('ac-cliente', _parceiros, q, {
     match: (p,l) => (p.nome_fantasia||'').toLowerCase().includes(l) || (p.razao_social||'').toLowerCase().includes(l) || (p.documento||'').includes(q),
@@ -610,7 +611,18 @@ function selecionarParceiro(el){
   _parceiroSel = _parceiros.find(p=>p.id===el.dataset.id) || null;
   closeAc('ac-cliente');
   atualizarLabelGerador();
+  atualizarLabelCtr();
   atualizarFinalizar();
+}
+
+function atualizarLabelCtr(){
+  const obrig = !!(_parceiroSel && _parceiroSel.ctr_obrigatorio);
+  const lbl = document.getElementById('lbl-ctr');
+  if(lbl){
+    lbl.innerHTML = obrig
+      ? 'Nº CTR ou MTR <span style="background:#F59E0B;color:#000;font-size:9px;font-weight:700;border-radius:5px;padding:1px 6px;margin-left:4px;vertical-align:middle">OBRIGATÓRIO</span>'
+      : 'Nº CTR ou MTR';
+  }
 }
 
 function atualizarLabelGerador(){
@@ -713,6 +725,8 @@ function adicionarItem(){
   const volStr = document.getElementById('if-volume').value.replace(',','.');
   const vol = parseFloat(volStr);
 
+  const ctrVal = document.getElementById('if-ctr').value.trim();
+  if(_parceiroSel && _parceiroSel.ctr_obrigatorio && !ctrVal){ showAlert('O cliente "' + (document.getElementById('v-cliente-input').value.trim()) + '" exige o preenchimento do Nº CTR ou MTR em cada descarga.'); document.getElementById('if-ctr').focus(); return; }
   if(!equipId){ showAlert('Selecione o equipamento/volume.'); return; }
   if(!residuoId){ showAlert('Selecione o tipo de resíduo.'); return; }
   if(!vol||vol<=0){ showAlert('Informe o volume recebido em m³.'); return; }
@@ -856,6 +870,7 @@ async function finalizarVale(){
   if(!dataServico || isNaN(new Date(dataServico).getTime())){ showAlert('Informe a data e hora do serviço.'); return; }
   if(!clienteId){ showAlert('Selecione o cliente/parceiro.'); return; }
   if(_parceiroSel && _parceiroSel.gerador_obrigatorio && !geradorNome){ showAlert('O cliente "' + (document.getElementById('v-cliente-input').value.trim()) + '" exige o preenchimento do Gerador. Por favor informe o nome do gerador.'); return; }
+  if(_parceiroSel && _parceiroSel.ctr_obrigatorio && _itens.some(it=>!it.ctr_mtr)){ showAlert('O cliente "' + (document.getElementById('v-cliente-input').value.trim()) + '" exige o preenchimento do Nº CTR ou MTR em todas as descargas.'); return; }
   if(!_itens.length){ showAlert('Adicione pelo menos uma descarga.'); return; }
 
   showLoading('Registrando vale...');
@@ -871,7 +886,7 @@ async function finalizarVale(){
       placa: document.getElementById('v-placa').value.trim().toUpperCase()||null,
       motorista: document.getElementById('v-motorista').value.trim()||null,
       observacoes_gerais: document.getElementById('v-obs-geral').value.trim()||null,
-      status: 'aguardando_pagamento',
+      status: 'sem_cobranca',
       total_itens: _itens.length,
       volume_total_m3: totalVol,
       preco_total: totalPreco>0 ? totalPreco : null,

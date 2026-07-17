@@ -2176,7 +2176,16 @@ body { font-size: 13.5px !important; }
         <div class="fg"><label>CTR/MTR</label><input type="text" id="fat-ctr" placeholder="Nº CTR" oninput="attRelFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:7px 10px;font-size:12px;outline:none;width:90px"/></div>
         <div class="fg"><label>Caçamba</label><input type="text" id="fat-cacamba" placeholder="Nº caçamba" oninput="attRelFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:7px 10px;font-size:12px;outline:none;width:90px"/></div>
         <div class="fg"><label>Resíduo</label><select id="fat-residuo" onchange="attRelFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:7px 10px;font-size:12px;outline:none"><option value="">Todos</option></select></div>
-        <div class="fg"><label>Status</label><select id="fat-status" onchange="attRelFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:7px 10px;font-size:12px;outline:none"><option value="">Todos</option><option value="aguardando_pagamento">Aguardando Pag.</option><option value="concluido">Concluído</option><option value="cancelado">Cancelado</option></select></div>
+        <div class="fg"><label>Tipo de Fechamento</label><select id="fat-fechamento" onchange="attRelFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:7px 10px;font-size:12px;outline:none"><option value="">Todos</option></select></div>
+        <div class="fg" style="position:relative"><label>Status</label>
+          <button type="button" id="fat-status-btn" onclick="attStatusDropToggle(event)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:7px 10px;font-size:12px;outline:none;cursor:pointer;min-width:120px;text-align:left">Todos ▾</button>
+          <div id="fat-status-drop" style="display:none;position:absolute;top:100%;left:0;z-index:50;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 16px #0006;padding:6px;margin-top:2px;min-width:180px">
+            <label style="display:flex;align-items:center;gap:7px;padding:5px 8px;font-size:12px;cursor:pointer;border-radius:6px"><input type="checkbox" class="fat-status-cb" value="sem_cobranca" onchange="attRelStatusChanged()"/> Sem Cobrança</label>
+            <label style="display:flex;align-items:center;gap:7px;padding:5px 8px;font-size:12px;cursor:pointer;border-radius:6px"><input type="checkbox" class="fat-status-cb" value="aguardando_pagamento" onchange="attRelStatusChanged()"/> Aguardando Pag.</label>
+            <label style="display:flex;align-items:center;gap:7px;padding:5px 8px;font-size:12px;cursor:pointer;border-radius:6px"><input type="checkbox" class="fat-status-cb" value="concluido" onchange="attRelStatusChanged()"/> Concluído</label>
+            <label style="display:flex;align-items:center;gap:7px;padding:5px 8px;font-size:12px;cursor:pointer;border-radius:6px"><input type="checkbox" class="fat-status-cb" value="cancelado" onchange="attRelStatusChanged()"/> Cancelado</label>
+          </div>
+        </div>
         <div class="fg"><label>Placa</label><input type="text" id="fat-placa" placeholder="ABC1234" oninput="attRelFiltrar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:7px 10px;font-size:12px;outline:none;width:80px"/></div>
         <button class="btn btn-sm" style="background:var(--accent);color:#fff;font-weight:700" onclick="attRelFiltrar()"><i data-lucide="search" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Buscar</button>
         <button class="btn btn-ghost btn-sm" onclick="attRelLimpar()"><i data-lucide="rotate-ccw" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Limpar</button>
@@ -2186,8 +2195,9 @@ body { font-size: 13.5px !important; }
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
         <div id="att-rel-bulk-bar" style="display:none;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:12px;flex-wrap:wrap">
           <span id="att-rel-sel-count" style="color:var(--accent);font-weight:700">0 selecionados</span>
-          <button onclick="attRelBulkStatus('concluido')" style="background:#10B98120;border:1px solid #10B981;color:#10B981;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-weight:600">✓ Concluir</button>
+          <button onclick="attRelBulkStatus('sem_cobranca')" style="background:#64748B20;border:1px solid #94A3B8;color:#94A3B8;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-weight:600">∅ Sem Cobrança</button>
           <button onclick="attRelBulkStatus('aguardando_pagamento')" style="background:#F59E0B20;border:1px solid #F59E0B;color:#F59E0B;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-weight:600">⏳ Aguard. Pag.</button>
+          <button onclick="attRelBulkStatus('concluido')" style="background:#10B98120;border:1px solid #10B981;color:#10B981;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-weight:600">✓ Concluir</button>
           <button onclick="attRelBulkStatus('cancelado')" style="background:#EF444420;border:1px solid #EF4444;color:#EF4444;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-weight:600">✕ Cancelar</button>
         </div>
         <div style="flex:1"></div>
@@ -2263,6 +2273,7 @@ body { font-size: 13.5px !important; }
               <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Motorista</label><input type="text" id="em2-motorista" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 10px;font-size:13px;outline:none"/></div>
               <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Status</label>
                 <select id="em2-status" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 10px;font-size:13px;outline:none">
+                  <option value="sem_cobranca">Sem Cobrança</option>
                   <option value="aguardando_pagamento">Aguardando Pagamento</option>
                   <option value="concluido">Concluído</option>
                   <option value="cancelado">Cancelado</option>
@@ -2351,6 +2362,14 @@ body { font-size: 13.5px !important; }
             <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">E-mail</label><input type="text" id="pm-email" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none" placeholder="contato@empresa.com.br"/></div>
             <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer"><input type="checkbox" id="pm-email-optin" style="width:16px;height:16px;accent-color:var(--accent,#10B981)"/> Enviar comprovante de descarte por e-mail automaticamente</label>
             <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer"><input type="checkbox" id="pm-gerador-obrig" style="width:16px;height:16px;accent-color:#F59E0B"/> <span>Gerador obrigatório — exigir preenchimento do gerador ao lançar O.S. <span style="background:#F59E0B20;color:#F59E0B;border:1px solid #F59E0B55;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700;margin-left:4px">obrigatório</span></span></label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer"><input type="checkbox" id="pm-ctr-obrig" style="width:16px;height:16px;accent-color:#F59E0B"/> <span>CTR obrigatório — exigir preenchimento do Nº CTR/MTR ao lançar O.S. <span style="background:#F59E0B20;color:#F59E0B;border:1px solid #F59E0B55;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700;margin-left:4px">obrigatório</span></span></label>
+            <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Tipo de Fechamento</label>
+              <div style="display:flex;gap:8px">
+                <select id="pm-fechamento" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none"><option value="">— Não definido —</option></select>
+                <button type="button" onclick="pmAddFechamento()" style="background:var(--surface2);border:1px solid var(--border);color:var(--accent,#10B981);border-radius:10px;padding:0 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">+ Novo</button>
+              </div>
+              <div style="font-size:10px;color:var(--muted2);margin-top:4px">Define a periodicidade de cobrança do cliente. Usado como filtro no Relatório de Descartes.</div>
+            </div>
             <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Observações</label><textarea id="pm-obs" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none;resize:none;height:70px;font-family:inherit" placeholder="Informações adicionais"></textarea></div>
 
             <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
@@ -9651,6 +9670,7 @@ initNavGroups();
   let _relViewingId = null;         // ID do vale aberto no modal Ver
   let _relRange = {from:null, to:null}; // período carregado do servidor
   let _relReloadTimer = null;
+  let _relFechamentoMap = {}; // parceiro_id → tipo_fechamento
 
   // Período padrão: mês atual. O filtro de data roda na CONSULTA ao banco —
   // sem isso a tela carregaria o histórico inteiro a cada abertura.
@@ -9675,6 +9695,16 @@ initNavGroups();
         sel.innerHTML = '<option value="">Todos</option>';
         _relResidues.forEach(r=>{ const o=document.createElement('option'); o.value=r.id; o.textContent=r.nome; sel.appendChild(o); });
       }
+
+      // Mapa parceiro→tipo de fechamento + opções do filtro de fechamento
+      try {
+        const parcs = await api('parceiros_att?select=id,tipo_fechamento&limit=1000');
+        _relFechamentoMap = {};
+        const fechSet = new Set(['Diário','Semanal','Quinzenal','Mensal']);
+        parcs.forEach(p=>{ if(p.tipo_fechamento){ _relFechamentoMap[p.id]=p.tipo_fechamento; fechSet.add(p.tipo_fechamento); } });
+        const fsel = document.getElementById('fat-fechamento');
+        if(fsel){ const cur=fsel.value; fsel.innerHTML='<option value="">Todos</option>'+[...fechSet].map(f=>`<option value="${esc(f)}">${esc(f)}</option>`).join(''); fsel.value=cur||''; }
+      } catch(e){ console.error('fechamento map',e); }
       let q = 'vales_descarga?select=*,vale_descarga_itens(*)&order=data_hora.desc';
       if(from) q += `&data_hora=gte.${encodeURIComponent(new Date(from+'T00:00:00').toISOString())}`;
       if(to)   q += `&data_hora=lte.${encodeURIComponent(new Date(to+'T23:59:59.999').toISOString())}`;
@@ -9707,7 +9737,8 @@ initNavGroups();
     const ctr     = (document.getElementById('fat-ctr')?.value||'').toLowerCase();
     const cac     = (document.getElementById('fat-cacamba')?.value||'').toLowerCase();
     const res     = document.getElementById('fat-residuo')?.value||'';
-    const sta     = document.getElementById('fat-status')?.value||'';
+    const staSel  = attRelStatusSel();
+    const fech    = document.getElementById('fat-fechamento')?.value||'';
     const plac    = (document.getElementById('fat-placa')?.value||'').toLowerCase();
 
     _relFiltered = _relData.filter(row=>{
@@ -9720,17 +9751,50 @@ initNavGroups();
       if(ctr  && !(row._item?.ctr_mtr||'').toLowerCase().includes(ctr)) return false;
       if(cac  && !(row._item?.numero_cacamba||'').toLowerCase().includes(cac)) return false;
       if(res  && row._item?.residuo_id !== res) return false;
-      if(sta  && row.status !== sta) return false;
+      if(staSel.length && !staSel.includes(row.status)) return false;
+      if(fech && (_relFechamentoMap[row.parceiro_id]||'') !== fech) return false;
       if(plac && !(row.placa||'').toLowerCase().includes(plac)) return false;
       return true;
     });
     attRelRender();
   };
 
+  // ── FILTRO STATUS (multi-seleção) ─────────────────────────────
+  function attRelStatusSel(){
+    return [...document.querySelectorAll('.fat-status-cb:checked')].map(c=>c.value);
+  }
+  window.attRelStatusChanged = function(){
+    const sel = attRelStatusSel();
+    const btn = document.getElementById('fat-status-btn');
+    if(btn){
+      const labels = {sem_cobranca:'Sem Cobrança',aguardando_pagamento:'Aguardando Pag.',concluido:'Concluído',cancelado:'Cancelado'};
+      btn.textContent = (sel.length===0 ? 'Todos' : sel.length===1 ? labels[sel[0]]||sel[0] : sel.length+' selecionados') + ' ▾';
+    }
+    attRelFiltrar();
+  };
+  window.attStatusDropToggle = function(e){
+    if(e) e.stopPropagation();
+    const drop = document.getElementById('fat-status-drop');
+    if(!drop) return;
+    const show = drop.style.display==='none' || !drop.style.display;
+    drop.style.display = show ? 'block' : 'none';
+    if(show){
+      const close = (ev)=>{
+        if(!drop.contains(ev.target) && ev.target.id!=='fat-status-btn'){
+          drop.style.display='none';
+          document.removeEventListener('click', close);
+        }
+      };
+      setTimeout(()=>document.addEventListener('click', close),0);
+    }
+  };
+
   window.attRelLimpar = function(){
     ['fat-cliente','fat-gerador','fat-vale','fat-ctr','fat-cacamba','fat-placa']
       .forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
-    ['fat-residuo','fat-status'].forEach(id=>{ const el=document.getElementById(id); if(el) el.selectedIndex=0; });
+    ['fat-residuo','fat-fechamento'].forEach(id=>{ const el=document.getElementById(id); if(el) el.selectedIndex=0; });
+    document.querySelectorAll('.fat-status-cb').forEach(c=>c.checked=false);
+    const stBtn=document.getElementById('fat-status-btn'); if(stBtn) stBtn.textContent='Todos ▾';
     // Volta ao período padrão (mês atual) e recarrega do servidor
     const p = attRelPeriodoPadrao();
     const fromEl = document.getElementById('fat-from'), toEl = document.getElementById('fat-to');
@@ -9747,6 +9811,7 @@ initNavGroups();
     const totalItens   = _relFiltered.filter(r=>r._item).length;
     const totalVol     = _relFiltered.reduce((a,r)=>a+(r._item?Number(r._item.volume_m3||0):0),0);
     const totalValor   = _relFiltered.reduce((a,r)=>a+(r._item?Number(r._item.valor_total||0):0),0);
+    const semCobranca  = new Set(_relFiltered.filter(r=>r.status==='sem_cobranca').map(r=>r.id)).size;
     const aguardando   = new Set(_relFiltered.filter(r=>r.status==='aguardando_pagamento').map(r=>r.id)).size;
 
     const kpiEl = document.getElementById('att-rel-kpis');
@@ -9755,6 +9820,7 @@ initNavGroups();
       ['Descargas', totalItens, 'green'],
       ['Volume total (m³)', fmtVol(totalVol), 'orange'],
       ['Valor Total (R$)', fM(totalValor), 'green'],
+      ['Sem Cobrança', semCobranca, 'blue'],
       ['Aguardando Pagamento', aguardando, 'yellow'],
     ].map(([l,v,c])=>`<div class="kpi-card"><div class="kpi-label">${esc(l)}</div><div class="kpi-value kpi-${c}">${esc(String(v))}</div></div>`).join('');
 
@@ -9793,6 +9859,7 @@ initNavGroups();
 
   function attBadge(status){
     const map = {
+      'sem_cobranca':['#64748B20','#94A3B8','Sem Cobrança'],
       'aguardando_pagamento':['#F59E0B20','#F59E0B','Aguardando Pag.'],
       'concluido':['#10B98120','#10B981','Concluído'],
       'cancelado':['#EF444420','#EF4444','Cancelado'],
@@ -9827,7 +9894,7 @@ initNavGroups();
 
   window.attRelBulkStatus = async function(newStatus){
     if(!_relSelectedIds.size) return;
-    const label = {concluido:'Concluído',aguardando_pagamento:'Aguardando Pagamento',cancelado:'Cancelado'}[newStatus]||newStatus;
+    const label = {sem_cobranca:'Sem Cobrança',concluido:'Concluído',aguardando_pagamento:'Aguardando Pagamento',cancelado:'Cancelado'}[newStatus]||newStatus;
     if(!confirm(`Alterar ${_relSelectedIds.size} vale(s) para "${label}"?`)) return;
     const ids = [..._relSelectedIds];
     try {
@@ -9893,6 +9960,7 @@ initNavGroups();
       </div>
       <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
         <button onclick="attRelAbrirEditar()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-weight:600">✏️ Editar O.S.</button>
+        ${v.status==='sem_cobranca'?`<button onclick="attRelMudarStatus('${id}','aguardando_pagamento')" style="background:#F59E0B20;border:1px solid #F59E0B;color:#F59E0B;border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-weight:600">💲 Cobrar (Aguard. Pag.)</button>`:''}
         ${v.status!=='concluido'?`<button onclick="attRelMudarStatus('${id}','concluido')" style="background:#10B98120;border:1px solid #10B981;color:#10B981;border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-weight:600">✓ Concluir</button>`:''}
         ${v.status==='cancelado'?`<button onclick="attRelMudarStatus('${id}','aguardando_pagamento')" style="background:#F59E0B20;border:1px solid #F59E0B;color:#F59E0B;border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-weight:600">↩ Reativar</button>`:`<button onclick="attRelMudarStatus('${id}','cancelado')" style="background:#EF444420;border:1px solid #EF4444;color:#EF4444;border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-weight:600">✕ Cancelar</button>`}
       </div>`;
@@ -9900,7 +9968,7 @@ initNavGroups();
   };
 
   window.attRelMudarStatus = async function(id, newStatus){
-    const label = {concluido:'Concluído',aguardando_pagamento:'Reativar (Aguard. Pag.)',cancelado:'Cancelar'}[newStatus]||newStatus;
+    const label = {sem_cobranca:'Sem Cobrança',concluido:'Concluído',aguardando_pagamento:'Aguardando Pagamento',cancelado:'Cancelar'}[newStatus]||newStatus;
     if(!confirm(`Confirmar: "${label}"?`)) return;
     try {
       await api(`vales_descarga?id=eq.${id}`,{method:'PATCH',body:JSON.stringify({status:newStatus})});
@@ -10162,13 +10230,13 @@ initNavGroups();
 
     const filtCliente = document.getElementById('fat-cliente')?.value.trim()||'';
     const filtGerador = document.getElementById('fat-gerador')?.value.trim()||'';
-    const filtStatus  = document.getElementById('fat-status')?.value||'';
-
     function statusLabel(st){
       if(st==='concluido')  return 'Concluído';
       if(st==='cancelado')  return 'Cancelado';
+      if(st==='sem_cobranca') return 'Sem Cobrança';
       return 'Aguard. Pag.';
     }
+    const filtStatus  = (typeof attRelStatusSel==='function' ? attRelStatusSel() : []).map(statusLabel).join(', ');
 
     let rowNum=0;
     const rowsHtml = vales.map(v=>{
@@ -10224,7 +10292,7 @@ initNavGroups();
     const filtrosLinha = [
       filtCliente?'Cliente: '+filtCliente:'',
       filtGerador?'Gerador: '+filtGerador:'',
-      filtStatus?'Status: '+statusLabel(filtStatus):''
+      filtStatus?'Status: '+filtStatus:''
     ].filter(Boolean).join('   ');
 
     const hoje = new Date();
@@ -10325,6 +10393,7 @@ initNavGroups();
     function statusLabel(st){
       if(st==='concluido')  return 'Concluído';
       if(st==='cancelado')  return 'Cancelado';
+      if(st==='sem_cobranca') return 'Sem Cobrança';
       return 'Aguardando Pagamento';
     }
 
@@ -10596,10 +10665,35 @@ initNavGroups();
     </tr>`).join('');
   };
 
+  const ATT_FECHAMENTOS_PADRAO = ['Diário','Semanal','Quinzenal','Mensal'];
+  function attFechamentosDisponiveis(){
+    const set = new Set(ATT_FECHAMENTOS_PADRAO);
+    (_parceiros||[]).forEach(p=>{ if(p.tipo_fechamento) set.add(p.tipo_fechamento); });
+    return [...set];
+  }
+  function pmFillFechamentos(sel){
+    const el = document.getElementById('pm-fechamento');
+    if(!el) return;
+    const cur = (sel!==undefined) ? sel : el.value;
+    el.innerHTML = '<option value="">— Não definido —</option>' +
+      attFechamentosDisponiveis().map(f=>`<option value="${esc(f)}">${esc(f)}</option>`).join('');
+    el.value = cur||'';
+  }
+  window.pmAddFechamento = function(){
+    const nome = (prompt('Novo tipo de fechamento (ex: Bimestral):')||'').trim();
+    if(!nome) return;
+    const el = document.getElementById('pm-fechamento');
+    let opt = [...el.options].find(o=>o.value.toLowerCase()===nome.toLowerCase());
+    if(!opt){ opt=document.createElement('option'); opt.value=nome; opt.textContent=nome; el.appendChild(opt); }
+    el.value = opt.value;
+  };
+
   window.attParcNovo = function(){
     ['pm-id','pm-nome','pm-razao','pm-doc','pm-tel','pm-email','pm-obs'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
     document.getElementById('pm-email-optin').checked=false;
     document.getElementById('pm-gerador-obrig').checked=false;
+    document.getElementById('pm-ctr-obrig').checked=false;
+    pmFillFechamentos('');
     document.getElementById('pm-tipo-doc').selectedIndex=0;
     document.getElementById('pm-status').value='ativo';
     document.getElementById('parc-modal-title').textContent='Novo Parceiro';
@@ -10620,6 +10714,8 @@ initNavGroups();
     document.getElementById('pm-email').value = p.email||'';
     document.getElementById('pm-email-optin').checked = !!p.enviar_comprovante_email;
     document.getElementById('pm-gerador-obrig').checked = !!p.gerador_obrigatorio;
+    document.getElementById('pm-ctr-obrig').checked = !!p.ctr_obrigatorio;
+    pmFillFechamentos(p.tipo_fechamento||'');
     document.getElementById('pm-obs').value = p.observacoes||'';
     document.getElementById('pm-status').value = p.status||'ativo';
     document.getElementById('parc-modal-title').textContent='Editar Parceiro';
@@ -10650,6 +10746,8 @@ initNavGroups();
       email: document.getElementById('pm-email').value.trim()||null,
       enviar_comprovante_email: document.getElementById('pm-email-optin').checked,
       gerador_obrigatorio: document.getElementById('pm-gerador-obrig').checked,
+      ctr_obrigatorio: document.getElementById('pm-ctr-obrig').checked,
+      tipo_fechamento: document.getElementById('pm-fechamento').value||null,
       observacoes: document.getElementById('pm-obs').value.trim()||null,
       status: document.getElementById('pm-status').value,
     };
