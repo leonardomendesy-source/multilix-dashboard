@@ -1782,7 +1782,7 @@ body { font-size: 13.5px !important; }
         <div class="nav-group" data-group="att-terceiros" style="margin-left:0">
           <button class="nav-group-toggle" onclick="toggleNavGroup('att-terceiros')" style="padding-left:34px"><span class="icon" data-lucide="package-open"></span>Entrada Terceiros<span class="chev" data-lucide="chevron-right"></span></button>
           <div class="nav-group-children"><div>
-            <button class="nav-item" onclick="window.open('/entrada-terceiros','_blank')" style="padding-left:54px"><span class="icon" data-lucide="plus-circle"></span>Lançar Vale</button>
+            <button class="nav-item" data-page="lancar-vale" onclick="window.open('/entrada-terceiros','_blank')" style="padding-left:54px"><span class="icon" data-lucide="plus-circle"></span>Lançar Vale</button>
             <button class="nav-item" onclick="showPage('att-relatorio',this)" style="padding-left:54px"><span class="icon" data-lucide="bar-chart-2"></span>Relatório de Descartes</button>
             <button class="nav-item" onclick="showPage('att-parceiros',this)" style="padding-left:54px"><span class="icon" data-lucide="users"></span>Parceiros ATT</button>
             <button class="nav-item" onclick="showPage('att-precos',this)" style="padding-left:54px"><span class="icon" data-lucide="tag"></span>Tabela de Preços</button>
@@ -3943,7 +3943,29 @@ body { font-size: 13.5px !important; }
       </div>
       <div id="usuarios-msg" style="font-size:12px;margin-bottom:14px"></div>
       <div class="sec">Usuários Cadastrados</div>
-      <div class="tbl-wrap"><table id="tbl-usuarios"><thead><tr><th>Email</th><th>Nível</th><th>Criado em</th><th>Ações</th></tr></thead><tbody><tr><td colspan="4" style="color:var(--muted)">Carregando…</td></tr></tbody></table></div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Admins têm acesso total. Para operadores, use <b>Permissões</b> para limitar quais módulos e submódulos aparecem para o usuário.</div>
+      <div class="tbl-wrap"><table id="tbl-usuarios"><thead><tr><th>Email</th><th>Nível</th><th>Acesso</th><th>Criado em</th><th>Ações</th></tr></thead><tbody><tr><td colspan="5" style="color:var(--muted)">Carregando…</td></tr></tbody></table></div>
+
+      <!-- MODAL PERMISSÕES DE ACESSO -->
+      <div id="perm-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:9300;overflow-y:auto;padding:30px 16px" onclick="if(event.target===this)permFechar()">
+        <div style="max-width:680px;margin:0 auto;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px" onclick="event.stopPropagation()">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <h2 style="font-size:17px;font-weight:700;color:var(--text)">Permissões de Acesso</h2>
+            <button onclick="permFechar()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px">✕</button>
+          </div>
+          <div id="perm-user-email" style="font-size:12px;color:var(--muted);margin-bottom:18px"></div>
+          <label style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:16px;cursor:pointer">
+            <input type="checkbox" id="perm-total" onchange="permToggleTotal()" style="width:15px;height:15px;accent-color:var(--accent)"/>
+            <span style="font-size:13px;font-weight:600;color:var(--text)">Acesso total (todos os módulos)</span>
+          </label>
+          <div id="perm-tree" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px"></div>
+          <div id="perm-msg" style="font-size:12px;margin-top:12px"></div>
+          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">
+            <button onclick="permFechar()" class="btn btn-ghost btn-sm">Cancelar</button>
+            <button onclick="permSalvar()" class="btn btn-primary btn-sm">Salvar Permissões</button>
+          </div>
+        </div>
+      </div>
     </div>
 
   </div>
@@ -4105,12 +4127,14 @@ async function doLogin(){
 
 async function _loadProfile(){
   if(!_session) return;
-  const r = await fetch(`${SUPA_URL}/rest/v1/profiles?id=eq.${_session.user.id}&select=id,email,role`,{
+  const r = await fetch(`${SUPA_URL}/rest/v1/profiles?id=eq.${_session.user.id}&select=id,email,role,permissoes`,{
     headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+_session.access_token}
   });
   const rows = await r.json();
-  _profile = rows[0] || null;
+  _profile = (Array.isArray(rows) && rows[0]) || null;
   document.getElementById('nav-usuarios').style.display = (_profile && _profile.role==='admin') ? '' : 'none';
+  applyPermissions();
+  _navFirstAllowed();
 }
 
 function doLogout(){
@@ -4147,6 +4171,77 @@ function _postLogin(){
   }
 }
 
+// ── CONTROLE DE ACESSO POR MÓDULO ─────────────────────────────
+// null em profiles.permissoes = acesso total; array = só as páginas listadas. Admin ignora restrições.
+const PERM_MODULES=[
+  {label:'Visão Geral',items:[['overview','Dashboard'],['data','Fontes de Dados']]},
+  {label:'Entrada de Resíduos',items:[['consolidado','Consolidado'],['att','Recebimento de Terceiros'],['locacao','Locação']]},
+  {label:'Entrada Terceiros',items:[['lancar-vale','Lançar Vale'],['att-relatorio','Relatório de Descartes'],['att-parceiros','Parceiros ATT'],['att-precos','Tabela de Preços'],['att-residuos','Tipos de Resíduo'],['att-equipamentos','Equipamentos'],['att-geradores','Geradores']]},
+  {label:'Agregados',items:[['agregados','Agregados Reciclados']]},
+  {label:'Destinação',items:[['destinacao','Dashboard Destinação'],['dest-pagamentos','Pagamentos'],['dest-freteiros','Freteiros'],['dest-residuos','Tipos de Resíduo'],['dest-conferencia','Conferência'],['dest-vales','Aterros & Vales'],['reciclaveis','Recicláveis'],['rec-destinos','Rec. — Destinos'],['rec-conferencia','Rec. — Conferência']]},
+  {label:'CDF',items:[['cdf','Certificado de Destinação Final']]},
+  {label:'Comercial',items:[['crm','CRM'],['prop-locacao','Propostas — Locação'],['prop-att','Propostas — Recebimento ATT'],['prop-agregados','Propostas — Agregados'],['contratos','Contratos'],['emails-comercial','E-mails Comercial']]},
+  {label:'Análises',items:[['inconsistencias','Inconsistências'],['resumo','Resumo Executivo'],['config','Metas e Configurações']]}
+];
+
+function _allowedPages(){
+  if(!_profile || _profile.role==='admin') return null;
+  return Array.isArray(_profile.permissoes) ? new Set(_profile.permissoes) : null;
+}
+
+function podeAcessar(id){
+  if(id==='usuarios') return !!(_profile && _profile.role==='admin');
+  const allowed=_allowedPages();
+  return allowed===null || allowed.has(id);
+}
+
+function applyPermissions(){
+  // marca cada item da sidebar com a página que ele abre (extrai do onclick)
+  document.querySelectorAll('#sidebar .nav-item').forEach(el=>{
+    if(!el.dataset.page){
+      const m=/showPage\('([\w-]+)'/.exec(el.getAttribute('onclick')||'');
+      if(m) el.dataset.page=m[1];
+    }
+  });
+  const allowed=_allowedPages();
+  document.querySelectorAll('#sidebar .nav-item[data-page]').forEach(el=>{
+    if(el.id==='nav-usuarios') return; // visibilidade controlada pelo role em _loadProfile
+    el.style.display=(allowed===null||allowed.has(el.dataset.page))?'':'none';
+  });
+  // linha "Destinação" (item + chevron): some junto com o item principal
+  document.querySelectorAll('#sidebar .nav-group-link').forEach(link=>{
+    const item=link.querySelector('.nav-item');
+    link.style.display=(item && item.style.display==='none')?'none':'';
+  });
+  // grupos sem nenhum item visível somem; de dentro pra fora por causa dos aninhados
+  [...document.querySelectorAll('#sidebar .nav-group')].reverse().forEach(g=>{
+    const anyVisible=[...g.querySelectorAll('.nav-item')].some(n=>n.style.display!=='none');
+    g.style.display=anyVisible?'':'none';
+    if(anyVisible){
+      const link=g.querySelector(':scope > .nav-group-link');
+      if(link && link.style.display==='none') g.classList.add('open');
+    }
+  });
+  // cabeçalhos de seção sem nada visível até a próxima seção somem
+  document.querySelectorAll('#sidebar .sb-section').forEach(sec=>{
+    let vis=false,el=sec.nextElementSibling;
+    while(el && !el.classList.contains('sb-section')){
+      if(el.style.display!=='none') vis=true;
+      el=el.nextElementSibling;
+    }
+    sec.style.display=vis?'':'none';
+  });
+}
+
+function _navFirstAllowed(){
+  const active=document.querySelector('.page.active');
+  const cur=active?active.id.replace('page-',''):'';
+  if(cur && podeAcessar(cur)) return;
+  const first=[...document.querySelectorAll('#sidebar .nav-item[data-page]')]
+    .find(n=>n.style.display!=='none' && n.dataset.page!=='lancar-vale' && podeAcessar(n.dataset.page));
+  if(first) showPage(first.dataset.page, first);
+}
+
 // ── GERENCIAR USUÁRIOS ────────────────────────────────────────
 async function _manageUsers(action, payload){
   const r = await fetch(`${SUPA_URL}/functions/v1/manage-users`,{
@@ -4159,12 +4254,22 @@ async function _manageUsers(action, payload){
   return data;
 }
 
+let _usersCache={};
 async function carregarUsuarios(){
   const tbody = document.querySelector('#tbl-usuarios tbody');
-  tbody.innerHTML = `<tr><td colspan="4" style="color:var(--muted)">Carregando…</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="5" style="color:var(--muted)">Carregando…</td></tr>`;
   try{
     const {users} = await _manageUsers('list');
-    tbody.innerHTML = users.map(u=>`
+    _usersCache={};
+    users.forEach(u=>_usersCache[u.id]=u);
+    tbody.innerHTML = users.map(u=>{
+      const acesso = u.role==='admin'
+        ? `<span style="font-size:11px;color:var(--green);font-weight:600">Total (admin)</span>`
+        : Array.isArray(u.permissoes)
+          ? `<span style="font-size:11px;color:var(--yellow);font-weight:600">${u.permissoes.length} página${u.permissoes.length===1?'':'s'}</span>`
+          : `<span style="font-size:11px;color:var(--green);font-weight:600">Total</span>`;
+      const btnPerm = u.role==='admin' ? '' : `<button class="btn btn-ghost btn-sm" onclick="abrirPermissoes('${u.id}')">Permissões</button>`;
+      return `
       <tr>
         <td>${u.email}</td>
         <td>
@@ -4173,15 +4278,75 @@ async function carregarUsuarios(){
             <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
           </select>
         </td>
+        <td>${acesso}</td>
         <td style="color:var(--muted);font-size:11px">${new Date(u.created_at).toLocaleDateString('pt-BR')}</td>
         <td>
+          ${btnPerm}
           <button class="btn btn-ghost btn-sm" onclick="resetarSenha('${u.id}')">Redefinir senha</button>
           <button class="btn btn-ghost btn-sm" onclick="removerUsuario('${u.id}','${u.email}')" style="color:var(--red)">Remover</button>
         </td>
-      </tr>`).join('');
+      </tr>`;
+    }).join('');
   }catch(e){
-    tbody.innerHTML = `<tr><td colspan="4" style="color:var(--red)">Erro: ${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" style="color:var(--red)">Erro: ${e.message}</td></tr>`;
   }
+}
+
+// ── MODAL DE PERMISSÕES ───────────────────────────────────────
+let _permUserId=null;
+function abrirPermissoes(id){
+  const u=_usersCache[id]; if(!u) return;
+  _permUserId=id;
+  document.getElementById('perm-user-email').textContent=u.email;
+  const allowed=new Set(Array.isArray(u.permissoes)?u.permissoes:[]);
+  document.getElementById('perm-total').checked=!Array.isArray(u.permissoes);
+  document.getElementById('perm-tree').innerHTML = PERM_MODULES.map((g,gi)=>`
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px">
+        <input type="checkbox" class="perm-grp" data-gi="${gi}" onchange="permToggleGroup(${gi})" style="width:14px;height:14px;accent-color:var(--accent)"/>
+        <span style="font-size:12px;font-weight:700;color:var(--text)">${g.label}</span>
+      </label>
+      <div style="display:flex;flex-direction:column;gap:5px;padding-left:6px">
+        ${g.items.map(([pid,lbl])=>`
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" class="perm-item" data-gi="${gi}" value="${pid}" ${allowed.has(pid)?'checked':''} onchange="permSyncGroup(${gi})" style="width:13px;height:13px;accent-color:var(--accent)"/>
+          <span style="font-size:12px;color:var(--muted)">${lbl}</span>
+        </label>`).join('')}
+      </div>
+    </div>`).join('');
+  PERM_MODULES.forEach((g,gi)=>permSyncGroup(gi));
+  permToggleTotal();
+  document.getElementById('perm-msg').textContent='';
+  document.getElementById('perm-modal-overlay').style.display='block';
+}
+function permToggleTotal(){
+  const total=document.getElementById('perm-total').checked;
+  const tree=document.getElementById('perm-tree');
+  tree.style.opacity=total?'.35':'1';
+  tree.style.pointerEvents=total?'none':'auto';
+}
+function permToggleGroup(gi){
+  const on=document.querySelector(`.perm-grp[data-gi="${gi}"]`).checked;
+  document.querySelectorAll(`.perm-item[data-gi="${gi}"]`).forEach(c=>c.checked=on);
+}
+function permSyncGroup(gi){
+  const items=[...document.querySelectorAll(`.perm-item[data-gi="${gi}"]`)];
+  document.querySelector(`.perm-grp[data-gi="${gi}"]`).checked = items.length>0 && items.every(c=>c.checked);
+}
+function permFechar(){ document.getElementById('perm-modal-overlay').style.display='none'; _permUserId=null; }
+async function permSalvar(){
+  if(!_permUserId) return;
+  const msg=document.getElementById('perm-msg');
+  const total=document.getElementById('perm-total').checked;
+  const permissoes = total ? null : [...document.querySelectorAll('.perm-item:checked')].map(c=>c.value);
+  if(!total && permissoes.length===0){ msg.style.color='var(--red)'; msg.textContent='Selecione ao menos uma página ou marque "Acesso total".'; return; }
+  msg.style.color='var(--muted)'; msg.textContent='Salvando…';
+  try{
+    await _manageUsers('updatePermissions',{id:_permUserId, permissoes});
+    msg.style.color='var(--green)'; msg.textContent='Permissões salvas. Valem a partir do próximo login/recarregamento do usuário.';
+    carregarUsuarios();
+    setTimeout(permFechar, 1200);
+  }catch(e){ msg.style.color='var(--red)'; msg.textContent='Erro: '+e.message; }
 }
 
 async function criarUsuario(){
@@ -4774,6 +4939,10 @@ function rankTbl(data,l1,l2,top=10){
 // ── NAV ────────────────────────────────────────────────────────
 const TITLES={overview:'Dashboard Executivo',data:'Fontes de Dados',consolidado:'Consolidado — Entrada de Resíduos',att:'Recebimento de Terceiros',locacao:'Locação de Caçambas',agregados:'Agregados Reciclados',destinacao:'Destinação de Resíduos','dest-pagamentos':'Pagamentos de Freteiros','dest-freteiros':'Cadastro de Freteiros','dest-residuos':'Tipos de Resíduo — Destinação','dest-conferencia':'Conferência de Vales','dest-vales':'Aterros & Vales de Destinação',reciclaveis:'Recicláveis — Destinação & Vendas','rec-destinos':'Recicláveis — Destinos & Resíduos','rec-conferencia':'Recicláveis — Conferência',cdf:'Certificado de Destinação Final',crm:'CRM',propostas:'Propostas Comerciais','prop-locacao':'Propostas — Locação','prop-att':'Propostas — Recebimento ATT','prop-agregados':'Propostas — Agregados',contratos:'Contratos',inconsistencias:'Inconsistências',resumo:'Resumo Executivo',config:'Metas & Configurações',usuarios:'Gerenciar Usuários','emails-comercial':'E-mails Comercial','att-parceiros':'Parceiros ATT','att-precos':'Tabela de Preços','att-residuos':'Tipos de Resíduo','att-equipamentos':'Equipamentos','att-geradores':'Geradores','att-relatorio':'Relatório de Descartes'};
 function showPage(id,el){
+  if(typeof podeAcessar==='function' && !podeAcessar(id)){
+    alert('Você não tem acesso a este módulo. Fale com um administrador.');
+    return;
+  }
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');

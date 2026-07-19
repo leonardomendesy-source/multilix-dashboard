@@ -22,6 +22,13 @@ Dashboard de gestão da Multilix (deploy Vercel a partir do main). Arquivo princ
   - index.html: páginas `page-reciclaveis` (dashboard c/ projeção por dias úteis via `calcularProjecaoSegmentada`), `page-rec-destinos` (cadastros), `page-rec-conferencia` (baixa por peso do ticket, `recCalcValor`, valor manual prevalece). JS no bloco 2, antes de `// ── SIDEBAR TOGGLE ──`
   - RLS: vales com INSERT/UPDATE anon (apontador sem login); cadastros só authenticated. Obs: em `vales_destinacao` (frete) o UPDATE é só authenticated — editar/cancelar no /vale falha silenciosamente (bug latente antigo, não corrigido de propósito)
 
+## Controle de acesso por módulo (v82)
+- `profiles.permissoes` (jsonb): `null` = acesso total; array de ids de páginas = só essas. Admin sempre ignora restrições; página Usuários é sempre só admin.
+- Edge function `manage-users`: ação `updatePermissions` ({id, permissoes}); `list` devolve `permissoes`.
+- index.html: `PERM_MODULES` (registro módulo→páginas), `podeAcessar(id)`, `applyPermissions()` (esconde nav-items/grupos/seções sem permissão; extrai o id da página do `onclick` para `data-page`), guarda no `showPage`, `_navFirstAllowed()` redireciona pós-login se a página ativa for bloqueada. "Lançar Vale" tem `data-page="lancar-vale"` manual (abre /entrada-terceiros).
+- UI admin: página Usuários → coluna Acesso + botão Permissões → modal `perm-modal-overlay` (checkbox "Acesso total" ou árvore por grupo). Mudanças valem no próximo login/reload do usuário.
+- Enforcement é só de UI/navegação (dados continuam acessíveis via REST com anon key p/ quem souber a API).
+
 ## Git
 - Branch principal: `main`
 - Remote: GitHub
