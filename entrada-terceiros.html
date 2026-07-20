@@ -236,6 +236,26 @@ html[data-theme="light"] .header-logo img{filter:invert(1)}
 html[data-theme="light"] #loading-overlay{background:rgba(244,246,250,.88)}
 html[data-theme="light"] #edit-overlay{background:rgba(20,30,60,.35)}
 html[data-theme="light"] ::-webkit-scrollbar-thumb{background:#C5CDDB}
+
+/* Dashboard de Entradas */
+#tela-dashboard{display:none;padding:16px 14px 48px;max-width:720px;margin:0 auto}
+.dash-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0 14px;flex-wrap:wrap}
+.dash-title{font-size:17px;font-weight:800;color:var(--text)}
+.dash-head select{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:9px 12px;font-size:14px;outline:none}
+.dash-kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px}
+.dash-kpi{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px}
+.dash-kpi-lbl{font-size:10px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.dash-kpi-val{font-size:24px;font-weight:800;letter-spacing:-.5px;line-height:1}
+.dash-kpi-sub{font-size:11px;color:var(--muted);margin-top:4px}
+.dash-sec-title{font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;margin:20px 0 8px}
+.dash-bar-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)}
+.dash-bar-lbl{font-size:12px;color:var(--text);font-weight:700;width:52px;flex-shrink:0}
+.dash-bar-lbl.parc{width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.dash-bar-track{flex:1;height:8px;background:var(--surface2);border-radius:6px;overflow:hidden}
+.dash-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),#10B981);border-radius:6px}
+.dash-bar-val{font-size:11px;color:var(--muted);white-space:nowrap;flex-shrink:0}
+.dash-empty{padding:24px;text-align:center;color:var(--muted);font-size:13px}
+@media(max-width:420px){.dash-bar-lbl.parc{width:90px}}
 </style>
 </head>
 <body>
@@ -270,6 +290,25 @@ html[data-theme="light"] ::-webkit-scrollbar-thumb{background:#C5CDDB}
     <div class="sel-card-title">Pesquisar / Visualizar O.S.</div>
     <div class="sel-card-desc">Consultar, enviar por WhatsApp ou e-mail</div>
   </div>
+  <div class="sel-card" style="border-color:#10B98140" onclick="irParaDashboard()">
+    <span class="sel-card-icon">📊</span>
+    <div class="sel-card-title">Dashboard de Entradas</div>
+    <div class="sel-card-desc">Caçambas e m³ que entraram, com projeções</div>
+  </div>
+</div>
+
+<!-- TELA DASHBOARD DE ENTRADAS -->
+<div id="tela-dashboard">
+  <button class="btn-voltar" onclick="voltarSelecao()">← Voltar</button>
+  <div class="dash-head">
+    <div class="dash-title">📊 Dashboard de Entradas</div>
+    <select id="dash-mes" onchange="dashRender()"></select>
+  </div>
+  <div class="dash-kpis" id="dash-kpis"></div>
+  <div class="dash-sec-title">Caçambas por dia</div>
+  <div id="dash-por-dia"></div>
+  <div class="dash-sec-title">Por parceiro</div>
+  <div id="dash-por-parceiro"></div>
 </div>
 
 <!-- TELA HISTÓRICO -->
@@ -1269,15 +1308,123 @@ function novoVale(){
 
 // ── NAVEGAÇÃO ────────────────────────────────────────────────────
 function mostrarTela(id){
-  ['tela-selecao','tela-form','tela-historico','tela-detalhe'].forEach(t=>{
+  ['tela-selecao','tela-form','tela-historico','tela-detalhe','tela-dashboard'].forEach(t=>{
     const el=document.getElementById(t);
-    if(el) el.style.display = t===id ? (t==='tela-form'?'block':'flex') : 'none';
+    if(el) el.style.display = t===id ? ((t==='tela-form'||t==='tela-dashboard')?'block':'flex') : 'none';
   });
   window.scrollTo(0,0);
 }
 
 function irParaFormulario(){ resetDataServico(); mostrarTela('tela-form'); }
 function voltarSelecao(){ mostrarTela('tela-selecao'); }
+
+// ── DASHBOARD DE ENTRADAS ────────────────────────────────────────
+let _dashRows = null;
+const fmtInt = v => Math.round(Number(v)||0).toLocaleString('pt-BR');
+
+async function irParaDashboard(){
+  mostrarTela('tela-dashboard');
+  document.getElementById('dash-kpis').innerHTML = '<div style="padding:20px;color:var(--muted);font-size:13px">Carregando…</div>';
+  document.getElementById('dash-por-dia').innerHTML = '';
+  document.getElementById('dash-por-parceiro').innerHTML = '';
+  try {
+    const r = await fetch(
+      `${SUPA_URL}/rest/v1/vales_descarga?select=data_hora,parceiro_nome_snapshot,status,deleted_at,vale_descarga_itens(volume_m3,quantidade)&status=neq.cancelado&deleted_at=is.null&order=data_hora.desc&limit=3000`,
+      {headers: HDR_NO_PREFER}
+    );
+    if(!r.ok) throw new Error(await r.text());
+    const vales = await r.json();
+    const rows = [];
+    vales.forEach(v=>{
+      const d = v.data_hora ? new Date(v.data_hora) : null;
+      const dk = d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : null;
+      (v.vale_descarga_itens||[]).forEach(it=>{
+        rows.push({
+          dk, ym: dk?dk.slice(0,7):null, dia: d?d.getDate():null,
+          parceiro: v.parceiro_nome_snapshot||'—',
+          cac: Number(it.quantidade||1)||1, m3: Number(it.volume_m3||0)
+        });
+      });
+    });
+    _dashRows = rows;
+    const meses = [...new Set(rows.filter(x=>x.ym).map(x=>x.ym))].sort().reverse();
+    const sel = document.getElementById('dash-mes');
+    sel.innerHTML = '<option value="">Todos os meses</option>'+meses.map(m=>`<option value="${m}">${m}</option>`).join('');
+    const hoje = new Date();
+    const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`;
+    sel.value = meses.includes(mesAtual) ? mesAtual : (meses[0]||'');
+    dashRender();
+  } catch(e){
+    document.getElementById('dash-kpis').innerHTML = `<div style="padding:20px;color:#EF4444;font-size:13px">Erro ao carregar: ${esc(e.message)}</div>`;
+  }
+}
+
+// Projeção simples por dias úteis (seg–sex): realizado + média por dia útil com
+// movimento × dias úteis restantes do mês. Mês já encerrado devolve o realizado.
+function _dashProjecao(ym, valorPorDia){
+  if(!ym) return null;
+  const [y,m] = ym.split('-').map(Number);
+  const diasNoMes = new Date(y, m, 0).getDate();
+  const isUtil = dia => { const w = new Date(y, m-1, dia).getDay(); return w>=1 && w<=5; };
+  let realizado = 0, soma = 0; const diasMov = new Set();
+  Object.entries(valorPorDia).forEach(([dia,val])=>{
+    realizado += val;
+    if(isUtil(Number(dia))){ diasMov.add(dia); soma += val; }
+  });
+  const hoje = new Date();
+  const ehMesCorrente = (hoje.getFullYear()===y && hoje.getMonth()===m-1);
+  if(!ehMesCorrente) return realizado;
+  let uteisRestantes = 0;
+  for(let d=hoje.getDate()+1; d<=diasNoMes; d++){ if(isUtil(d)) uteisRestantes++; }
+  const media = diasMov.size>0 ? soma/diasMov.size : 0;
+  return realizado + media*uteisRestantes;
+}
+
+function dashRender(){
+  if(!_dashRows) return;
+  const mes = document.getElementById('dash-mes').value;
+  const rows = _dashRows.filter(r=>!mes || r.ym===mes);
+  const tCac = rows.reduce((s,r)=>s+r.cac,0);
+  const tM3  = rows.reduce((s,r)=>s+r.m3,0);
+  const diasSet = new Set(rows.filter(r=>r.dk).map(r=>r.dk));
+  const media = diasSet.size>0 ? tCac/diasSet.size : 0;
+
+  let projCac='—', projM3='—';
+  if(mes){
+    const cacPorDia={}, m3PorDia={};
+    rows.forEach(r=>{ if(!r.dia) return; cacPorDia[r.dia]=(cacPorDia[r.dia]||0)+r.cac; m3PorDia[r.dia]=(m3PorDia[r.dia]||0)+r.m3; });
+    const pc=_dashProjecao(mes,cacPorDia), pm=_dashProjecao(mes,m3PorDia);
+    projCac = pc!=null?fmtInt(pc):'—'; projM3 = pm!=null?fmtVol(pm):'—';
+  }
+
+  const kpi = (lbl,val,sub,cor)=>`<div class="dash-kpi"><div class="dash-kpi-lbl">${lbl}</div><div class="dash-kpi-val" style="color:${cor}">${val}</div><div class="dash-kpi-sub">${sub}</div></div>`;
+  document.getElementById('dash-kpis').innerHTML =
+    kpi('Caçambas recebidas', fmtInt(tCac), diasSet.size+' dia(s) com entrada', 'var(--text)')+
+    kpi('m³ recebidos', fmtVol(tM3), 'volume total', 'var(--green,#10B981)')+
+    kpi('Projeção caçambas', projCac, mes?'estimativa fim do mês':'selecione um mês', '#F59E0B')+
+    kpi('Projeção m³', projM3, mes?'estimativa fim do mês':'selecione um mês', '#F59E0B')+
+    kpi('Média caçambas/dia', fmtVol(media), 'dias com movimento', '#8B5CF6');
+
+  // Por dia
+  const byDia = {};
+  rows.forEach(r=>{ if(!r.dk) return; if(!byDia[r.dk]) byDia[r.dk]={dk:r.dk,cac:0,m3:0}; byDia[r.dk].cac+=r.cac; byDia[r.dk].m3+=r.m3; });
+  const dias = Object.values(byDia).sort((a,b)=>b.dk.localeCompare(a.dk));
+  const maxCac = Math.max(1, ...dias.map(d=>d.cac));
+  document.getElementById('dash-por-dia').innerHTML = dias.length ? dias.map(d=>{
+    const p = d.dk.split('-'); const pct = Math.round(d.cac/maxCac*100);
+    return `<div class="dash-bar-row"><div class="dash-bar-lbl">${p[2]}/${p[1]}</div><div class="dash-bar-track"><div class="dash-bar-fill" style="width:${pct}%"></div></div><div class="dash-bar-val">${fmtInt(d.cac)} cç · ${fmtVol(d.m3)} m³</div></div>`;
+  }).join('') : '<div class="dash-empty">Sem entradas no período</div>';
+
+  // Por parceiro
+  const byP = {};
+  rows.forEach(r=>{ const k=r.parceiro||'—'; if(!byP[k]) byP[k]={k,cac:0,m3:0}; byP[k].cac+=r.cac; byP[k].m3+=r.m3; });
+  const parcs = Object.values(byP).sort((a,b)=>b.cac-a.cac);
+  const maxP = Math.max(1, ...parcs.map(p=>p.cac));
+  document.getElementById('dash-por-parceiro').innerHTML = parcs.length ? parcs.map(p=>{
+    const pct = Math.round(p.cac/maxP*100);
+    return `<div class="dash-bar-row"><div class="dash-bar-lbl parc" title="${esc(p.k)}">${esc(p.k)}</div><div class="dash-bar-track"><div class="dash-bar-fill" style="width:${pct}%"></div></div><div class="dash-bar-val">${fmtInt(p.cac)} cç · ${fmtVol(p.m3)} m³</div></div>`;
+  }).join('') : '<div class="dash-empty">Sem entradas no período</div>';
+}
 
 // ── HISTÓRICO ────────────────────────────────────────────────────
 let _histAll = [];   // todos os vales carregados

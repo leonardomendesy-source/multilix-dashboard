@@ -1887,7 +1887,6 @@ html[data-theme="light"] #login-overlay>div{background:linear-gradient(165deg,#F
           <button class="nav-group-toggle" onclick="toggleNavGroup('att-terceiros')" style="padding-left:34px"><span class="icon" data-lucide="package-open"></span>Entrada Terceiros<span class="chev" data-lucide="chevron-right"></span></button>
           <div class="nav-group-children"><div>
             <button class="nav-item" data-page="lancar-vale" onclick="window.open('/entrada-terceiros','_blank')" style="padding-left:54px"><span class="icon" data-lucide="plus-circle"></span>Lançar Vale</button>
-            <button class="nav-item" onclick="showPage('att-dashboard',this)" style="padding-left:54px"><span class="icon" data-lucide="package-open"></span>Dashboard de Entradas</button>
             <button class="nav-item" onclick="showPage('att-relatorio',this)" style="padding-left:54px"><span class="icon" data-lucide="bar-chart-2"></span>Relatório de Descartes</button>
             <button class="nav-item" onclick="showPage('att-parceiros',this)" style="padding-left:54px"><span class="icon" data-lucide="users"></span>Parceiros ATT</button>
             <button class="nav-item" onclick="showPage('att-precos',this)" style="padding-left:54px"><span class="icon" data-lucide="tag"></span>Tabela de Preços</button>
@@ -2270,37 +2269,6 @@ html[data-theme="light"] #login-overlay>div{background:linear-gradient(165deg,#F
             </tr></thead>
             <tbody id="tbody-top10-att"></tbody>
           </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- ══════════ ATT TERCEIROS: DASHBOARD DE ENTRADAS ══════════ -->
-    <div class="page" id="page-att-dashboard">
-      <div class="filterbar" style="gap:8px;align-items:center;flex-wrap:wrap">
-        <div class="fg"><label>Mês</label><select id="att-dash-mes" onchange="attDashRender()"><option value="">Todos</option></select></div>
-        <button class="btn btn-ghost btn-sm" onclick="attDashLoad()"><i data-lucide="refresh-cw" style="width:12px;height:12px;display:inline-block;vertical-align:-2px"></i> Atualizar</button>
-        <span id="att-dash-info" style="font-size:11px;color:var(--muted)">—</span>
-      </div>
-
-      <div class="sec green"><i data-lucide="package-open" style="width:13px;height:13px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Entrada de Caçambas — Terceiros</div>
-      <div class="kpi-grid" id="att-dash-kpis"></div>
-
-      <div class="panel" style="margin:16px 0 20px">
-        <div class="panel-head">
-          <span class="panel-title"><i data-lucide="calendar-days" style="width:13px;height:13px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Caçambas que entraram por dia</span>
-          <span class="panel-badge" id="att-dash-chart-badge">—</span>
-        </div>
-        <div class="chart-wrap-tall" data-chart-id="cAttDashDia"><canvas id="cAttDashDia"></canvas></div>
-      </div>
-
-      <div class="g2">
-        <div class="panel">
-          <div class="panel-head"><span class="panel-title"><i data-lucide="calendar" style="width:13px;height:13px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Entradas por dia</span><span class="panel-badge" id="att-dash-dia-badge">—</span></div>
-          <div class="tbl-wrap" id="att-dash-lista-dia"></div>
-        </div>
-        <div class="panel">
-          <div class="panel-head"><span class="panel-title"><i data-lucide="users" style="width:13px;height:13px;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Entradas por parceiro</span><span class="panel-badge" id="att-dash-parc-badge">—</span></div>
-          <div class="tbl-wrap" id="att-dash-lista-parc"></div>
         </div>
       </div>
     </div>
@@ -4361,7 +4329,7 @@ function _postLogin(){
 const PERM_MODULES=[
   {label:'Visão Geral',items:[['overview','Dashboard'],['data','Fontes de Dados']]},
   {label:'Entrada de Resíduos',items:[['consolidado','Consolidado'],['att','Recebimento de Terceiros'],['locacao','Locação']]},
-  {label:'Entrada Terceiros',items:[['lancar-vale','Lançar Vale'],['att-dashboard','Dashboard de Entradas'],['att-relatorio','Relatório de Descartes'],['att-parceiros','Parceiros ATT'],['att-precos','Tabela de Preços'],['att-residuos','Tipos de Resíduo'],['att-equipamentos','Equipamentos'],['att-geradores','Geradores']]},
+  {label:'Entrada Terceiros',items:[['lancar-vale','Lançar Vale'],['att-relatorio','Relatório de Descartes'],['att-parceiros','Parceiros ATT'],['att-precos','Tabela de Preços'],['att-residuos','Tipos de Resíduo'],['att-equipamentos','Equipamentos'],['att-geradores','Geradores']]},
   {label:'Agregados',items:[['agregados','Agregados Reciclados']]},
   {label:'Destinação',items:[['destinacao','Dashboard Destinação'],['dest-pagamentos','Pagamentos'],['dest-freteiros','Freteiros'],['dest-residuos','Tipos de Resíduo'],['dest-conferencia','Conferência'],['dest-vales','Aterros & Vales'],['reciclaveis','Recicláveis'],['rec-destinos','Rec. — Destinos'],['rec-conferencia','Rec. — Conferência']]},
   {label:'CDF',items:[['cdf','Certificado de Destinação Final']]},
@@ -6339,89 +6307,6 @@ function updateATT(){
   mkMensalComProj('cAttMesM3','attMesM3',S.raw.att,'volume','#10B981','m³',false);
   mkMensalComProj('cAttMesFat','attMesFat',S.raw.att,'valor','#8B5CF6','Faturamento',true);
 }
-
-// ── DASHBOARD DE ENTRADAS (Entrada Terceiros: caçambas que entraram) ──────────
-// Painel simples/visual alimentado direto de vales_descarga (todo o histórico,
-// exceto canceladas/excluídas), independente do corte de 16/07 dos indicadores.
-let _attDashRows = null;
-async function attDashLoad(){
-  const info = document.getElementById('att-dash-info');
-  if(info) info.textContent = 'Carregando…';
-  try{
-    const vales = await _supaFetch('vales_descarga',
-      'select=data_hora,parceiro_nome_snapshot,status,deleted_at,vale_descarga_itens(volume_m3,quantidade)'+
-      '&status=neq.cancelado&deleted_at=is.null&order=data_hora.desc');
-    const rows = [];
-    vales.forEach(v=>{
-      const d = v.data_hora ? (()=>{const x=new Date(v.data_hora);return new Date(x.getFullYear(),x.getMonth(),x.getDate());})() : null;
-      (v.vale_descarga_itens||[]).forEach(it=>{
-        const qt = Number(it.quantidade||1)||1;
-        rows.push({ data:d, parceiro:v.parceiro_nome_snapshot||'—', qtdCacamba:qt, volume:Number(it.volume_m3||0) });
-      });
-    });
-    _attDashRows = rows;
-    const sel = document.getElementById('att-dash-mes');
-    const meses = [...new Set(rows.filter(r=>r.data).map(r=>r.data.getFullYear()+'-'+String(r.data.getMonth()+1).padStart(2,'0')))].sort().reverse();
-    const prev = sel.value;
-    sel.innerHTML = '<option value="">Todos</option>'+meses.map(m=>`<option value="${m}">${m}</option>`).join('');
-    const hoje = new Date(); const mesAtual = hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0');
-    sel.value = prev || (meses.includes(mesAtual)?mesAtual:(meses[0]||''));
-    attDashRender();
-  }catch(e){ if(info) info.textContent = 'Erro ao carregar: '+e.message; console.error('attDashLoad',e); }
-}
-
-function attDashRender(){
-  if(!_attDashRows) return;
-  const escH = s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const mes = document.getElementById('att-dash-mes').value;
-  const rows = _filtMesGen(_attDashRows, mes);
-  const tCac = rows.reduce((s,r)=>s+r.qtdCacamba,0);
-  const tM3  = rows.reduce((s,r)=>s+r.volume,0);
-  const prCac = calcularProjecaoATT(rows, r=>r.qtdCacamba).projecao;
-  const prM3  = calcularProjecaoATT(rows, r=>r.volume).projecao;
-  const diasComMov = new Set(rows.filter(r=>r.data).map(r=>r.data.getFullYear()+'-'+r.data.getMonth()+'-'+r.data.getDate())).size;
-  const mediaCacDia = diasComMov>0 ? tCac/diasComMov : 0;
-
-  document.getElementById('att-dash-kpis').innerHTML = [
-    kpi('Caçambas Recebidas', fN(tCac,0), diasComMov+' dia(s) com entrada','', 'kb-blue','blue'),
-    kpi('m³ Recebidos', fN(tM3,1), 'Volume total','', 'kb-green','green'),
-    kpi('Projeção Caçambas', fN(prCac,0), mes?'Estimativa fim do mês':'Selecione um mês','', 'kb-yellow','yellow'),
-    kpi('Projeção m³', fN(prM3,1), mes?'Estimativa fim do mês':'Selecione um mês','', 'kb-yellow','yellow'),
-    kpi('Média Caçambas/dia', fN(mediaCacDia,1), 'Dias com movimento','', 'kb-purple','purple'),
-  ].join('');
-
-  const info = document.getElementById('att-dash-info');
-  if(info) info.textContent = (mes?('Mês '+mes):'Todos os meses')+' · '+fN(tCac,0)+' caçambas · '+fN(tM3,1)+' m³';
-
-  document.getElementById('att-dash-chart-badge').textContent = mes||'Todos';
-  mkBarWithLabels('cAttDashDia','attDashDia',rows,'qtdCacamba','#10B981','Caçambas/dia', mes?null:60, false);
-
-  // Lista por dia
-  const byDia = {};
-  rows.forEach(r=>{ if(!r.data)return; const k=r.data.getFullYear()+'-'+String(r.data.getMonth()+1).padStart(2,'0')+'-'+String(r.data.getDate()).padStart(2,'0'); if(!byDia[k])byDia[k]={k,cac:0,m3:0}; byDia[k].cac+=r.qtdCacamba; byDia[k].m3+=r.volume; });
-  const dias = Object.values(byDia).sort((a,b)=>b.k.localeCompare(a.k));
-  document.getElementById('att-dash-dia-badge').textContent = dias.length+' dia(s)';
-  document.getElementById('att-dash-lista-dia').innerHTML = dias.length ?
-    '<table><thead><tr><th>Data</th><th style="text-align:right">Caçambas</th><th style="text-align:right">m³</th></tr></thead><tbody>'+
-    dias.map(d=>{const p=d.k.split('-');return `<tr><td>${p[2]}/${p[1]}/${p[0]}</td><td style="text-align:right;font-weight:700;color:var(--text)">${fN(d.cac,0)}</td><td style="text-align:right;color:var(--text)">${fN(d.m3,1)}</td></tr>`;}).join('')+
-    `</tbody><tfoot><tr style="border-top:2px solid var(--border);font-weight:800"><td>Total</td><td style="text-align:right;color:var(--text)">${fN(tCac,0)}</td><td style="text-align:right;color:var(--text)">${fN(tM3,1)}</td></tr></tfoot></table>` :
-    '<div class="empty"><p style="color:var(--muted)">Sem entradas no período</p></div>';
-
-  // Lista por parceiro
-  const byParc = {};
-  rows.forEach(r=>{ const k=r.parceiro||'—'; if(!byParc[k])byParc[k]={k,cac:0,m3:0}; byParc[k].cac+=r.qtdCacamba; byParc[k].m3+=r.volume; });
-  const parcs = Object.values(byParc).sort((a,b)=>b.cac-a.cac);
-  document.getElementById('att-dash-parc-badge').textContent = parcs.length+' parceiro(s)';
-  document.getElementById('att-dash-lista-parc').innerHTML = parcs.length ?
-    '<table><thead><tr><th>Parceiro</th><th style="text-align:right">Caçambas</th><th style="text-align:right">m³</th></tr></thead><tbody>'+
-    parcs.map(p=>`<tr><td style="color:var(--text)">${escH(p.k)}</td><td style="text-align:right;font-weight:700;color:var(--text)">${fN(p.cac,0)}</td><td style="text-align:right;color:var(--text)">${fN(p.m3,1)}</td></tr>`).join('')+
-    '</tbody></table>' :
-    '<div class="empty"><p style="color:var(--muted)">Sem entradas no período</p></div>';
-
-  if(window.lucide) lucide.createIcons();
-}
-window.attDashLoad = attDashLoad;
-window.attDashRender = attDashRender;
 
 // Gráfico de barras com labels no topo das colunas
 function mkBarWithLabels(id,key,rows,vKey,color,label,maxDays,isMon){
@@ -12208,7 +12093,6 @@ initNavGroups();
   const _origShowPage = window.showPage;
   window.showPage = function(page, el){
     if(_origShowPage) _origShowPage(page, el);
-    if(page==='att-dashboard' && window.attDashLoad) window.attDashLoad();
     if(page==='att-relatorio') attRelLoad();
     if(page==='att-parceiros') attParcLoad();
     if(page==='att-precos'){ Promise.all([attResLoad(),attEqLoad()]).then(()=>{ if(!_parceiros.length) attParcLoad().then(precosLoad); else precosLoad(); }); }
