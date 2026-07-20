@@ -2464,6 +2464,7 @@ html[data-theme="light"] #login-overlay>div{background:linear-gradient(165deg,#F
               <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Tipo Doc.</label><select id="pm-tipo-doc" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none"><option value="">—</option><option value="CNPJ">CNPJ</option><option value="CPF">CPF</option></select></div>
               <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Documento</label><input type="text" id="pm-doc" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none" placeholder="00.000.000/0001-00"/></div>
             </div>
+            <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Tipo Fiscal *</label><select id="pm-tipo-fiscal" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none"><option value="">— Selecione —</option><option value="com_nota">COM NOTA (PJ)</option><option value="com_recibo">COM RECIBO (PF)</option></select><div style="font-size:10px;color:var(--muted2);margin-top:4px">COM NOTA = com nota fiscal, classificado como <b>PJ</b>. COM RECIBO = sem nota, classificado como <b>PF</b> nos indicadores de Recebimento.</div></div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
               <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Telefone</label><input type="text" id="pm-tel" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none" placeholder="(11) 99999-9999"/></div>
               <div><label style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Status</label><select id="pm-status" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;font-size:14px;outline:none"><option value="ativo">Ativo</option><option value="inativo">Inativo</option></select></div>
@@ -4174,6 +4175,49 @@ function _supaRowToInternal(row, type){
   };
 }
 
+// A partir desta data, as caçambas lançadas na Entrada Terceiros (vales_descarga)
+// passam a contar nos indicadores de Recebimento de Terceiros. A tabela `att` (feed
+// antigo/n8n) só possui dados até 15/07/2026, então não há sobreposição/duplicidade.
+const ENTRADA_TERCEIROS_CUTOFF = '2026-07-16';
+
+// Busca as O.S. de Entrada Terceiros (>= corte, exceto canceladas/excluídas), converte
+// cada item (caçamba) para o mesmo formato interno de `att` e injeta em S.raw.att, para
+// que todos os indicadores/gráficos de Recebimento já existentes passem a considerá-las.
+// PF/PJ é definido pelo tipo_fiscal do parceiro: com_nota => PJ, com_recibo => PF.
+async function mergeEntradaTerceiros(){
+  const parcs = await _supaFetch('parceiros_att','select=id,tipo_fiscal');
+  const fiscalMap = {};
+  parcs.forEach(p=>{ fiscalMap[p.id] = p.tipo_fiscal||'com_recibo'; });
+  const vales = await _supaFetch('vales_descarga',
+    'select=id,numero_vale,data_hora,parceiro_id,parceiro_nome_snapshot,gerador_nome_snapshot,placa,motorista,status,'+
+    'vale_descarga_itens(id,ctr_mtr,numero_cacamba,residuo_nome_snapshot,equipamento_nome_snapshot,volume_m3,quantidade,valor_total,gerador_nome_snapshot)'+
+    `&data_hora=gte.${ENTRADA_TERCEIROS_CUTOFF}&status=neq.cancelado&deleted_at=is.null&order=data_hora.desc`);
+  const extra = [];
+  vales.forEach(v=>{
+    const tf = fiscalMap[v.parceiro_id];
+    const pfpj = tf==='com_nota' ? 'PJ' : tf==='com_recibo' ? 'PF' : 'NÃO CLASSIFICADO';
+    const d = v.data_hora ? (()=>{ const x=new Date(v.data_hora); return new Date(x.getFullYear(),x.getMonth(),x.getDate()); })() : null;
+    (v.vale_descarga_itens||[]).forEach(it=>{
+      const qt = Number(it.quantidade||1)||1;
+      extra.push({
+        data: d,
+        os: v.numero_vale||'', ctr: it.ctr_mtr||'', cacamba: it.numero_cacamba||'',
+        cliente: v.parceiro_nome_snapshot||'', gerador: it.gerador_nome_snapshot||v.gerador_nome_snapshot||'',
+        nf:'', status: v.status||'',
+        residuo: it.residuo_nome_snapshot||'', volume: Number(it.volume_m3||0),
+        eqColoc:'', eqRetir: it.equipamento_nome_snapshot||'',
+        qtdeEq: qt, qtdCacamba: qt,
+        geraDoc:'', pfpj,
+        motorista: v.motorista||'', placa: v.placa||'',
+        tipo:'entrada_terceiros', tipoServico:'',
+        valor: Number(it.valor_total||0), total: Number(it.valor_total||0),
+        _origem:'entrada_terceiros'
+      });
+    });
+  });
+  if(extra.length) S.raw.att = S.raw.att.concat(extra);
+}
+
 async function syncSupabase(){
   if(!SUPA_URL || !SUPA_KEY){ alert('Configure SUPA_URL e SUPA_KEY no código.'); return; }
   const btn = document.getElementById('btn-sync');
@@ -4186,6 +4230,7 @@ async function syncSupabase(){
         return !st.includes('cancelad');
       });
     }
+    try { await mergeEntradaTerceiros(); } catch(e){ console.error('mergeEntradaTerceiros', e); }
     _supaConnected = true;
     await destMergeSupabase();
     cdfLoadDestinos();
@@ -10604,7 +10649,7 @@ initNavGroups();
     return `<div id="em2-item-wrap-${iid}" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <div style="font-size:11px;font-weight:700;color:var(--accent)">Item ${num}${isNew?' <span style="color:var(--muted)">(novo)</span>':''}</div>
-        ${isNew?`<button type="button" onclick="attEditRemoverItem('${iid}')" style="background:#EF444420;border:1px solid #EF4444;color:#EF4444;border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer">Remover</button>`:''}
+        <button type="button" onclick="attEditRemoverItem('${iid}')" style="background:#EF444420;border:1px solid #EF4444;color:#EF4444;border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer">Remover</button>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
         <div><label style="${lbl}">Equipamento *</label><select id="ei-eq-${iid}" style="${sel}" onchange="attEditAutoPreco('${iid}')"><option value="">— selecione —</option>${attEditEqOpts(it?.equipamento_id||'')}</select></div>
@@ -10666,6 +10711,7 @@ initNavGroups();
     document.getElementById('att-edit-modal').style.display='flex';
     document.getElementById('att-edit-modal').dataset.itens = JSON.stringify(itens.map(it=>it.id));
     document.getElementById('att-edit-modal').dataset.novosItens = '[]';
+    document.getElementById('att-edit-modal').dataset.removidosItens = '[]';
   };
 
   window.attEditClienteInput = function(q){
@@ -10730,10 +10776,20 @@ initNavGroups();
   };
 
   window.attEditRemoverItem = function(iid){
+    const modal = document.getElementById('att-edit-modal');
+    // Uma O.S. precisa manter ao menos uma caçamba; para zerar tudo, cancele a O.S.
+    const visiveis = modal.querySelectorAll('[id^="em2-item-wrap-"]').length;
+    if(visiveis<=1){ alert('A O.S. precisa ter ao menos uma caçamba.\nPara remover todas, altere o status para Cancelado.'); return; }
+    const existentes = JSON.parse(modal.dataset.itens||'[]');
+    if(existentes.includes(iid) && !confirm('Remover esta caçamba da O.S.? Os totais serão recalculados ao salvar.')) return;
     const el = document.getElementById('em2-item-wrap-'+iid);
     if(el) el.remove();
-    const novos = JSON.parse(document.getElementById('att-edit-modal').dataset.novosItens||'[]').filter(x=>x!==iid);
-    document.getElementById('att-edit-modal').dataset.novosItens = JSON.stringify(novos);
+    const novos = JSON.parse(modal.dataset.novosItens||'[]').filter(x=>x!==iid);
+    modal.dataset.novosItens = JSON.stringify(novos);
+    if(existentes.includes(iid)){
+      const rem = JSON.parse(modal.dataset.removidosItens||'[]');
+      if(!rem.includes(iid)){ rem.push(iid); modal.dataset.removidosItens = JSON.stringify(rem); }
+    }
   };
 
   window.attRelSalvarEdicao = async function(){
@@ -10757,7 +10813,8 @@ initNavGroups();
         observacoes_gerais:     document.getElementById('em2-obs-geral').value.trim()||null,
         ...(dataHoraVal ? {data_hora: new Date(dataHoraVal).toISOString()} : {}),
       })});
-      const itensIds = JSON.parse(document.getElementById('att-edit-modal').dataset.itens||'[]');
+      const removidosItens = JSON.parse(document.getElementById('att-edit-modal').dataset.removidosItens||'[]');
+      const itensIds = JSON.parse(document.getElementById('att-edit-modal').dataset.itens||'[]').filter(iid=>!removidosItens.includes(iid));
       await Promise.all(itensIds.map(iid=>{
         const resId  = document.getElementById('ei-res-'+iid)?.value||null;
         const eqId   = document.getElementById('ei-eq-'+iid)?.value||null;
@@ -10802,6 +10859,21 @@ initNavGroups();
           gerador_nome_snapshot:     document.getElementById('em2-gerador').value.trim()||null,
         })});
       }));
+      // Excluir as caçambas removidas da O.S.
+      if(removidosItens.length){
+        await Promise.all(removidosItens.map(iid=>api(`vale_descarga_itens?id=eq.${iid}`,{method:'DELETE'})));
+      }
+      // Recalcular os totais da O.S. a partir dos itens atuais (valor_total é coluna gerada)
+      try {
+        const itensAtuais = await api(`vale_descarga_itens?vale_descarga_id=eq.${id}&select=volume_m3,valor_total`);
+        const novoVol = itensAtuais.reduce((s,it)=>s+Number(it.volume_m3||0),0);
+        const novoTot = itensAtuais.reduce((s,it)=>s+Number(it.valor_total||0),0);
+        await api(`vales_descarga?id=eq.${id}`,{method:'PATCH',body:JSON.stringify({
+          total_itens: itensAtuais.length,
+          volume_total_m3: novoVol,
+          preco_total: novoTot>0?novoTot:null
+        })});
+      } catch(e){ console.error('recalc totais O.S.', e); }
       document.getElementById('att-edit-modal').style.display='none';
       await attRelLoad();
     } catch(e){ err.textContent='Erro ao salvar: '+e.message; err.style.display='block'; }
@@ -11299,6 +11371,7 @@ initNavGroups();
     document.getElementById('pm-ctr-obrig').checked=false;
     pmFillFechamentos('');
     document.getElementById('pm-tipo-doc').selectedIndex=0;
+    document.getElementById('pm-tipo-fiscal').value='';
     document.getElementById('pm-status').value='ativo';
     document.getElementById('parc-modal-title').textContent='Novo Parceiro';
     document.getElementById('pm-error').style.display='none';
@@ -11313,6 +11386,7 @@ initNavGroups();
     document.getElementById('pm-nome').value = p.nome_fantasia||'';
     document.getElementById('pm-razao').value = p.razao_social||'';
     document.getElementById('pm-tipo-doc').value = p.tipo_documento||'';
+    document.getElementById('pm-tipo-fiscal').value = p.tipo_fiscal||'com_recibo';
     document.getElementById('pm-doc').value = p.documento||'';
     document.getElementById('pm-tel').value = p.telefone||'';
     document.getElementById('pm-email').value = p.email||'';
@@ -11339,11 +11413,14 @@ initNavGroups();
   window.attParcSalvar = async function(){
     const nome = document.getElementById('pm-nome').value.trim();
     if(!nome){ document.getElementById('pm-error').textContent='Nome fantasia é obrigatório.'; document.getElementById('pm-error').style.display='block'; return; }
+    const tipoFiscal = document.getElementById('pm-tipo-fiscal').value;
+    if(!tipoFiscal){ document.getElementById('pm-error').textContent='Selecione o Tipo Fiscal (COM NOTA ou COM RECIBO).'; document.getElementById('pm-error').style.display='block'; return; }
     const id = document.getElementById('pm-id').value;
     const payload = {
       nome_fantasia: nome,
       razao_social: document.getElementById('pm-razao').value.trim()||null,
       tipo_documento: document.getElementById('pm-tipo-doc').value||null,
+      tipo_fiscal: tipoFiscal,
       documento: document.getElementById('pm-doc').value.trim()||null,
       documento_normalizado: document.getElementById('pm-doc').value.trim()||null,
       telefone: document.getElementById('pm-tel').value.trim()||null,

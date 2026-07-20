@@ -1464,6 +1464,7 @@ function imprimirComprovanteDetalhe(){ window.print(); }
 // ── EDIÇÃO DE O.S. ───────────────────────────────────────────────
 let _edNovoIdx = 0;
 let _edParceiroPrecos = [];
+let _edRemovidos = [];
 
 function edItemHtml(itemId, num, it, isNew){
   const eqOpts = _equipamentos.map(e=>`<option value="${e.id}" data-vol="${e.volume_m3_padrao||''}"${it&&it.equipamento_id===e.id?' selected':''}>${esc(e.nome)}</option>`).join('');
@@ -1472,7 +1473,7 @@ function edItemHtml(itemId, num, it, isNew){
   return `<div class="edit-item-block" data-item-id="${itemId}" data-is-new="${isNew?'1':'0'}">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
       <div class="edit-item-label" style="margin-bottom:0">Descarga #${num}${isNew?' <span style=\"color:var(--muted);font-weight:400\">(nova)</span>':''}</div>
-      ${isNew?`<button type="button" onclick="edRemoverItem(this)" style="background:#EF444420;border:1px solid #EF4444;color:#EF4444;border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer">Remover</button>`:''}
+      <button type="button" onclick="edRemoverItem(this)" style="background:#EF444420;border:1px solid #EF4444;color:#EF4444;border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer">Remover</button>
     </div>
     <div class="edit-row2">
       <div class="edit-field">
@@ -1546,7 +1547,16 @@ function edAddNovoItem(){
 }
 
 function edRemoverItem(btn){
-  btn.closest('.edit-item-block').remove();
+  const block = btn.closest('.edit-item-block');
+  const visiveis = document.querySelectorAll('#ed-itens .edit-item-block').length;
+  if(visiveis<=1){ alert('A O.S. precisa ter ao menos uma descarga.\nPara remover todas, cancele a O.S.'); return; }
+  const isNew = block.dataset.isNew === '1';
+  if(!isNew){
+    if(!confirm('Remover esta caçamba da O.S.? Os totais serão recalculados ao salvar.')) return;
+    const itemId = block.dataset.itemId;
+    if(itemId && !_edRemovidos.includes(itemId)) _edRemovidos.push(itemId);
+  }
+  block.remove();
 }
 
 function onEdClienteInput(q){
@@ -1595,6 +1605,7 @@ function abrirEdicaoOS(){
   if(!_detVale) return;
   const {vale:v, itens} = _detVale;
   _edNovoIdx = 0;
+  _edRemovidos = [];
 
   document.getElementById('edit-title').textContent = `Editar ${v.numero_vale}`;
   document.getElementById('edit-alert').style.display='none';
@@ -1711,6 +1722,15 @@ async function salvarEdicaoOS(){
         if(!ri.ok) throw new Error(await ri.text());
       }
     }));
+
+    // Excluir as caçambas removidas da O.S.
+    if(_edRemovidos.length){
+      await Promise.all(_edRemovidos.map(itemId=>
+        fetch(`${SUPA_URL}/rest/v1/vale_descarga_itens?id=eq.${encodeURIComponent(itemId)}`,{method:'DELETE', headers:HDR})
+      ));
+      _edRemovidos = [];
+    }
+
     if(geradorNome) await salvarGerador(geradorNome);
 
     hideLoading();
@@ -1726,7 +1746,7 @@ async function salvarEdicaoOS(){
     const novoVol   = itensAtuais.reduce((s,it)=>s+Number(it.volume_m3||0),0);
     const novoTotal = itensAtuais.reduce((s,it)=>s+Number(it.valor_total||0),0);
     await fetch(`${SUPA_URL}/rest/v1/vales_descarga?id=eq.${encodeURIComponent(v.id)}`,
-      {method:'PATCH', headers:HDR, body:JSON.stringify({volume_total_m3:novoVol, preco_total:novoTotal>0?novoTotal:null})});
+      {method:'PATCH', headers:HDR, body:JSON.stringify({total_itens:itensAtuais.length, volume_total_m3:novoVol, preco_total:novoTotal>0?novoTotal:null})});
     vAtual.volume_total_m3 = novoVol;
     vAtual.preco_total = novoTotal>0?novoTotal:null;
     hideLoading();
