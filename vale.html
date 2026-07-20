@@ -8,6 +8,13 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <title>Multilix — Registro de Vale</title>
 <link rel="icon" type="image/png" href="assets/logo-icone.png">
+<script>
+/* Tema claro/escuro — padrão escuro, persiste em localStorage('mlx_theme') */
+(function(){try{var t=localStorage.getItem('mlx_theme');if(t!=='dark'&&t!=='light')t='dark';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();
+window.applyTheme=function(t){if(t!=='light'&&t!=='dark')t='dark';document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('mlx_theme',t);}catch(e){}document.querySelectorAll('.theme-switch input').forEach(function(c){c.checked=(t==='light');});};
+window.toggleTheme=function(){window.applyTheme(document.documentElement.getAttribute('data-theme')==='light'?'dark':'light');};
+document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('.theme-switch input').forEach(function(c){c.checked=document.documentElement.getAttribute('data-theme')==='light';});});
+</script>
 <style>
   :root{
     --bg:#0B0D11;--surface:#151922;--surface2:#1c212d;--border:#262D3D;
@@ -140,6 +147,29 @@
   .dash-table .proj{text-align:right;font-size:11px;color:var(--muted2)}
   .dash-loading{text-align:center;color:var(--muted);padding:40px 20px;font-size:13px}
   .dash-badge{display:inline-block;background:#3B82F620;color:#3B82F6;border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700;margin-left:6px;vertical-align:middle}
+
+  /* ═══ INTERRUPTOR DE TEMA ═══ */
+  .theme-switch{display:inline-flex;align-items:center;cursor:pointer;user-select:none;-webkit-user-select:none;flex-shrink:0}
+  .theme-switch input{position:absolute;opacity:0;width:0;height:0;pointer-events:none}
+  .theme-switch .ts-track{width:46px;height:25px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);position:relative;transition:background .2s,border-color .2s}
+  .theme-switch .ts-thumb{position:absolute;top:2px;left:2px;width:19px;height:19px;border-radius:50%;background:var(--muted);transition:transform .22s cubic-bezier(.4,0,.2,1),background .2s}
+  html[data-theme="light"] .theme-switch .ts-track{background:var(--blue);border-color:var(--blue)}
+  html[data-theme="light"] .theme-switch .ts-thumb{transform:translateX(21px);background:#fff}
+
+  /* ═══ TEMA CLARO — paleta Multilix, alto contraste p/ uso ao sol ═══ */
+  html[data-theme="light"]{
+    --bg:#F4F6FA;--surface:#FFFFFF;--surface2:#EEF1F7;--border:#D8DEE9;
+    --text:#0E1626;--muted:#4B5670;--muted2:#6E7893;
+    --accent:#D97706;--accent2:#B45309;
+    --green:#059669;--red:#DC2626;--blue:#2563EB;
+  }
+  html[data-theme="light"] .header{box-shadow:0 1px 0 var(--border),0 2px 12px rgba(20,30,60,.05)}
+  /* logo é branca sobre fundo preto: invert deixa fundo→branco (some) e logo→escuro (visível) */
+  html[data-theme="light"] .header-logo img{filter:invert(1)}
+  /* overlays translúcidos escuros → claros */
+  html[data-theme="light"] #loading-overlay{background:rgba(244,246,250,.88)}
+  html[data-theme="light"] #vale-edit-overlay{background:rgba(20,30,60,.35)}
+  html[data-theme="light"] ::-webkit-scrollbar-thumb{background:#C5CDDB}
 </style>
 </head>
 <body>
@@ -150,6 +180,10 @@
     <div class="header-title">Registro de Vale</div>
     <div class="header-sub">Operador de Pátio — Saída de Resíduos</div>
   </div>
+  <label class="theme-switch" title="Alternar tema claro/escuro" style="margin-left:auto">
+    <input type="checkbox" onchange="toggleTheme()" aria-label="Alternar tema claro/escuro">
+    <span class="ts-track"><span class="ts-thumb"></span></span>
+  </label>
 </div>
 
 <!-- TELA DE SELEÇÃO DE FLUXO -->

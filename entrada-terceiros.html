@@ -9,6 +9,13 @@
 <title>Multilix — Vale de Descarga</title>
 <link rel="icon" type="image/png" href="assets/logo-icone.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+/* Tema claro/escuro — padrão escuro, persiste em localStorage('mlx_theme') */
+(function(){try{var t=localStorage.getItem('mlx_theme');if(t!=='dark'&&t!=='light')t='dark';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();
+window.applyTheme=function(t){if(t!=='light'&&t!=='dark')t='dark';document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('mlx_theme',t);}catch(e){}document.querySelectorAll('.theme-switch input').forEach(function(c){c.checked=(t==='light');});};
+window.toggleTheme=function(){window.applyTheme(document.documentElement.getAttribute('data-theme')==='light'?'dark':'light');};
+document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('.theme-switch input').forEach(function(c){c.checked=document.documentElement.getAttribute('data-theme')==='light';});});
+</script>
 <style>
 :root{
   --bg:#0B0D11;--surface:#151922;--surface2:#1c212d;--border:#262D3D;
@@ -206,6 +213,29 @@ textarea{resize:none;height:80px}
   .cp-assinatura{margin:34px auto 0;width:70%;border-top:1px solid #1a2f5e;padding-top:4px;font-size:8pt;text-align:center;color:#555}
   .cp-footer{border-top:1px dashed #b9bfcc;margin-top:20px;padding-top:8px;text-align:center;font-size:7.5pt;color:#888}
 }
+
+/* ═══ INTERRUPTOR DE TEMA ═══ */
+.theme-switch{display:inline-flex;align-items:center;cursor:pointer;user-select:none;-webkit-user-select:none;flex-shrink:0}
+.theme-switch input{position:absolute;opacity:0;width:0;height:0;pointer-events:none}
+.theme-switch .ts-track{width:46px;height:25px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);position:relative;transition:background .2s,border-color .2s}
+.theme-switch .ts-thumb{position:absolute;top:2px;left:2px;width:19px;height:19px;border-radius:50%;background:var(--muted);transition:transform .22s cubic-bezier(.4,0,.2,1),background .2s}
+html[data-theme="light"] .theme-switch .ts-track{background:var(--blue);border-color:var(--blue)}
+html[data-theme="light"] .theme-switch .ts-thumb{transform:translateX(21px);background:#fff}
+
+/* ═══ TEMA CLARO — paleta Multilix, alto contraste p/ uso ao sol ═══ */
+html[data-theme="light"]{
+  --bg:#F4F6FA;--surface:#FFFFFF;--surface2:#EEF1F7;--border:#D8DEE9;
+  --text:#0E1626;--muted:#4B5670;--muted2:#6E7893;
+  --accent:#059669;--accent2:#047857;
+  --yellow:#D97706;--red:#DC2626;--blue:#2563EB;
+}
+html[data-theme="light"] .header{box-shadow:0 1px 0 var(--border),0 2px 12px rgba(20,30,60,.05)}
+/* logo é branca sobre fundo preto: invert deixa fundo→branco (some) e logo→escuro (visível) */
+html[data-theme="light"] .header-logo img{filter:invert(1)}
+/* overlays translúcidos escuros → claros */
+html[data-theme="light"] #loading-overlay{background:rgba(244,246,250,.88)}
+html[data-theme="light"] #edit-overlay{background:rgba(20,30,60,.35)}
+html[data-theme="light"] ::-webkit-scrollbar-thumb{background:#C5CDDB}
 </style>
 </head>
 <body>
@@ -218,6 +248,10 @@ textarea{resize:none;height:80px}
     <div class="header-sub">ATT Multilix — Entrada de Terceiros</div>
   </div>
   <div class="header-datetime" id="header-dt">—</div>
+  <label class="theme-switch" title="Alternar tema claro/escuro">
+    <input type="checkbox" onchange="toggleTheme()" aria-label="Alternar tema claro/escuro">
+    <span class="ts-track"><span class="ts-thumb"></span></span>
+  </label>
 </div>
 
 <!-- TELA SELEÇÃO INICIAL -->
