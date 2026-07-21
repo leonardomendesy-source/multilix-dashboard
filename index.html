@@ -1509,6 +1509,8 @@ tr:hover td{background:#3B82F60a}
 .goal-item label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:5px}
 .goal-item input{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 10px;font-size:13px;font-weight:700;outline:none}
 .goal-item input:focus{border-color:var(--blue)}
+.meta-hint{font-size:10px;color:var(--muted2);margin-top:5px;line-height:1.35}
+.meta-hint.manual{color:var(--orange,#F59E0B)}
 
 .exec-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;font-size:12px;line-height:1.9;white-space:pre-wrap;color:var(--text);border-left:3px solid var(--blue)}
 
@@ -3933,29 +3935,27 @@ html[data-theme="light"] #login-overlay>div{background:linear-gradient(165deg,#F
     <!-- CONFIG -->
     <div class="page" id="page-config">
       <div class="sec">Parâmetros de Projeção</div>
-      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:22px">
-        <div class="fg"><label>Mês de Referência</label><input type="month" id="mes-ref" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;outline:none"/></div>
-        <div class="fg"><label>Dias Úteis do Mês</label><input type="number" id="dias-uteis" value="22" style="width:90px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 10px;font-size:12px;outline:none"/></div>
-        <div class="fg"><label>Dias Úteis Realizados</label><input type="number" id="dias-real" value="10" style="width:90px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 10px;font-size:12px;outline:none"/></div>
-      </div>
+      <p style="font-size:11px;color:var(--muted);margin:-6px 0 10px">Calculados automaticamente pelo calendário do mês — feriados nacionais e de São Paulo já são descontados. Não há nada para configurar aqui.</p>
+      <div id="proj-params" style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:22px"></div>
+
       <div class="sec">ATT — Recebimento de Terceiros</div>
       <div class="goals-grid">
-        <div class="goal-item"><label>Meta Caçambas</label><input type="number" id="meta-att-cacamba" value="2250"/></div>
+        <div class="goal-item"><label>Meta Caçambas</label><input type="number" id="meta-att-cacamba" value="2250" oninput="recalcMetasFaturamento()"/></div>
         <div class="goal-item"><label>Meta m³</label><input type="number" id="meta-att-m3" value="10000"/></div>
-        <div class="goal-item"><label>Meta Ticket Médio (R$)</label><input type="number" id="meta-att-ticket" value="230"/></div>
-        <div class="goal-item"><label>Meta Faturamento (R$)</label><input type="number" id="meta-att-fat" value="517500"/></div>
+        <div class="goal-item"><label>Meta Ticket Médio (R$)</label><input type="number" id="meta-att-ticket" value="230" oninput="recalcMetasFaturamento()"/></div>
+        <div class="goal-item"><label>Meta Faturamento (R$)</label><input type="number" id="meta-att-fat" oninput="metaFatEditada('att-fat')"/><div class="meta-hint" id="hint-att-fat"></div></div>
       </div>
       <div class="sec">Locação — Caçambas Multilix</div>
       <div class="goals-grid">
-        <div class="goal-item"><label>Meta Caçambas</label><input type="number" id="meta-loc-cacamba" value="1625"/></div>
-        <div class="goal-item"><label>Meta Ticket Médio (R$)</label><input type="number" id="meta-loc-ticket" value="460"/></div>
-        <div class="goal-item"><label>Meta Faturamento (R$)</label><input type="number" id="meta-loc-fat" value="747500"/></div>
+        <div class="goal-item"><label>Meta Caçambas</label><input type="number" id="meta-loc-cacamba" value="1625" oninput="recalcMetasFaturamento()"/></div>
+        <div class="goal-item"><label>Meta Ticket Médio (R$)</label><input type="number" id="meta-loc-ticket" value="460" oninput="recalcMetasFaturamento()"/></div>
+        <div class="goal-item"><label>Meta Faturamento (R$)</label><input type="number" id="meta-loc-fat" oninput="metaFatEditada('loc-fat')"/><div class="meta-hint" id="hint-loc-fat"></div></div>
       </div>
       <div class="sec">Agregados Reciclados</div>
       <div class="goals-grid">
-        <div class="goal-item"><label>Meta m³</label><input type="number" id="meta-agr-m3" value="1800"/></div>
-        <div class="goal-item"><label>Meta Ticket Médio (R$/m³)</label><input type="number" id="meta-agr-ticket" value="64"/></div>
-        <div class="goal-item"><label>Meta Faturamento (R$)</label><input type="number" id="meta-agr-fat" value="115200"/></div>
+        <div class="goal-item"><label>Meta m³</label><input type="number" id="meta-agr-m3" value="1800" oninput="recalcMetasFaturamento()"/></div>
+        <div class="goal-item"><label>Meta Ticket Médio (R$/m³)</label><input type="number" id="meta-agr-ticket" value="64" oninput="recalcMetasFaturamento()"/></div>
+        <div class="goal-item"><label>Meta Faturamento (R$)</label><input type="number" id="meta-agr-fat" oninput="metaFatEditada('agr-fat')"/><div class="meta-hint" id="hint-agr-fat"></div></div>
       </div>
 
       <div class="sec">Meta de Destinação MIX</div>
@@ -4326,7 +4326,7 @@ function _postLogin(){
   if(SUPA_URL && SUPA_KEY){
     status.innerHTML = ic('cloud',11)+' Supabase configurado';
     // Metas antes do sync: updateAll() no fim do syncSupabase já lê os inputs preenchidos
-    _cfgCarregar().catch(e=>console.error('_cfgCarregar',e)).then(syncSupabase);
+    _cfgCarregar().catch(e=>console.error('_cfgCarregar',e)).finally(syncSupabase);
   } else {
     aplicarMetasNosInputs();
     setTimeout(loadStorage, 300);
@@ -4976,21 +4976,103 @@ async function _cfgSalvar(chave,valor){
   if(!r.ok)throw new Error(await r.text());
 }
 async function _cfgCarregar(){
-  if(!SUPA_URL||!SUPA_KEY)return;
-  const r=await fetch(`${SUPA_URL}/rest/v1/configuracoes?select=chave,valor`,{headers:_supaHeaders()});
-  if(!r.ok){console.error('configuracoes',await r.text());return;}
-  (await r.json()).forEach(row=>{
-    if(row.chave==='metas_gerais'){_metasGerais=row.valor||{};try{localStorage.setItem('mlx_metas_gerais',JSON.stringify(_metasGerais));}catch(e){}}
-    if(row.chave==='meta_mix'){_metaMix=row.valor||{};try{localStorage.setItem('mlx_meta_mix',JSON.stringify(_metaMix));}catch(e){}}
-  });
-  aplicarMetasNosInputs();
+  // O finally garante que a tela sempre fique preenchida (com o cache do localStorage,
+  // se o servidor não responder) — inclusive os campos de faturamento calculados.
+  try{
+    if(!SUPA_URL||!SUPA_KEY)return;
+    const r=await fetch(`${SUPA_URL}/rest/v1/configuracoes?select=chave,valor`,{headers:_supaHeaders()});
+    if(!r.ok){console.error('configuracoes',await r.text());return;}
+    (await r.json()).forEach(row=>{
+      if(row.chave==='metas_gerais'){_metasGerais=row.valor||{};try{localStorage.setItem('mlx_metas_gerais',JSON.stringify(_metasGerais));}catch(e){}}
+      if(row.chave==='meta_mix'){_metaMix=row.valor||{};try{localStorage.setItem('mlx_meta_mix',JSON.stringify(_metaMix));}catch(e){}}
+    });
+  } finally {
+    aplicarMetasNosInputs();
+  }
 }
+// ── Meta de faturamento = quantidade × ticket médio ────────────────────────────────
+// O campo é preenchido sozinho, mas continua editável: se você digitar um valor ele
+// passa a valer (fica marcado como manual) e para de ser recalculado. Para voltar ao
+// automático, basta apagar o campo.
+const META_FAT_AUTO={
+  'att-fat':['att-cacamba','att-ticket'],   // caçambas × ticket
+  'loc-fat':['loc-cacamba','loc-ticket'],   // caçambas × ticket
+  'agr-fat':['agr-m3','agr-ticket'],        // m³ × ticket por m³
+};
+let _fatManuais=new Set();
+
+function _metaNum(id){
+  const el=document.getElementById('meta-'+id);
+  const v=el?parseFloat(el.value):NaN;
+  return isFinite(v)?v:0;
+}
+
+function recalcMetasFaturamento(){
+  Object.entries(META_FAT_AUTO).forEach(([fatId,[qtdId,tkId]])=>{
+    const el=document.getElementById('meta-'+fatId);
+    if(!el)return;
+    const hint=document.getElementById('hint-'+fatId);
+    const qtd=_metaNum(qtdId),tk=_metaNum(tkId),calc=qtd*tk;
+    if(_fatManuais.has(fatId)){
+      if(hint){
+        hint.className='meta-hint manual';
+        hint.textContent=calc?`valor manual — o cálculo daria ${fM(calc)}. Apague o campo para voltar ao automático.`
+                             :'valor manual — apague o campo para voltar ao automático.';
+      }
+      return;
+    }
+    el.value=calc?Math.round(calc*100)/100:'';
+    if(hint){
+      hint.className='meta-hint';
+      hint.textContent=calc?`${fN(qtd,0)} × ${fM(tk)} — calculado automaticamente`
+                           :'preencha quantidade e ticket médio';
+    }
+  });
+}
+
+// Chamado pelo oninput do próprio campo de faturamento: marca como manual, ou volta
+// ao automático se o usuário apagar o conteúdo.
+window.metaFatEditada=function(fatId){
+  const el=document.getElementById('meta-'+fatId);
+  if(el&&el.value.trim()==='')_fatManuais.delete(fatId); else _fatManuais.add(fatId);
+  recalcMetasFaturamento();
+};
+
+// Mostra os parâmetros que a projeção realmente usa (antes eram inputs mortos: nada no
+// código lia "Dias Úteis do Mês"/"Realizados", davam a impressão de configurar algo).
+function renderProjParams(){
+  const box=document.getElementById('proj-params');
+  if(!box)return;
+  const hoje=new Date();
+  const ym=hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0');
+  const p=calcularProjecaoSegmentada([],()=>0,ym);
+  const feriadosMes=[];
+  const ultimoDia=new Date(hoje.getFullYear(),hoje.getMonth()+1,0).getDate();
+  const fer=calcularFeriados(hoje.getFullYear());
+  for(let d=1;d<=ultimoDia;d++){
+    const dt=new Date(hoje.getFullYear(),hoje.getMonth(),d);
+    if(_classificarDia(dt,fer)==='feriado')feriadosMes.push(String(d).padStart(2,'0')+'/'+String(hoje.getMonth()+1).padStart(2,'0'));
+  }
+  const item=(lbl,val,sub)=>`<div class="fg" style="min-width:150px">
+    <label>${lbl}</label>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:13px;font-weight:700;color:var(--text)">${val}</div>
+    ${sub?`<div class="meta-hint">${sub}</div>`:''}</div>`;
+  box.innerHTML=
+    item('Mês de Referência',hoje.toLocaleDateString('pt-BR',{month:'long',year:'numeric'}),'sempre o mês corrente')+
+    item('Dias Úteis do Mês',fN(p.totalUteisMes,0),'já sem feriados')+
+    item('Dias Úteis Decorridos',fN(p.nUteisDecorridos,0),'até ontem — hoje entra pelo valor real')+
+    item('Blocos de Fim de Semana',fN(p.totalBlocosFDSMes,0),`${fN(p.nBlocosFDSDecorridos,0)} concluído(s) · sáb+dom = 1 bloco`)+
+    item('Feriados no Mês',feriadosMes.length?feriadosMes.join(', '):'nenhum','fora da média e dos multiplicadores');
+}
+
 // Joga os valores salvos nos inputs da tela de Metas & Configurações.
 function aplicarMetasNosInputs(){
   METAS_IDS.forEach(id=>{
     const el=document.getElementById('meta-'+id);
     if(el&&_metasGerais[id]!=null&&_metasGerais[id]!=='')el.value=_metasGerais[id];
   });
+  _fatManuais=new Set(_metasGerais.__fatManuais||[]);
+  recalcMetasFaturamento();
 }
 // Configuração da meta MIX de um mês 'YYYY-MM'
 function getMixMetaConfig(mes){
@@ -5251,7 +5333,7 @@ function showPage(id,el){
   if(id==='dest-pagamentos') showDestPagamentoPage();
   if(id==='att') updateATT();
   if(id==='consolidado') updateConsolidado();
-  if(id==='config'){ aplicarMetasNosInputs(); initMetaMixForm(); }
+  if(id==='config'){ aplicarMetasNosInputs(); renderProjParams(); initMetaMixForm(); }
   if(id==='dest-freteiros') freteiroLoadPage();
   if(id==='dest-residuos') destResiduosLoadPage();
   if(id==='dest-conferencia') confInit();
@@ -6098,6 +6180,7 @@ async function salvarMetas(){
       const el=document.getElementById('meta-'+id);
       if(el&&el.value!=='')novas[id]=Number(el.value);
     });
+    novas.__fatManuais=[..._fatManuais];   // quais faturamentos o usuário digitou à mão
     _metasGerais=novas;
     saveMetaMixForm();                       // monta _metaMix a partir do formulário
     await Promise.all([
@@ -8654,7 +8737,6 @@ async function gerarPdfPagamentoFreteiro(){
 }
 
 // ── INIT ──────────────────────────────────────────────────────
-document.getElementById('mes-ref').value=new Date().toISOString().slice(0,7);
 // Renderiza ícones Lucide na sidebar
 // ═══════════════════════════════════════════════════════════════
 // MÓDULO FRETEIROS
