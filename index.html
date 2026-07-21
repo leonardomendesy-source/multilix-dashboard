@@ -4661,10 +4661,27 @@ function parseNum(v){
 }
 
 // ══════════════════════════════════════════════════════════════
-// MOTOR DE PROJEÇÃO AUTOMÁTICA — baseado na última data real da base
+// MOTOR DE PROJEÇÃO AUTOMÁTICA
+// Regra oficial (definida pela operação da ATT):
+//
+//   Projeção = (Σ dias úteis ÷ nº de dias úteis decorridos)  × D.U. do mês
+//            + (Σ FDS        ÷ nº de blocos FDS decorridos)  × FDS do mês
+//            + Σ recebido em feriados          (parcela fixa, não projetada)
+//            + Σ recebido hoje / no FDS corrente (parcela fixa, dia em andamento)
+//
+//   • "Bloco FDS" = um sábado + o domingo seguinte (a folha conta 4 F.D.S. num mês
+//     de 22 dias úteis: 22 + 8 dias de fim de semana = 30 dias).
+//   • Feriado é IGNORADO no cálculo da média e não é multiplicado por nada — mas o
+//     que já foi recebido nele é somado, porque é caçamba real que entrou.
+//   • Dias decorridos contam mesmo SEM movimento (dia útil parado puxa a média p/ baixo,
+//     que é o comportamento correto).
+//   • O dia corrente fica fora da média (está em andamento e distorceria o resultado ao
+//     longo do dia); entra só pelo valor real já recebido.
+//   • Mês passado/encerrado devolve o realizado.
 // ══════════════════════════════════════════════════════════════
 
-// Feriados nacionais fixos (mês 0-indexed) + móveis via cálculo da Páscoa
+// Feriados nacionais + estaduais/municipais de São Paulo (mês 0-indexed);
+// móveis via cálculo da Páscoa
 function _pascoa(ano){
   const a=ano%19,b=Math.floor(ano/100),c=ano%100,d=Math.floor(b/4),e=b%4,
     f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,
@@ -4677,12 +4694,14 @@ function calcularFeriados(ano){
   const add=(base,days)=>{const d=new Date(base);d.setDate(d.getDate()+days);return d;};
   const fer=[
     new Date(ano,0,1),   // Confraternização Universal
+    new Date(ano,0,25),  // Aniversário da cidade de São Paulo (municipal)
     add(p,-47),          // Carnaval (segunda)
     add(p,-46),          // Carnaval (terça)
     add(p,-2),           // Sexta-feira Santa
     new Date(ano,3,21),  // Tiradentes
     new Date(ano,4,1),   // Dia do Trabalho
     add(p,60),           // Corpus Christi
+    new Date(ano,6,9),   // Revolução Constitucionalista (estadual SP)
     new Date(ano,8,7),   // Independência
     new Date(ano,9,12),  // N. Sra. Aparecida
     new Date(ano,10,2),  // Finados
@@ -4715,92 +4734,107 @@ function _blocoFDSKey(dt){
   return fDkey(d);
 }
 
-// ── ATT / AGREGADOS / DESTINAÇÃO — projeção com 3 médias (útil / fds / feriado) ──
-// extractor(r) -> número a somar (m³, faturamento, qtde, etc.)
-function calcularProjecaoSegmentada(rows,extractor){
-  const validRows=rows.filter(r=>r.data instanceof Date&&!isNaN(r.data));
-  const realizado=validRows.reduce((s,r)=>s+(extractor(r)||0),0);
-  const ultimaData=obterUltimaDataLancamento(validRows);
-  if(!ultimaData)return{realizado,projecao:realizado,ultimaData:null};
-
-  const ano=ultimaData.getFullYear(),mes=ultimaData.getMonth();
-  const feriadosKeys=calcularFeriados(ano);
-  const ultimoDiaMes=new Date(ano,mes+1,0).getDate();
-
-  // Mês encerrado: última data lançada é o último dia do mês
-  if(ultimaData.getDate()>=ultimoDiaMes)return{realizado,projecao:realizado,ultimaData};
-
-  // Acumuladores por tipo de dia (apenas dias com dados, dentro do mês de referência)
-  const acum={util:{soma:0,dias:new Set()},fimsemana:{soma:0,blocos:new Set()},feriado:{soma:0,dias:new Set()}};
-  validRows.forEach(r=>{
-    if(r.data.getFullYear()!==ano||r.data.getMonth()!==mes)return;
-    const tipo=_classificarDia(r.data,feriadosKeys);
-    const v=extractor(r)||0;
-    if(tipo==='util'){acum.util.soma+=v;acum.util.dias.add(fDkey(r.data));}
-    else if(tipo==='fimsemana'){acum.fimsemana.soma+=v;acum.fimsemana.blocos.add(_blocoFDSKey(r.data));}
-    else{acum.feriado.soma+=v;acum.feriado.dias.add(fDkey(r.data));}
-  });
-
-  // Contagem de dias/blocos restantes (após a última data lançada, dentro do mês)
-  let diasUteisRestantes=0,blocosFDSRestantes=0,feriadosRestantes=0;
-  const blocosFDSContados=new Set();
-  for(let d=ultimaData.getDate()+1;d<=ultimoDiaMes;d++){
-    const dt=new Date(ano,mes,d);
-    const tipo=_classificarDia(dt,feriadosKeys);
-    if(tipo==='util')diasUteisRestantes++;
-    else if(tipo==='feriado')feriadosRestantes++;
-    else{const k=_blocoFDSKey(dt);if(!blocosFDSContados.has(k)){blocosFDSContados.add(k);blocosFDSRestantes++;}}
-  }
-
-  const mediaUtil=acum.util.dias.size>0?acum.util.soma/acum.util.dias.size:0;
-  const mediaFDS=acum.fimsemana.blocos.size>0?acum.fimsemana.soma/acum.fimsemana.blocos.size:0;
-  const mediaFeriado=acum.feriado.dias.size>0?acum.feriado.soma/acum.feriado.dias.size:0;
-
-  const projecao=realizado
-    +mediaUtil*diasUteisRestantes
-    +mediaFDS*blocosFDSRestantes
-    +mediaFeriado*feriadosRestantes;
-
-  return{realizado,projecao,ultimaData};
+// Mês de referência ('YYYY-MM') de um conjunto de linhas: o mês da última data lançada.
+function _mesRefDeRows(validRows){
+  const ultima=obterUltimaDataLancamento(validRows);
+  if(!ultima)return null;
+  return ultima.getFullYear()+'-'+String(ultima.getMonth()+1).padStart(2,'0');
 }
 
-// ── LOCAÇÃO — projeção apenas por dias úteis ──
-function calcularProjecaoLocacao(rows,extractor){
+// ── MOTOR ÚNICO DE PROJEÇÃO (dias úteis × blocos de FDS, feriado fora da média) ──
+// extractor(r) -> número a somar (m³, faturamento, qtde, etc.)
+// mesRef ('YYYY-MM') opcional; sem ele usa o mês da última data lançada.
+// opts.somenteDiasUteis -> ignora a parcela de fim de semana (usado pela Locação).
+function calcularProjecaoSegmentada(rows,extractor,mesRef,opts){
   const validRows=rows.filter(r=>r.data instanceof Date&&!isNaN(r.data));
   const realizado=validRows.reduce((s,r)=>s+(extractor(r)||0),0);
   const ultimaData=obterUltimaDataLancamento(validRows);
-  if(!ultimaData)return{realizado,projecao:realizado,ultimaData:null};
+  const ym=mesRef||_mesRefDeRows(validRows);
+  const vazio={realizado,projecao:realizado,ultimaData,mesRef:ym,
+    mediaUtil:0,mediaFDS:0,nUteisDecorridos:0,totalUteisMes:0,
+    nBlocosFDSDecorridos:0,totalBlocosFDSMes:0,feriadoRealizado:0,parcialCorrente:0};
+  if(!ym)return vazio;
 
-  const ano=ultimaData.getFullYear(),mes=ultimaData.getMonth();
+  const ano=Number(ym.slice(0,4)),mes=Number(ym.slice(5,7))-1;
   const feriadosKeys=calcularFeriados(ano);
   const ultimoDiaMes=new Date(ano,mes+1,0).getDate();
 
-  if(ultimaData.getDate()>=ultimoDiaMes)return{realizado,projecao:realizado,ultimaData};
+  // Corte "hoje": no mês corrente é a data de hoje; em mês passado o mês já fechou.
+  const agora=new Date();
+  const ehMesCorrente=(agora.getFullYear()===ano&&agora.getMonth()===mes);
+  const ehMesFuturo=(ano>agora.getFullYear())||(ano===agora.getFullYear()&&mes>agora.getMonth());
+  if(!ehMesCorrente&&!ehMesFuturo)return Object.assign({},vazio,{projecao:realizado}); // mês encerrado
+  const diaHoje=ehMesCorrente?agora.getDate():0; // mês futuro: nada decorrido
 
-  // Verifica se resta algum dia útil após a última data lançada
-  let diasUteisRestantes=0;
-  for(let d=ultimaData.getDate()+1;d<=ultimoDiaMes;d++){
-    const dt=new Date(ano,mes,d);
-    if(_classificarDia(dt,feriadosKeys)==='util')diasUteisRestantes++;
-  }
-  if(diasUteisRestantes===0)return{realizado,projecao:realizado,ultimaData};
+  // Um dia é "decorrido" só se já terminou (hoje está em andamento e fica de fora).
+  const diaDecorrido=d=>d<diaHoje;
+  // Id do bloco de FDS = dia do mês do sábado (pode ser <=0 se o mês começa no domingo).
+  const _blocoDia=dt=>dt.getDate()-(dt.getDay()===0?1:0);
+  // Bloco decorrido = o domingo do bloco já terminou (exclui o FDS corrente e os futuros).
+  const blocoDecorrido=sat=>(sat+1)<diaHoje;
 
-  // Dias úteis já decorridos com movimento, dentro do mês de referência
-  const diasComMovimento=new Set();
-  let somaUtil=0;
+  // ── Acumula o realizado do mês por tipo de dia ──
+  let somaUtilDecorrida=0,feriadoRealizado=0,parcialCorrente=0;
+  const somaPorBloco={};
   validRows.forEach(r=>{
     if(r.data.getFullYear()!==ano||r.data.getMonth()!==mes)return;
-    if(_classificarDia(r.data,feriadosKeys)==='util'){diasComMovimento.add(fDkey(r.data));somaUtil+=(extractor(r)||0);}
+    const v=extractor(r)||0, d=r.data.getDate();
+    const tipo=_classificarDia(r.data,feriadosKeys);
+    if(tipo==='feriado'){feriadoRealizado+=v;return;}
+    if(tipo==='util'){
+      if(diaDecorrido(d))somaUtilDecorrida+=v; else parcialCorrente+=v; // hoje entra como valor real
+      return;
+    }
+    // fim de semana
+    const k=_blocoDia(r.data);
+    if(blocoDecorrido(k))somaPorBloco[k]=(somaPorBloco[k]||0)+v; else parcialCorrente+=v;
   });
-  const mediaDiaria=diasComMovimento.size>0?somaUtil/diasComMovimento.size:0;
-  const projecao=realizado+mediaDiaria*diasUteisRestantes;
 
-  return{realizado,projecao,ultimaData};
+  // ── Conta dias úteis e blocos de FDS: decorridos (denominador) e totais do mês ──
+  let nUteisDecorridos=0,totalUteisMes=0;
+  const blocosDecorridos=new Set(),blocosMes=new Set();
+  for(let d=1;d<=ultimoDiaMes;d++){
+    const dt=new Date(ano,mes,d);
+    const tipo=_classificarDia(dt,feriadosKeys);
+    if(tipo==='feriado')continue;              // feriado é ignorado dos dois lados
+    if(tipo==='util'){
+      totalUteisMes++;
+      if(diaDecorrido(d))nUteisDecorridos++;
+    }else{
+      const k=_blocoDia(dt);
+      blocosMes.add(k);
+      if(blocoDecorrido(k))blocosDecorridos.add(k);
+    }
+  }
+  // Blocos que atravessam a virada do mês (mês começando no domingo ou terminando no
+  // sábado) contam como um bloco só, pelo sábado — numerador e denominador usam o mesmo
+  // critério, então a média não distorce.
+  const somenteUteis=!!(opts&&opts.somenteDiasUteis);
+  const somaFDSDecorrida=Object.values(somaPorBloco).reduce((s,v)=>s+v,0);
+  const nBlocosFDSDecorridos=blocosDecorridos.size;
+  const totalBlocosFDSMes=blocosMes.size;
+
+  const mediaUtil=nUteisDecorridos>0?somaUtilDecorrida/nUteisDecorridos:0;
+  const mediaFDS=(!somenteUteis&&nBlocosFDSDecorridos>0)?somaFDSDecorrida/nBlocosFDSDecorridos:0;
+
+  const projecao=mediaUtil*totalUteisMes
+    +mediaFDS*totalBlocosFDSMes
+    +feriadoRealizado
+    +parcialCorrente;
+
+  return{realizado,projecao,ultimaData,mesRef:ym,
+    mediaUtil,mediaFDS,nUteisDecorridos,totalUteisMes,
+    nBlocosFDSDecorridos,totalBlocosFDSMes,feriadoRealizado,parcialCorrente};
+}
+
+// ── LOCAÇÃO — mesma regra, mas sem a parcela de fim de semana (não opera em FDS) ──
+function calcularProjecaoLocacao(rows,extractor,mesRef){
+  return calcularProjecaoSegmentada(rows,extractor,mesRef,{somenteDiasUteis:true});
 }
 
 // Wrappers nomeados conforme prompt
-function calcularProjecaoATT(rows,extractor){return calcularProjecaoSegmentada(rows,extractor);}
-function calcularProjecaoAgregados(rows,extractor){return calcularProjecaoSegmentada(rows,extractor);}
+function calcularProjecaoATT(rows,extractor,mesRef){return calcularProjecaoSegmentada(rows,extractor,mesRef);}
+function calcularProjecaoAgregados(rows,extractor,mesRef){return calcularProjecaoSegmentada(rows,extractor,mesRef);}
 // ════════════════════════════════════════════════════════════════
 // PROJEÇÃO CONSOLIDADA + META DE DESTINAÇÃO MIX — utilitárias
 // Regras de negócio:
@@ -4822,18 +4856,18 @@ function _locTrocaRetirada(){
   return S.raw.locacao.filter(r=>r.tipoServico==='Coleta'||r.tipoServico==='Retirada');
 }
 
-// ── Projeção: Recebimento de Terceiros (regra de projeção existente, sem alteração) ──
+// ── Projeção: Recebimento de Terceiros ──
 function getProjectedThirdPartyVolume(mes){
   const att=_filtMesGen(S.raw.att,mes);
   return {
-    cacambas:calcularProjecaoATT(att,r=>r.qtdCacamba).projecao,
-    m3:calcularProjecaoATT(att,r=>r.volume).projecao
+    cacambas:calcularProjecaoATT(att,r=>r.qtdCacamba,mes).projecao,
+    m3:calcularProjecaoATT(att,r=>r.volume,mes).projecao
   };
 }
 // ── Projeção: Locação Multilix (apenas Troca+Retirada) ──
 function getProjectedRentalBuckets(mes){
   const loc=_filtMesGen(_locTrocaRetirada(),mes);
-  return calcularProjecaoLocacao(loc,()=>1).projecao;
+  return calcularProjecaoLocacao(loc,()=>1,mes).projecao;
 }
 // ── Projeção consolidada (Terceiros + Locação) ──
 function getConsolidatedProjectedVolume(mes){
@@ -5973,10 +6007,11 @@ function updateOverview(){
     kpi('Ticket Médio ATT',tkAtt>0?fM(tkAtt):'—','por caçamba','','kb-blue','blue'),
     kpi('Ticket Médio Locação',tkLoc>0?fM(tkLoc):'—','por caçamba','','kb-blue','blue'),
   ].join('');
-  const prCac=calcularProjecaoATT(att,r=>r.qtdCacamba).projecao;
-  const prM3=calcularProjecaoATT(att,r=>r.volume).projecao;
-  const prLoc=calcularProjecaoLocacao(loc,r=>r.qtdCacamba).projecao;
-  const prAgrM3=calcularProjecaoAgregados(agr,r=>r.volume).projecao;
+  const _mesOV=S.filters.mes||'';
+  const prCac=calcularProjecaoATT(att,r=>r.qtdCacamba,_mesOV).projecao;
+  const prM3=calcularProjecaoATT(att,r=>r.volume,_mesOV).projecao;
+  const prLoc=calcularProjecaoLocacao(loc,r=>r.qtdCacamba,_mesOV).projecao;
+  const prAgrM3=calcularProjecaoAgregados(agr,r=>r.volume,_mesOV).projecao;
   document.getElementById('meta-ov').innerHTML=mbar('Caçambas ATT',tCac,gM('att-cacamba'),'cac',false,prCac)+mbar('m³ ATT',tM3,gM('att-m3'),'m³',false,prM3)+mbar('Caçambas Locação',tLoc,gM('loc-cacamba'),'cac',false,prLoc)+mbar('m³ Agregados',tAgrM3,gM('agr-m3'),'m³',false,prAgrM3);
   mkFaturamentoAnual('cFatAnual','ovFatAnual');
   const ctx=document.getElementById('cOp');if(ctx){if(S.charts.op)S.charts.op.destroy();const _opTotal=fAtt+fLoc+fAgr;S.charts.op=new Chart(ctx,{type:'doughnut',data:{labels:['ATT','Locação','Agregados'],datasets:[{data:[fAtt,fLoc,fAgr],backgroundColor:['#3B82F6','#10B981','#F59E0B'],borderWidth:0,hoverOffset:8,spacing:2}]},options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{position:'bottom',labels:{color:'#8a93ab',font:{size:11},padding:12,usePointStyle:true,pointStyle:'circle'}},tooltip:{backgroundColor:'#1a1f2e',titleColor:'#eef0ff',bodyColor:'#aab2cc',borderColor:'#2e3850',borderWidth:1,cornerRadius:10,padding:10,displayColors:false}}},plugins:[{id:'opLbl',afterDraw(chart){const{ctx:c,chartArea:{width,height,left,top}}=chart;const cx=left+width/2,cy=top+height/2-10;c.save();c.textAlign='center';c.textBaseline='middle';c.font='700 14px Inter,sans-serif';c.fillStyle='#eef0ff';c.fillText(fM(_opTotal),cx,cy);c.font='500 10px Inter,sans-serif';c.fillStyle='#8a93ab';c.fillText('faturamento',cx,cy+16);c.restore();}}]});}
@@ -6003,7 +6038,7 @@ function mkFaturamentoAnual(id,key){
   let projExtra=0;
   if(ano===anoAtual){
     const rowsMesAtual=[...S.raw.att,...S.raw.locacao,...S.raw.agregados].filter(r=>r.data instanceof Date&&!isNaN(r.data)&&r.data.getFullYear()===ano&&r.data.getMonth()===mesAtualIdx);
-    const projObj=calcularProjecaoSegmentada(rowsMesAtual,r=>r.valor||0);
+    const projObj=calcularProjecaoSegmentada(rowsMesAtual,r=>r.valor||0,ano+'-'+String(mesAtualIdx+1).padStart(2,'0'));
     projExtra=Math.max(0,projObj.projecao-projObj.realizado);
   }
   // Dados: meses futuros = null, mês atual = real + projeção, passados = real
@@ -6051,7 +6086,7 @@ function mkMensalComProj(id,key,allRows,vKey,color,label,isMon){
   if(lastMonth===mesHoje){
     projIdx=months.length-1;
     const rowsMes=rows.filter(r=>r.data.getFullYear()+'-'+String(r.data.getMonth()+1).padStart(2,'0')===lastMonth);
-    const projObj=calcularProjecaoSegmentada(rowsMes,r=>parseFloat(r[vKey])||0);
+    const projObj=calcularProjecaoSegmentada(rowsMes,r=>parseFloat(r[vKey])||0,lastMonth);
     projExtra=Math.max(0,projObj.projecao-projObj.realizado);
   }
   const dataProj=months.map((_,i)=>i===projIdx&&projExtra>0?projExtra:null);
@@ -6094,9 +6129,9 @@ function updateATT(){
   const tk=cacFat>0?tFat/cacFat:0;
 
   // Projeção
-  const prCacObj=calcularProjecaoATT(rows,r=>r.qtdCacamba);
-  const prM3Obj=calcularProjecaoATT(rows,r=>r.volume);
-  const prFatObj=calcularProjecaoATT(rows,r=>r.valor);
+  const prCacObj=calcularProjecaoATT(rows,r=>r.qtdCacamba,S.attF.mes||'');
+  const prM3Obj=calcularProjecaoATT(rows,r=>r.volume,S.attF.mes||'');
+  const prFatObj=calcularProjecaoATT(rows,r=>r.valor,S.attF.mes||'');
   const projCac=prCacObj.projecao, projM3=prM3Obj.projecao;
 
   // PF / PJ / NC
@@ -6620,12 +6655,13 @@ function updateConsolidado(){
   const pctAttM3=tM3>0?(attM3/tM3*100):0;
 
   // ── Projeção do mês — mesma regra usada em ATT e Locação ────
-  // Terceiros (ATT): projeção segmentada (dias úteis/fim-de-semana/feriados)
-  const prAttM3=calcularProjecaoATT(att,r=>r.volume).projecao;
-  const prAttCac=calcularProjecaoATT(att,r=>r.qtdCacamba).projecao;
-  // Locação (Troca+Retirada): projeção apenas por dias úteis
-  const prLocM3=calcularProjecaoLocacao(loc,r=>r.volume).projecao;
-  const prLocCac=calcularProjecaoLocacao(loc,()=>1).projecao;
+  // Terceiros (ATT): dias úteis + blocos de fim de semana (feriado fora da média)
+  const _mesCons=S.consF.mes||'';
+  const prAttM3=calcularProjecaoATT(att,r=>r.volume,_mesCons).projecao;
+  const prAttCac=calcularProjecaoATT(att,r=>r.qtdCacamba,_mesCons).projecao;
+  // Locação (Troca+Retirada): mesma regra, sem a parcela de fim de semana
+  const prLocM3=calcularProjecaoLocacao(loc,r=>r.volume,_mesCons).projecao;
+  const prLocCac=calcularProjecaoLocacao(loc,()=>1,_mesCons).projecao;
   // Totais consolidados
   const prTotalM3=prAttM3+prLocM3;
   const prTotalCac=prAttCac+prLocCac;
@@ -6798,10 +6834,10 @@ function updateConsolidado(){
     consProjIdx=months.length-1;
     const rowsConsAtt=attAll.filter(r=>r.data instanceof Date&&!isNaN(r.data)&&r.data.getFullYear()+'-'+String(r.data.getMonth()+1).padStart(2,'0')===lastConsMonth);
     const rowsConsLoc=locAll.filter(r=>r.data instanceof Date&&!isNaN(r.data)&&r.data.getFullYear()+'-'+String(r.data.getMonth()+1).padStart(2,'0')===lastConsMonth);
-    const pAttCac=calcularProjecaoSegmentada(rowsConsAtt,r=>r.qtdCacamba||1);
-    const pLocCac=calcularProjecaoLocacao(rowsConsLoc,r=>1);
-    const pAttM3=calcularProjecaoSegmentada(rowsConsAtt,r=>r.volume||0);
-    const pLocM3=calcularProjecaoLocacao(rowsConsLoc,r=>r.volume||0);
+    const pAttCac=calcularProjecaoSegmentada(rowsConsAtt,r=>r.qtdCacamba||1,lastConsMonth);
+    const pLocCac=calcularProjecaoLocacao(rowsConsLoc,r=>1,lastConsMonth);
+    const pAttM3=calcularProjecaoSegmentada(rowsConsAtt,r=>r.volume||0,lastConsMonth);
+    const pLocM3=calcularProjecaoLocacao(rowsConsLoc,r=>r.volume||0,lastConsMonth);
     consProjCac=Math.max(0,(pAttCac.projecao-pAttCac.realizado)+(pLocCac.projecao-pLocCac.realizado));
     consProjM3=Math.max(0,(pAttM3.projecao-pAttM3.realizado)+(pLocM3.projecao-pLocM3.realizado));
   }
@@ -7694,8 +7730,8 @@ function gerarResumo(){
   const tAgrM3=agr.reduce((s,r)=>s+r.volume,0),fAgr=agr.reduce((s,r)=>s+r.valor,0),pAgr=gM('agr-m3')>0?(tAgrM3/gM('agr-m3')*100).toFixed(1):'—';
   const nc=[...att,...loc,...agr,...dest].filter(r=>r.pfpj==='NÃO CLASSIFICADO'&&r.cliente).length;
   const topCli=groupBy(att,'cliente','volume')[0];
-  const prCacAtt=calcularProjecaoATT(att,r=>r.qtdCacamba).projecao;
-  const prM3Att=calcularProjecaoATT(att,r=>r.volume).projecao;
+  const prCacAtt=calcularProjecaoATT(att,r=>r.qtdCacamba,mes||'').projecao;
+  const prM3Att=calcularProjecaoATT(att,r=>r.volume,mes||'').projecao;
   // ── Destinação (MIX / Rachão Sujo) ──
   const mixRows=dest.filter(r=>r.residuo==='MIX'),rachRows=dest.filter(r=>r.residuo==='RACHÃO SUJO');
   const totalDestM3=dest.reduce((s,r)=>s+r.volume,0);
@@ -10178,19 +10214,20 @@ function recDashRender() {
     kpi('Ticket Médio/Viagem', nViag>0 ? fM((rsRecebido+rsAReceber)/nViag) : '—','Receita ÷ viagens','','kb-purple','purple'),
   ].join('');
 
-  // ── PROJEÇÃO DO MÊS (dias úteis — mesma regra dos demais módulos) ──
+  // ── PROJEÇÃO DO MÊS (mesma regra dos demais módulos) ──
   const hoje = new Date();
+  const mesRecKey = hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0');
   const rowsMes = _recDashRows.filter(r => r.data && r.data.getFullYear()===hoje.getFullYear() && r.data.getMonth()===hoje.getMonth());
   const rowsMesValor = rowsMes.filter(r => r.valor != null);
-  const pVol = calcularProjecaoSegmentada(rowsMes, r=>r.volume);
-  const pVal = calcularProjecaoSegmentada(rowsMesValor, r=>r.valor||0);
+  const pVol = calcularProjecaoSegmentada(rowsMes, r=>r.volume, mesRecKey);
+  const pVal = calcularProjecaoSegmentada(rowsMesValor, r=>r.valor||0, mesRecKey);
   const mesLabel = hoje.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
 
   document.getElementById('kpi-rec-proj').innerHTML = [
     kpi('m³ Realizado (mês)', fN(pVol.realizado,1)+' m³', mesLabel,'','kb-blue','blue'),
     kpi('Projeção m³ (mês)', fN(pVol.projecao,1)+' m³', pVol.ultimaData?'último lançamento: '+fD(pVol.ultimaData):'sem lançamentos','','kb-green','green'),
     kpi('R$ Realizado (mês)', fM(pVal.realizado), 'recebido + estimado','','kb-blue','blue'),
-    kpi('Projeção R$ (mês)', fM(pVal.projecao), 'média por dia útil × dias restantes','','kb-green','green'),
+    kpi('Projeção R$ (mês)', fM(pVal.projecao), 'média por dia útil × dias úteis do mês','','kb-green','green'),
   ].join('');
 
   // ── Período exibido ──

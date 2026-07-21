@@ -1322,16 +1322,26 @@ function voltarSelecao(){ mostrarTela('tela-selecao'); }
 let _dashRows = null;
 const fmtInt = v => Math.round(Number(v)||0).toLocaleString('pt-BR');
 
+// A partir desta data, as caçambas de Recebimento de Terceiros passam a vir das O.S.
+// lançadas neste app (`vales_descarga`). Antes dela valem os números do feed antigo
+// (n8n → tabela `att`, exposta aqui pela view agregada `att_totais_diarios`), porque o
+// app ainda estava em rodagem parcial. Mesma constante do index.html — os dois painéis
+// precisam mostrar exatamente o mesmo total. Manter em sincronia.
+const ENTRADA_TERCEIROS_CUTOFF = '2026-07-16';
+const PARCEIRO_FEED_ANTIGO = 'Recebimento anterior ao app (feed ATT)';
+
 async function irParaDashboard(){
   mostrarTela('tela-dashboard');
   document.getElementById('dash-kpis').innerHTML = '<div style="padding:20px;color:var(--muted);font-size:13px">Carregando…</div>';
   document.getElementById('dash-por-dia').innerHTML = '';
   document.getElementById('dash-por-parceiro').innerHTML = '';
   try {
-    const r = await fetch(
-      `${SUPA_URL}/rest/v1/vales_descarga?select=data_hora,parceiro_nome_snapshot,status,deleted_at,vale_descarga_itens(volume_m3,quantidade)&status=neq.cancelado&deleted_at=is.null&order=data_hora.desc&limit=3000`,
-      {headers: HDR_NO_PREFER}
-    );
+    const [r, rAtt] = await Promise.all([
+      fetch(`${SUPA_URL}/rest/v1/vales_descarga?select=data_hora,parceiro_nome_snapshot,status,deleted_at,vale_descarga_itens(volume_m3,quantidade)&data_hora=gte.${ENTRADA_TERCEIROS_CUTOFF}&status=neq.cancelado&deleted_at=is.null&order=data_hora.desc&limit=3000`,
+        {headers: HDR_NO_PREFER}),
+      fetch(`${SUPA_URL}/rest/v1/att_totais_diarios?select=data,cacambas,m3&data=lt.${ENTRADA_TERCEIROS_CUTOFF}&order=data.desc`,
+        {headers: HDR_NO_PREFER})
+    ]);
     if(!r.ok) throw new Error(await r.text());
     const vales = await r.json();
     const rows = [];
@@ -1346,6 +1356,20 @@ async function irParaDashboard(){
         });
       });
     });
+    // Feed antigo (agregado por dia, sem detalhe de parceiro)
+    if(rAtt.ok){
+      (await rAtt.json()).forEach(a=>{
+        const dk = String(a.data).slice(0,10);
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(dk)) return;
+        rows.push({
+          dk, ym: dk.slice(0,7), dia: Number(dk.slice(8,10)),
+          parceiro: PARCEIRO_FEED_ANTIGO,
+          cac: Number(a.cacambas||0), m3: Number(a.m3||0)
+        });
+      });
+    } else {
+      console.error('att_totais_diarios', await rAtt.text());
+    }
     _dashRows = rows;
     const meses = [...new Set(rows.filter(x=>x.ym).map(x=>x.ym))].sort().reverse();
     const sel = document.getElementById('dash-mes');
@@ -1359,25 +1383,111 @@ async function irParaDashboard(){
   }
 }
 
-// Projeção simples por dias úteis (seg–sex): realizado + média por dia útil com
-// movimento × dias úteis restantes do mês. Mês já encerrado devolve o realizado.
+// ── PROJEÇÃO — espelho de calcularProjecaoSegmentada do index.html ────────────────
+// Os dois arquivos são single-file e não compartilham JS; qualquer mudança na regra
+// precisa ser replicada nos dois. Regra oficial da operação da ATT:
+//
+//   Projeção = (Σ dias úteis ÷ dias úteis decorridos) × D.U. do mês
+//            + (Σ FDS        ÷ blocos FDS decorridos) × FDS do mês
+//            + Σ recebido em feriados        (parcela fixa, não projetada)
+//            + Σ recebido hoje / no FDS em andamento
+//
+// Bloco FDS = um sábado + o domingo seguinte. Feriado sai da média e dos multiplicadores.
+// Dias decorridos contam mesmo sem movimento. Hoje fica fora da média (dia em andamento).
+function _pascoa(ano){
+  const a=ano%19,b=Math.floor(ano/100),c=ano%100,d=Math.floor(b/4),e=b%4,
+    f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,
+    i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),
+    mes=Math.floor((h+l-7*m+114)/31)-1,dia=((h+l-7*m+114)%31)+1;
+  return new Date(ano,mes,dia);
+}
+// Feriados nacionais + estaduais/municipais de São Paulo
+function _feriadosDoAno(ano){
+  const p=_pascoa(ano);
+  const add=(base,days)=>{const d=new Date(base);d.setDate(d.getDate()+days);return d;};
+  return [
+    new Date(ano,0,1), new Date(ano,0,25), add(p,-47), add(p,-46), add(p,-2),
+    new Date(ano,3,21), new Date(ano,4,1), add(p,60), new Date(ano,6,9),
+    new Date(ano,8,7), new Date(ano,9,12), new Date(ano,10,2), new Date(ano,10,15),
+    new Date(ano,10,20), new Date(ano,11,25),
+  ].map(d=>d.getMonth()+'-'+d.getDate());
+}
+// 'util' | 'fimsemana' | 'feriado' — fim de semana prevalece sobre feriado
+function _tipoDoDia(y,mIdx,dia,feriados){
+  const dt=new Date(y,mIdx,dia), w=dt.getDay();
+  if(w===0||w===6) return 'fimsemana';
+  return feriados.includes(mIdx+'-'+dia) ? 'feriado' : 'util';
+}
+
+// valorPorDia: { <dia do mês>: valor }. Devolve null se não houver mês selecionado.
 function _dashProjecao(ym, valorPorDia){
   if(!ym) return null;
   const [y,m] = ym.split('-').map(Number);
-  const diasNoMes = new Date(y, m, 0).getDate();
-  const isUtil = dia => { const w = new Date(y, m-1, dia).getDay(); return w>=1 && w<=5; };
-  let realizado = 0, soma = 0; const diasMov = new Set();
-  Object.entries(valorPorDia).forEach(([dia,val])=>{
-    realizado += val;
-    if(isUtil(Number(dia))){ diasMov.add(dia); soma += val; }
-  });
+  const mIdx = m-1;
+  const realizado = Object.values(valorPorDia).reduce((s,v)=>s+v,0);
+
   const hoje = new Date();
-  const ehMesCorrente = (hoje.getFullYear()===y && hoje.getMonth()===m-1);
-  if(!ehMesCorrente) return realizado;
-  let uteisRestantes = 0;
-  for(let d=hoje.getDate()+1; d<=diasNoMes; d++){ if(isUtil(d)) uteisRestantes++; }
-  const media = diasMov.size>0 ? soma/diasMov.size : 0;
-  return realizado + media*uteisRestantes;
+  const ehMesCorrente = (hoje.getFullYear()===y && hoje.getMonth()===mIdx);
+  const ehMesFuturo = (y>hoje.getFullYear()) || (y===hoje.getFullYear() && mIdx>hoje.getMonth());
+  if(!ehMesCorrente && !ehMesFuturo) return realizado;   // mês encerrado
+
+  const feriados = _feriadosDoAno(y);
+  const diasNoMes = new Date(y, m, 0).getDate();
+  const diaHoje = ehMesCorrente ? hoje.getDate() : 0;
+  const blocoDia = dia => dia - (new Date(y,mIdx,dia).getDay()===0 ? 1 : 0); // dia do sábado
+  const blocoDecorrido = sat => (sat+1) < diaHoje;
+
+  let somaUtil=0, feriadoRealizado=0, parcialCorrente=0;
+  const somaPorBloco = {};
+  Object.entries(valorPorDia).forEach(([diaStr,val])=>{
+    const dia = Number(diaStr);
+    const tipo = _tipoDoDia(y,mIdx,dia,feriados);
+    if(tipo==='feriado'){ feriadoRealizado += val; return; }
+    if(tipo==='util'){
+      if(dia < diaHoje) somaUtil += val; else parcialCorrente += val;
+      return;
+    }
+    const sat = blocoDia(dia);
+    if(blocoDecorrido(sat)) somaPorBloco[sat] = (somaPorBloco[sat]||0) + val;
+    else parcialCorrente += val;
+  });
+
+  let nUteisDecorridos=0, totalUteisMes=0;
+  const blocosDecorridos=new Set(), blocosMes=new Set();
+  for(let d=1; d<=diasNoMes; d++){
+    const tipo = _tipoDoDia(y,mIdx,d,feriados);
+    if(tipo==='feriado') continue;                 // feriado é ignorado dos dois lados
+    if(tipo==='util'){
+      totalUteisMes++;
+      if(d < diaHoje) nUteisDecorridos++;
+    } else {
+      const sat = blocoDia(d);
+      blocosMes.add(sat);
+      if(blocoDecorrido(sat)) blocosDecorridos.add(sat);
+    }
+  }
+
+  const somaFDS = Object.values(somaPorBloco).reduce((s,v)=>s+v,0);
+  const mediaUtil = nUteisDecorridos>0 ? somaUtil/nUteisDecorridos : 0;
+  const mediaFDS  = blocosDecorridos.size>0 ? somaFDS/blocosDecorridos.size : 0;
+
+  return mediaUtil*totalUteisMes + mediaFDS*blocosMes.size + feriadoRealizado + parcialCorrente;
+}
+
+// Dias úteis já decorridos no mês (denominador da média) — usado no KPI de média/dia.
+function _dashUteisDecorridos(ym){
+  if(!ym) return 0;
+  const [y,m] = ym.split('-').map(Number);
+  const mIdx = m-1;
+  const hoje = new Date();
+  const ehMesCorrente = (hoje.getFullYear()===y && hoje.getMonth()===mIdx);
+  if((y>hoje.getFullYear()) || (y===hoje.getFullYear() && mIdx>hoje.getMonth())) return 0;
+  const feriados = _feriadosDoAno(y);
+  const diasNoMes = new Date(y, m, 0).getDate();
+  const limite = ehMesCorrente ? hoje.getDate()-1 : diasNoMes;
+  let n=0;
+  for(let d=1; d<=limite; d++) if(_tipoDoDia(y,mIdx,d,feriados)==='util') n++;
+  return n;
 }
 
 function dashRender(){
@@ -1387,7 +1497,11 @@ function dashRender(){
   const tCac = rows.reduce((s,r)=>s+r.cac,0);
   const tM3  = rows.reduce((s,r)=>s+r.m3,0);
   const diasSet = new Set(rows.filter(r=>r.dk).map(r=>r.dk));
-  const media = diasSet.size>0 ? tCac/diasSet.size : 0;
+  // Média por dia útil decorrido — mesmo denominador usado na projeção (dia útil parado
+  // conta e puxa a média para baixo). Sem mês selecionado cai em dias com movimento.
+  const uteisDec = mes ? _dashUteisDecorridos(mes) : 0;
+  const mediaDiv = mes ? uteisDec : diasSet.size;
+  const media = mediaDiv>0 ? tCac/mediaDiv : 0;
 
   let projCac='—', projM3='—';
   if(mes){
@@ -1403,7 +1517,7 @@ function dashRender(){
     kpi('m³ recebidos', fmtVol(tM3), 'volume total', 'var(--green,#10B981)')+
     kpi('Projeção caçambas', projCac, mes?'estimativa fim do mês':'selecione um mês', '#F59E0B')+
     kpi('Projeção m³', projM3, mes?'estimativa fim do mês':'selecione um mês', '#F59E0B')+
-    kpi('Média caçambas/dia', fmtVol(media), 'dias com movimento', '#8B5CF6');
+    kpi('Média caçambas/dia', fmtVol(media), mes?uteisDec+' dia(s) útil(eis) decorrido(s)':'dias com movimento', '#8B5CF6');
 
   // Por dia
   const byDia = {};
