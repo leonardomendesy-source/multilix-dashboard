@@ -1020,15 +1020,97 @@ async function abrirDashboard() {
   await carregarDashboard(sel.value);
 }
 
-function _diasUteis(ano, mes, ate) {
-  let count = 0;
-  const fim = ate || new Date(ano, mes, 0);
-  const fim2 = new Date(Math.min(fim, new Date(ano, mes, 0)));
-  for (let d = new Date(ano, mes-1, 1); d <= fim2; d.setDate(d.getDate()+1)) {
-    const dow = d.getDay();
-    if (dow !== 0 && dow !== 6) count++;
+// Capacidade padrão por truck. O painel converte volume em viagens com
+// Math.ceil(m³ / 17) em todos os módulos de destinação — esta tela precisa usar a mesma
+// conta, senão diverge (antes contava linhas de vale: 287 vg contra 332 do painel).
+const M3_POR_TRUCK = 17;
+const viagensDeM3 = m3 => m3 > 0 ? Math.ceil(m3 / M3_POR_TRUCK) : 0;
+
+// ── PROJEÇÃO — espelho de calcularProjecaoSegmentada do index.html ────────────────
+// Os arquivos são single-file e não compartilham JS; mudança na regra tem que ser
+// replicada em index.html, entrada-terceiros.html e aqui. Regra oficial da operação:
+//
+//   Projeção = (Σ dias úteis ÷ dias úteis decorridos) × D.U. do mês
+//            + (Σ FDS        ÷ blocos FDS decorridos) × FDS do mês
+//            + Σ recebido em feriados / hoje / no FDS em andamento (parcelas fixas)
+//
+// Bloco FDS = sábado + domingo seguinte. Feriado sai da média e dos multiplicadores.
+function _pascoa(ano){
+  const a=ano%19,b=Math.floor(ano/100),c=ano%100,d=Math.floor(b/4),e=b%4,
+    f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,
+    i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),
+    mes=Math.floor((h+l-7*m+114)/31)-1,dia=((h+l-7*m+114)%31)+1;
+  return new Date(ano,mes,dia);
+}
+// Feriados nacionais + estaduais/municipais de São Paulo
+function _feriadosDoAno(ano){
+  const p=_pascoa(ano);
+  const add=(base,days)=>{const d=new Date(base);d.setDate(d.getDate()+days);return d;};
+  return [
+    new Date(ano,0,1), new Date(ano,0,25), add(p,-47), add(p,-46), add(p,-2),
+    new Date(ano,3,21), new Date(ano,4,1), add(p,60), new Date(ano,6,9),
+    new Date(ano,8,7), new Date(ano,9,12), new Date(ano,10,2), new Date(ano,10,15),
+    new Date(ano,10,20), new Date(ano,11,25),
+  ].map(d=>d.getMonth()+'-'+d.getDate());
+}
+function _tipoDoDia(y,mIdx,dia,feriados){
+  const w = new Date(y,mIdx,dia).getDay();
+  if(w===0||w===6) return 'fimsemana';
+  return feriados.includes(mIdx+'-'+dia) ? 'feriado' : 'util';
+}
+// valorPorDia: { <dia do mês>: valor }. Mês encerrado/passado devolve o realizado.
+function _projMes(ym, valorPorDia){
+  const [y,m] = ym.split('-').map(Number);
+  const mIdx = m-1;
+  const realizado = Object.values(valorPorDia).reduce((s,v)=>s+v,0);
+
+  const hoje = new Date();
+  const ehMesCorrente = (hoje.getFullYear()===y && hoje.getMonth()===mIdx);
+  const ehMesFuturo = (y>hoje.getFullYear()) || (y===hoje.getFullYear() && mIdx>hoje.getMonth());
+  if(!ehMesCorrente && !ehMesFuturo) return realizado;
+
+  const feriados = _feriadosDoAno(y);
+  const diasNoMes = new Date(y, m, 0).getDate();
+  const diaHoje = ehMesCorrente ? hoje.getDate() : 0;
+  const blocoDia = dia => dia - (new Date(y,mIdx,dia).getDay()===0 ? 1 : 0);
+  const blocoDecorrido = sat => (sat+1) < diaHoje;
+
+  let somaUtil=0, fixo=0;
+  const somaPorBloco = {};
+  Object.entries(valorPorDia).forEach(([diaStr,val])=>{
+    const dia = Number(diaStr);
+    const tipo = _tipoDoDia(y,mIdx,dia,feriados);
+    if(tipo==='feriado'){ fixo += val; return; }
+    if(tipo==='util'){ if(dia < diaHoje) somaUtil += val; else fixo += val; return; }
+    const sat = blocoDia(dia);
+    if(blocoDecorrido(sat)) somaPorBloco[sat] = (somaPorBloco[sat]||0) + val;
+    else fixo += val;
+  });
+
+  let nUteis=0, totalUteis=0;
+  const blocosDec=new Set(), blocosMes=new Set();
+  for(let d=1; d<=diasNoMes; d++){
+    const tipo = _tipoDoDia(y,mIdx,d,feriados);
+    if(tipo==='feriado') continue;
+    if(tipo==='util'){ totalUteis++; if(d < diaHoje) nUteis++; }
+    else { const sat=blocoDia(d); blocosMes.add(sat); if(blocoDecorrido(sat)) blocosDec.add(sat); }
   }
-  return Math.max(count, 1);
+
+  const somaFDS = Object.values(somaPorBloco).reduce((s,v)=>s+v,0);
+  const mediaUtil = nUteis>0 ? somaUtil/nUteis : 0;
+  const mediaFDS  = blocosDec.size>0 ? somaFDS/blocosDec.size : 0;
+  return mediaUtil*totalUteis + mediaFDS*blocosMes.size + fixo;
+}
+// Agrupa linhas em { <dia do mês>: soma } a partir de uma data 'YYYY-MM-DD'
+function _porDia(linhas, getData, getValor){
+  const acc = {};
+  linhas.forEach(l=>{
+    const d = String(getData(l)||'').slice(0,10);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+    const dia = Number(d.slice(8,10));
+    acc[dia] = (acc[dia]||0) + Number(getValor(l)||0);
+  });
+  return acc;
 }
 
 async function carregarDashboard(mes) {
@@ -1040,21 +1122,20 @@ async function carregarDashboard(mes) {
   const fim = `${mes}-${String(ultimoDia).padStart(2,'0')}`;
   const H = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY };
   try {
-    const [rDest, rRec, rResid] = await Promise.all([
-      fetch(`${SUPA_URL}/rest/v1/vales_destinacao?select=tipo_residuo,capacidade_m3,tipo_veiculo&data_saida=gte.${inicio}&data_saida=lte.${fim}&status=neq.cancelado`, {headers:H}),
-      fetch(`${SUPA_URL}/rest/v1/vales_reciclaveis?select=residuo_id,volume_m3&data_saida=gte.${inicio}&data_saida=lte.${fim}&status=neq.cancelado`, {headers:H}),
+    const [rDest, rRec, rResid, rAgr] = await Promise.all([
+      fetch(`${SUPA_URL}/rest/v1/vales_destinacao?select=tipo_residuo,capacidade_m3,tipo_veiculo,data_saida&data_saida=gte.${inicio}&data_saida=lte.${fim}&status=neq.cancelado`, {headers:H}),
+      fetch(`${SUPA_URL}/rest/v1/vales_reciclaveis?select=residuo_id,volume_m3,data_saida&data_saida=gte.${inicio}&data_saida=lte.${fim}&status=neq.cancelado`, {headers:H}),
       fetch(`${SUPA_URL}/rest/v1/tipos_residuo_reciclavel?select=id,nome&order=nome.asc`, {headers:H}),
+      fetch(`${SUPA_URL}/rest/v1/agregados_totais_diarios?select=data,produto,qtde&data=gte.${inicio}&data=lte.${fim}`, {headers:H}),
     ]);
     const dest   = await rDest.json();
     const rec    = await rRec.json();
     const resids = await rResid.json();
+    const agr    = rAgr.ok ? await rAgr.json() : [];
+    if(!rAgr.ok) console.error('agregados_totais_diarios', await rAgr.text());
 
-    // ── Projeção ──
     const hoje = new Date();
     const esMesAtual = hoje.getFullYear()===ano && hoje.getMonth()+1===mesNum;
-    const totalDU  = _diasUteis(ano, mesNum, null);
-    const decorrDU = esMesAtual ? _diasUteis(ano, mesNum, hoje) : totalDU;
-    const fator    = totalDU / decorrDU;
 
     // ── Frete Destinação — lista dinâmica de resíduos (parametrização) ──
     const ordemDest = {}; _tiposDest.forEach(t => { ordemDest[t.nome] = t.ordem; });
@@ -1083,20 +1164,21 @@ async function carregarDashboard(mes) {
       </div>`;
     }
 
-    // ── Recicláveis ──
+    // ── Recicláveis (1 vale = 1 viagem/caçamba, igual ao painel) ──
     const byRes = {};
     rec.forEach(v => {
-      if (!byRes[v.residuo_id]) byRes[v.residuo_id] = {vg:0, m3:0};
+      if (!byRes[v.residuo_id]) byRes[v.residuo_id] = {vg:0, m3:0, linhas:[]};
       byRes[v.residuo_id].vg++;
       byRes[v.residuo_id].m3 += Number(v.volume_m3||0);
+      byRes[v.residuo_id].linhas.push(v);
     });
     const recRows = resids
       .filter(r => byRes[r.id])
       .sort((a,b) => byRes[b.id].m3 - byRes[a.id].m3)
       .map(r => {
         const d = byRes[r.id];
-        const pVg = esMesAtual ? Math.round(d.vg*fator*10)/10 : null;
-        const pM3 = esMesAtual ? Math.round(d.m3*fator) : null;
+        const pVg = esMesAtual ? Math.round(_projMes(mes, _porDia(d.linhas, x=>x.data_saida, ()=>1))) : null;
+        const pM3 = esMesAtual ? Math.round(_projMes(mes, _porDia(d.linhas, x=>x.data_saida, x=>x.volume_m3))) : null;
         return `<tr>
           <td>${r.nome}</td>
           <td class="num">${d.vg}</td>
@@ -1105,8 +1187,30 @@ async function carregarDashboard(mes) {
         </tr>`;
       }).join('');
 
+    // ── Agregados Reciclados vendidos (m³ por produto) ──
+    const byProd = {};
+    agr.forEach(a => {
+      const k = a.produto || 'NÃO INFORMADO';
+      if (!byProd[k]) byProd[k] = {m3:0, linhas:[]};
+      byProd[k].m3 += Number(a.qtde||0);
+      byProd[k].linhas.push(a);
+    });
+    const agrTotal = Object.values(byProd).reduce((s,d)=>s+d.m3, 0);
+    const agrProjTotal = esMesAtual ? _projMes(mes, _porDia(agr, x=>x.data, x=>x.qtde)) : null;
+    const agrRows = Object.entries(byProd)
+      .sort((a,b) => b[1].m3 - a[1].m3)
+      .map(([nome, d]) => {
+        const p = esMesAtual ? _projMes(mes, _porDia(d.linhas, x=>x.data, x=>x.qtde)) : null;
+        return `<tr>
+          <td>${nome}</td>
+          <td class="num">${fmtN(d.m3)}</td>
+          <td class="proj">${p!=null?'~'+fmtN(p)+' m³':'—'}</td>
+        </tr>`;
+      }).join('');
+
     const semFreteMsg = !dest.length ? '<p style="font-size:12px;color:var(--muted2);text-align:center;margin-top:6px">Nenhuma saída registrada neste mês</p>' : '';
     const semRecMsg   = !rec.length  ? '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px;font-size:12px">Nenhum reciclável neste mês</td></tr>' : '';
+    const semAgrMsg   = !agr.length  ? '<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px;font-size:12px">Nenhuma venda de agregado neste mês</td></tr>' : '';
     const projNote    = !esMesAtual  ? '<p style="font-size:11px;color:var(--muted2);text-align:center;margin-top:10px">Projeção disponível apenas para o mês atual</p>' : '';
 
     document.getElementById('dash-content').innerHTML = `
@@ -1114,8 +1218,11 @@ async function carregarDashboard(mes) {
       <div class="dash-cards">
         ${tiposFrete.map(nome => {
           const d = dest.filter(v => v.tipo_residuo === nome);
-          const vg = d.length, m3 = d.reduce((s,v)=>s+Number(v.capacidade_m3||0),0);
-          const projVg = esMesAtual ? Math.round(vg * fator) : null;
+          const m3 = d.reduce((s,v)=>s+Number(v.capacidade_m3||0),0);
+          // Viagens = m³ ÷ 17 arredondado p/ cima — mesma conta do painel (não conta vales).
+          const vg = viagensDeM3(m3);
+          const projM3 = esMesAtual ? _projMes(mes, _porDia(d, x=>x.data_saida, x=>x.capacidade_m3)) : null;
+          const projVg = projM3!=null ? viagensDeM3(projM3) : null;
           const isMix = nome === 'MIX';
           return dashCard(nome, vg, m3, projVg, isMix?metaMixVg:null, !isMix);
         }).join('') || '<p style="font-size:12px;color:var(--muted2);text-align:center;grid-column:1/-1">Nenhum resíduo cadastrado</p>'}
@@ -1131,6 +1238,25 @@ async function carregarDashboard(mes) {
             <th style="text-align:right">Projeção</th>
           </tr></thead>
           <tbody>${recRows||semRecMsg}</tbody>
+        </table>
+      </div>
+      <div class="dash-sec">💎 Agregados Reciclados vendidos</div>
+      <div class="dash-cards">
+        <div class="dash-card">
+          <div class="dash-card-label">Total vendido</div>
+          <div class="dash-card-num">${fmtN(agrTotal)}<span style="font-size:14px;font-weight:600;margin-left:4px">m³</span></div>
+          <div class="dash-card-vol">${Object.keys(byProd).length} produto(s)</div>
+          ${agrProjTotal!=null?`<div class="dash-card-proj">Projeção: <strong>${fmtN(agrProjTotal)} m³</strong></div>`:''}
+        </div>
+      </div>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+        <table class="dash-table">
+          <thead><tr>
+            <th>Produto</th>
+            <th style="text-align:right">m³ vendidos</th>
+            <th style="text-align:right">Projeção</th>
+          </tr></thead>
+          <tbody>${agrRows||semAgrMsg}</tbody>
         </table>
       </div>
       ${projNote}

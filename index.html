@@ -8411,12 +8411,13 @@ function renderPagamentosFreteiro(rows,freteiro){
       <td style="color:var(--muted);font-size:11px">${r.aterro||'—'}</td>
       <td style="text-align:right">${fM(r._totalLinha)}</td>
     </tr>`).join('')}<tr style="font-weight:700;background:var(--surface2)">
-      <td colspan="5">TOTAL ${g.residuo}</td>
+      <td colspan="4">TOTAL ${g.residuo}</td>
+      <td style="text-align:right">${fN(g.viagens,0)}</td>
       <td style="text-align:right">${fN(g.m3,1)}</td>
       <td></td>
       <td style="text-align:right">${fM(g.total)}</td>
     </tr></tbody></table>`;
-  }).join('')+`<div style="text-align:right;font-size:13px;font-weight:700;color:var(--text);margin-top:14px;padding-top:10px;border-top:1px solid var(--border)">TOTAL GERAL: ${fM(totGeral)}</div>`;
+  }).join('')+`<div style="text-align:right;font-size:13px;font-weight:700;color:var(--text);margin-top:14px;padding-top:10px;border-top:1px solid var(--border)">TOTAL GERAL: ${fN(totViagens,0)} viagem(ns) · ${fN(totM3,1)} m³ · ${fM(totGeral)}</div>`;
 }
 
 // ── PDF de pagamento ────────────────────────────────────────────
@@ -8424,6 +8425,8 @@ function _pagBuildReportHTML(){
   const {rows,freteiro,from,to}=_pagState;
   const arr=_pagAgrupar(rows);
   const totGeral=arr.reduce((s,g)=>s+g.total,0);
+  const totViagens=arr.reduce((s,g)=>s+g.viagens,0);
+  const totM3=arr.reduce((s,g)=>s+g.m3,0);
   const th='padding:5px 6px;border:1px solid #1a1a1a;font-size:9px;color:#1a1a1a;background:#f0f0f0;text-align:center;font-weight:bold';
   const td='padding:4px 6px;border:1px solid #1a1a1a;font-size:9px;color:#1a1a1a;background:#ffffff;text-align:center';
 
@@ -8451,7 +8454,8 @@ function _pagBuildReportHTML(){
         <td style="${td};font-size:8px">${r.aterro||'—'}</td>
         <td style="${td}">${fM(r._totalLinha)}</td>
       </tr>`).join('')}<tr style="font-weight:bold">
-        <td style="${td}" colspan="5">TOTAL ${g.residuo}</td>
+        <td style="${td}" colspan="4">TOTAL ${g.residuo}</td>
+        <td style="${td}">${fN(g.viagens,0)}</td>
         <td style="${td}">${fN(g.m3,1)}</td>
         <td style="${td}"></td>
         <td style="${td}">${fM(g.total)}</td>
@@ -8473,7 +8477,10 @@ function _pagBuildReportHTML(){
       <div><b>Data de emissão:</b> ${fD(new Date())}</div>
     </div>
     ${blocos}
-    <div style="text-align:right;font-size:13px;font-weight:bold;margin:16px 0;padding-top:8px;border-top:2px solid #1a1a1a">TOTAL GERAL DO RELATÓRIO: ${fM(totGeral)}</div>
+    <div style="text-align:right;font-size:13px;font-weight:bold;margin:16px 0;padding-top:8px;border-top:2px solid #1a1a1a">
+      <div style="font-size:11px;font-weight:normal;margin-bottom:3px">Total de viagens: <b>${fN(totViagens,0)}</b> &nbsp;·&nbsp; Total de m³: <b>${fN(totM3,1)}</b></div>
+      TOTAL GERAL DO RELATÓRIO: ${fM(totGeral)}
+    </div>
     <div style="margin-top:54px;font-size:11px">Conferido por: ______________________________________</div>
     <div style="margin-top:24px;font-size:9px;color:#777;text-align:center;border-top:1px solid #ccc;padding-top:8px">Multilix — Gestão de Resíduos da Construção Civil</div>
   </div>`;
@@ -11307,38 +11314,117 @@ initNavGroups();
   // ─────────────────────────────────────────────────────────────
   let _parceiros = [];
 
-  window.attParcExportarXLSX = function(){
+  // Relatório completo de parceiros: aba com todos os campos do cadastro + aba com a
+  // tabela de preços de cada parceiro (resíduo × equipamento). Respeita os filtros de
+  // busca/status da tela — sem filtro, exporta todos.
+  window.attParcExportarXLSX = async function(){
     if(!_parceiros.length){ alert('Nenhum parceiro carregado.'); return; }
-    const q  = (document.getElementById('parc-busca')?.value||'').toLowerCase();
-    const st = document.getElementById('parc-status-f')?.value||'';
-    const lista = _parceiros.filter(p=>{
-      if(st && p.status!==st) return false;
-      if(q && !(p.nome_fantasia||'').toLowerCase().includes(q) &&
-              !(p.razao_social||'').toLowerCase().includes(q) &&
-              !(p.documento||'').includes(q)) return false;
-      return true;
-    });
-    const rows = lista.map(p=>({
-      'Nome Fantasia':          p.nome_fantasia||'',
-      'Razão Social':           p.razao_social||'',
-      'Documento (CNPJ/CPF)':   p.documento||'',
-      'Telefone':               p.telefone||'',
-      'E-mail':                 p.email||'',
-      'Status':                 p.status||'',
-      'Enviar Comprovante E-mail': p.enviar_comprovante_email ? 'Sim' : 'Não',
-      'Endereço':               p.endereco||'',
-      'CEP':                    p.cep||'',
-      'Cidade':                 p.cidade||'',
-      'Estado':                 p.estado||'',
-      'Observações':            p.observacoes||'',
-      'Criado em':              p.created_at ? new Date(p.created_at).toLocaleDateString('pt-BR') : '',
-    }));
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(rows);
-    ws['!cols'] = [40,40,24,18,34,10,26,40,14,20,8,30,14].map(w=>({wch:w}));
-    XLSX.utils.book_append_sheet(wb, ws, 'Parceiros ATT');
-    const filtro = st ? `_${st}` : '';
-    XLSX.writeFile(wb, `parceiros_att${filtro}_${new Date().toLocaleDateString('sv-SE')}.xlsx`);
+    const btn = document.querySelector('[onclick="attParcExportarXLSX()"]');
+    const btnHtml = btn ? btn.innerHTML : null;
+    if(btn){ btn.disabled = true; btn.textContent = 'Gerando…'; }
+    try {
+      const q  = (document.getElementById('parc-busca')?.value||'').toLowerCase();
+      const st = document.getElementById('parc-status-f')?.value||'';
+      const lista = _parceiros.filter(p=>{
+        if(st && p.status!==st) return false;
+        if(q && !(p.nome_fantasia||'').toLowerCase().includes(q) &&
+                !(p.razao_social||'').toLowerCase().includes(q) &&
+                !(p.documento||'').includes(q)) return false;
+        return true;
+      });
+
+      // Nomes de resíduo/equipamento para a aba de preços
+      if(!_residuos.length || !_equipamentos.length){
+        await Promise.all([_residuos.length?null:attResLoad(), _equipamentos.length?null:attEqLoad()]);
+      }
+      const nomeRes = {}; (_residuos||[]).forEach(r=>{ nomeRes[r.id]=r.nome; });
+      const nomeEq  = {}; (_equipamentos||[]).forEach(e=>{ nomeEq[e.id]=e.nome; });
+
+      // Tabela de preços de todos os parceiros. O PostgREST corta em 1000 linhas por
+      // requisição (db-max-rows), e são mais de 5 mil itens — precisa paginar.
+      let precos = [];
+      try {
+        const PAGE = 1000;
+        for(let offset=0; ; offset+=PAGE){
+          const lote = await api(`parceiros_att_tabela_precos?select=*&order=id.asc&limit=${PAGE}&offset=${offset}`);
+          precos = precos.concat(lote);
+          if(lote.length < PAGE) break;
+          if(offset > 100000) break;   // trava de segurança
+        }
+      } catch(e){ console.error('export precos', e); }
+      const precosPorParc = {};
+      precos.forEach(pr=>{ (precosPorParc[pr.parceiro_id] = precosPorParc[pr.parceiro_id] || []).push(pr); });
+
+      const dt   = v => v ? new Date(v).toLocaleDateString('pt-BR') : '';
+      const bool = v => v ? 'Sim' : 'Não';
+      const FISCAL = {com_nota:'COM NOTA (PJ)', com_recibo:'COM RECIBO (PF)'};
+
+      // ── Aba 1: cadastro completo ──
+      const rows = lista.map(p=>{
+        const pp = (precosPorParc[p.id]||[]).filter(x=>x.ativo!==false);
+        return {
+          'Nome Fantasia':        p.nome_fantasia||'',
+          'Razão Social':         p.razao_social||'',
+          'Tipo Documento':       p.tipo_documento||'',
+          'Documento (CNPJ/CPF)': p.documento||'',
+          'Tipo Fiscal':          FISCAL[p.tipo_fiscal]||p.tipo_fiscal||'',
+          'Status':               p.status||'',
+          'Telefone':             p.telefone||'',
+          'WhatsApp':             p.whatsapp||'',
+          'E-mail':               p.email||'',
+          'Enviar Comprovante por E-mail': bool(p.enviar_comprovante_email),
+          'Gerador Obrigatório':  bool(p.gerador_obrigatorio),
+          'CTR/MTR Obrigatório':  bool(p.ctr_obrigatorio),
+          'Tipo de Fechamento':   p.tipo_fechamento||'',
+          'Empresa de Origem':    p.empresa_origem||'',
+          'Itens na Tabela de Preços': pp.length,
+          'Observações':          p.observacoes||'',
+          'Criado em':            dt(p.created_at),
+          'Atualizado em':        dt(p.updated_at),
+        };
+      });
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(rows);
+      ws['!cols'] = [34,40,14,22,18,10,18,18,32,26,20,20,22,22,12,44,14,14].map(w=>({wch:w}));
+      ws['!autofilter'] = {ref: XLSX.utils.encode_range({s:{r:0,c:0}, e:{r:rows.length, c:17}})};
+      ws['!freeze'] = {xSplit:0, ySplit:1, topLeftCell:'A2', activeCell:'A2', sqref:'A2'};
+      XLSX.utils.book_append_sheet(wb, ws, 'Parceiros');
+
+      // ── Aba 2: tabela de preços por parceiro ──
+      const linhasPreco = [];
+      lista.forEach(p=>{
+        (precosPorParc[p.id]||[])
+          .sort((a,b)=>(nomeRes[a.residuo_id]||'').localeCompare(nomeRes[b.residuo_id]||''))
+          .forEach(pr=>{
+            linhasPreco.push({
+              'Nome Fantasia':  p.nome_fantasia||'',
+              'Documento':      p.documento||'',
+              'Status Parceiro':p.status||'',
+              'Resíduo':        nomeRes[pr.residuo_id]||'—',
+              'Equipamento':    nomeEq[pr.equipamento_id]||'—',
+              'Preço Carga (R$)': pr.preco_carga!=null ? Number(pr.preco_carga) : '',
+              'Preço m³ (R$)':    pr.preco_m3!=null    ? Number(pr.preco_m3)    : '',
+              'Ativo':          bool(pr.ativo),
+              'Atualizado em':  dt(pr.updated_at),
+            });
+          });
+      });
+      if(linhasPreco.length){
+        const ws2 = XLSX.utils.json_to_sheet(linhasPreco);
+        ws2['!cols'] = [34,22,14,26,22,17,15,8,14].map(w=>({wch:w}));
+        ws2['!autofilter'] = {ref: XLSX.utils.encode_range({s:{r:0,c:0}, e:{r:linhasPreco.length, c:8}})};
+        ws2['!freeze'] = {xSplit:0, ySplit:1, topLeftCell:'A2', activeCell:'A2', sqref:'A2'};
+        XLSX.utils.book_append_sheet(wb, ws2, 'Tabela de Preços');
+      }
+
+      const filtro = st ? `_${st}` : '';
+      XLSX.writeFile(wb, `parceiros_att${filtro}_${new Date().toLocaleDateString('sv-SE')}.xlsx`);
+    } catch(e){
+      console.error('attParcExportarXLSX', e);
+      alert('Erro ao gerar o relatório: '+e.message);
+    } finally {
+      if(btn){ btn.disabled = false; if(btnHtml!=null) btn.innerHTML = btnHtml; }
+    }
   };
 
   async function attParcLoad(){
