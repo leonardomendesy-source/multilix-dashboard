@@ -4109,11 +4109,18 @@ const SUPA_TABLES = {att:'att', locacao:'locacao', agregados:'agregados', destin
 const SESSION_KEY = 'multilix_auth';
 let _supaConnected = false;
 
+// Headers do PostgREST com o token da sessão logada (cai na anon key se não houver).
+// Tabelas restritas a `authenticated` (att, agregados, configuracoes…) só respondem
+// com o token da sessão.
+function _supaHeaders(){
+  return {'apikey':SUPA_KEY,'Authorization':'Bearer '+(_session?.access_token||SUPA_KEY)};
+}
+
 async function _supaFetch(table, params=''){
   const PAGE=1000; let all=[],offset=0,done=false;
   while(!done){
     const r=await fetch(`${SUPA_URL}/rest/v1/${table}?${params}&limit=${PAGE}&offset=${offset}`,{
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+(_session?.access_token||SUPA_KEY),'Content-Type':'application/json','Prefer':'count=none'}
+      headers:Object.assign({},_supaHeaders(),{'Content-Type':'application/json','Prefer':'count=none'})
     });
     if(!r.ok) throw new Error(`Supabase ${table}: ${r.status}`);
     const batch=await r.json();
@@ -4318,8 +4325,10 @@ function _postLogin(){
   const status = document.getElementById('login-supa-status');
   if(SUPA_URL && SUPA_KEY){
     status.innerHTML = ic('cloud',11)+' Supabase configurado';
-    syncSupabase();
+    // Metas antes do sync: updateAll() no fim do syncSupabase já lê os inputs preenchidos
+    _cfgCarregar().catch(e=>console.error('_cfgCarregar',e)).then(syncSupabase);
   } else {
+    aplicarMetasNosInputs();
     setTimeout(loadStorage, 300);
   }
 }
@@ -4744,8 +4753,9 @@ function _mesRefDeRows(validRows){
 // ── MOTOR ÚNICO DE PROJEÇÃO (dias úteis × blocos de FDS, feriado fora da média) ──
 // extractor(r) -> número a somar (m³, faturamento, qtde, etc.)
 // mesRef ('YYYY-MM') opcional; sem ele usa o mês da última data lançada.
-// opts.somenteDiasUteis -> ignora a parcela de fim de semana (usado pela Locação).
-function calcularProjecaoSegmentada(rows,extractor,mesRef,opts){
+// A Locação tem regra própria (só dias úteis, corte no último lançamento):
+// ver calcularProjecaoLocacao.
+function calcularProjecaoSegmentada(rows,extractor,mesRef){
   const validRows=rows.filter(r=>r.data instanceof Date&&!isNaN(r.data));
   const realizado=validRows.reduce((s,r)=>s+(extractor(r)||0),0);
   const ultimaData=obterUltimaDataLancamento(validRows);
@@ -4809,13 +4819,12 @@ function calcularProjecaoSegmentada(rows,extractor,mesRef,opts){
   // Blocos que atravessam a virada do mês (mês começando no domingo ou terminando no
   // sábado) contam como um bloco só, pelo sábado — numerador e denominador usam o mesmo
   // critério, então a média não distorce.
-  const somenteUteis=!!(opts&&opts.somenteDiasUteis);
   const somaFDSDecorrida=Object.values(somaPorBloco).reduce((s,v)=>s+v,0);
   const nBlocosFDSDecorridos=blocosDecorridos.size;
   const totalBlocosFDSMes=blocosMes.size;
 
   const mediaUtil=nUteisDecorridos>0?somaUtilDecorrida/nUteisDecorridos:0;
-  const mediaFDS=(!somenteUteis&&nBlocosFDSDecorridos>0)?somaFDSDecorrida/nBlocosFDSDecorridos:0;
+  const mediaFDS=nBlocosFDSDecorridos>0?somaFDSDecorrida/nBlocosFDSDecorridos:0;
 
   const projecao=mediaUtil*totalUteisMes
     +mediaFDS*totalBlocosFDSMes
@@ -4827,9 +4836,67 @@ function calcularProjecaoSegmentada(rows,extractor,mesRef,opts){
     nBlocosFDSDecorridos,totalBlocosFDSMes,feriadoRealizado,parcialCorrente};
 }
 
-// ── LOCAÇÃO — mesma regra, mas sem a parcela de fim de semana (não opera em FDS) ──
+// ── LOCAÇÃO — só dias úteis, corte no último dia útil LANÇADO ──────────────────────
+// A locação não trabalha por calendário e sim por lançamento: o dado entra em lote e
+// pode ficar dias sem atualizar. Por isso o corte NÃO é "hoje" (como na ATT) e sim o
+// último dia útil que já tem lançamento — se o último registro é 10/07, projeta-se
+// como se 10/07 fosse o último dia decorrido, até chegar dado novo.
+//
+//   Projeção = (Σ dias úteis até o corte ÷ nº de dias úteis até o corte) × D.U. do mês
+//            + Σ lançado em fim de semana / feriado   (parcela fixa)
+//
+// Fim de semana e feriado nunca contam como dia no cálculo (nem no denominador, nem no
+// multiplicador). O que foi lançado neles é somado como parcela fixa, para a projeção
+// nunca ficar abaixo do realizado.
 function calcularProjecaoLocacao(rows,extractor,mesRef){
-  return calcularProjecaoSegmentada(rows,extractor,mesRef,{somenteDiasUteis:true});
+  const validRows=rows.filter(r=>r.data instanceof Date&&!isNaN(r.data));
+  const realizado=validRows.reduce((s,r)=>s+(extractor(r)||0),0);
+  const ultimaData=obterUltimaDataLancamento(validRows);
+  const ym=mesRef||_mesRefDeRows(validRows);
+  const vazio={realizado,projecao:realizado,ultimaData,mesRef:ym,
+    mediaUtil:0,mediaFDS:0,nUteisDecorridos:0,totalUteisMes:0,
+    nBlocosFDSDecorridos:0,totalBlocosFDSMes:0,feriadoRealizado:0,parcialCorrente:0,
+    ultimoDiaUtilLancado:null};
+  if(!ym)return vazio;
+
+  const ano=Number(ym.slice(0,4)),mes=Number(ym.slice(5,7))-1;
+  const feriadosKeys=calcularFeriados(ano);
+  const ultimoDiaMes=new Date(ano,mes+1,0).getDate();
+  const doMes=validRows.filter(r=>r.data.getFullYear()===ano&&r.data.getMonth()===mes);
+
+  // Corte = maior dia ÚTIL do mês que já tem lançamento (sábado/domingo não servem
+  // de referência porque não entram na conta).
+  let corte=0;
+  doMes.forEach(r=>{
+    const d=r.data.getDate();
+    if(_classificarDia(r.data,feriadosKeys)==='util'&&d>corte)corte=d;
+  });
+
+  // Total de dias úteis do mês e quantos já decorreram até o corte (inclusive).
+  let totalUteisMes=0,nUteisDecorridos=0;
+  for(let d=1;d<=ultimoDiaMes;d++){
+    if(_classificarDia(new Date(ano,mes,d),feriadosKeys)!=='util')continue;
+    totalUteisMes++;
+    if(d<=corte)nUteisDecorridos++;
+  }
+  if(!corte||nUteisDecorridos>=totalUteisMes)
+    return Object.assign({},vazio,{projecao:realizado,totalUteisMes,nUteisDecorridos,ultimoDiaUtilLancado:corte||null});
+
+  // Numerador: só dias úteis até o corte. Fim de semana/feriado viram parcela fixa.
+  let somaUtil=0,fixo=0;
+  doMes.forEach(r=>{
+    const v=extractor(r)||0,d=r.data.getDate();
+    if(_classificarDia(r.data,feriadosKeys)!=='util'){fixo+=v;return;}
+    if(d<=corte)somaUtil+=v; else fixo+=v;
+  });
+
+  const mediaUtil=nUteisDecorridos>0?somaUtil/nUteisDecorridos:0;
+  const projecao=mediaUtil*totalUteisMes+fixo;
+
+  return{realizado,projecao,ultimaData,mesRef:ym,
+    mediaUtil,mediaFDS:0,nUteisDecorridos,totalUteisMes,
+    nBlocosFDSDecorridos:0,totalBlocosFDSMes:0,feriadoRealizado:0,parcialCorrente:fixo,
+    ultimoDiaUtilLancado:corte};
 }
 
 // Wrappers nomeados conforme prompt
@@ -4881,10 +4948,50 @@ function getConsolidatedProjectedVolume(mes){
   };
 }
 
-// ── META DE DESTINAÇÃO MIX — persistência por mês de referência ──
-// As metas gerais do dashboard não são persistidas/por mês; usamos store próprio.
+// ══════════════════════════════════════════════════════════════
+// PERSISTÊNCIA DE METAS & CONFIGURAÇÕES
+// Antes as metas gerais viviam SÓ nos inputs da tela: `salvarMetas()` avisava
+// "Metas salvas!" mas não gravava nada, e tudo voltava ao padrão do HTML a cada
+// reload. A meta MIX ficava em localStorage e não acompanhava o usuário entre
+// navegadores/dispositivos. Agora as duas vão para a tabela `configuracoes` no
+// Supabase (compartilhada por todos os usuários), com localStorage só como cache
+// para a tela abrir preenchida antes do fetch e para funcionar offline.
+// ══════════════════════════════════════════════════════════════
+const METAS_IDS=['att-cacamba','att-m3','att-fat','att-ticket',
+                 'loc-cacamba','loc-fat','loc-ticket',
+                 'agr-m3','agr-fat','agr-ticket'];
+let _metasGerais=JSON.parse(localStorage.getItem('mlx_metas_gerais')||'{}');
 let _metaMix=JSON.parse(localStorage.getItem('mlx_meta_mix')||'{}');
-function _saveMetaMix(){localStorage.setItem('mlx_meta_mix',JSON.stringify(_metaMix));}
+
+async function _cfgSalvar(chave,valor){
+  const cache={metas_gerais:'mlx_metas_gerais',meta_mix:'mlx_meta_mix'}[chave];
+  if(cache)try{localStorage.setItem(cache,JSON.stringify(valor));}catch(e){}
+  if(!SUPA_URL||!SUPA_KEY)return;
+  const r=await fetch(`${SUPA_URL}/rest/v1/configuracoes?on_conflict=chave`,{
+    method:'POST',
+    headers:Object.assign({},_supaHeaders(),{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'}),
+    body:JSON.stringify({chave,valor,updated_at:new Date().toISOString(),
+      updated_by:(_profile&&_profile.email)||(_session&&_session.user&&_session.user.email)||null})
+  });
+  if(!r.ok)throw new Error(await r.text());
+}
+async function _cfgCarregar(){
+  if(!SUPA_URL||!SUPA_KEY)return;
+  const r=await fetch(`${SUPA_URL}/rest/v1/configuracoes?select=chave,valor`,{headers:_supaHeaders()});
+  if(!r.ok){console.error('configuracoes',await r.text());return;}
+  (await r.json()).forEach(row=>{
+    if(row.chave==='metas_gerais'){_metasGerais=row.valor||{};try{localStorage.setItem('mlx_metas_gerais',JSON.stringify(_metasGerais));}catch(e){}}
+    if(row.chave==='meta_mix'){_metaMix=row.valor||{};try{localStorage.setItem('mlx_meta_mix',JSON.stringify(_metaMix));}catch(e){}}
+  });
+  aplicarMetasNosInputs();
+}
+// Joga os valores salvos nos inputs da tela de Metas & Configurações.
+function aplicarMetasNosInputs(){
+  METAS_IDS.forEach(id=>{
+    const el=document.getElementById('meta-'+id);
+    if(el&&_metasGerais[id]!=null&&_metasGerais[id]!=='')el.value=_metasGerais[id];
+  });
+}
 // Configuração da meta MIX de um mês 'YYYY-MM'
 function getMixMetaConfig(mes){
   const c=(mes&&_metaMix[mes])||{};
@@ -5144,7 +5251,7 @@ function showPage(id,el){
   if(id==='dest-pagamentos') showDestPagamentoPage();
   if(id==='att') updateATT();
   if(id==='consolidado') updateConsolidado();
-  if(id==='config') initMetaMixForm();
+  if(id==='config'){ aplicarMetasNosInputs(); initMetaMixForm(); }
   if(id==='dest-freteiros') freteiroLoadPage();
   if(id==='dest-residuos') destResiduosLoadPage();
   if(id==='dest-conferencia') confInit();
@@ -5980,9 +6087,34 @@ function saveMetaMixForm(){
     metaInicialManual:val('meta-mix-inicial-manual'),
     truckCap:truck!=null?truck:M3_POR_TRUCK_DEFAULT
   };
-  _saveMetaMix();
 }
-function salvarMetas(){saveMetaMixForm();updateAll();alert('✅ Metas salvas!');}
+async function salvarMetas(){
+  const btn=document.querySelector('[onclick="salvarMetas()"]');
+  if(btn)btn.disabled=true;
+  try{
+    // Metas gerais: lê os inputs da tela e persiste
+    const novas={};
+    METAS_IDS.forEach(id=>{
+      const el=document.getElementById('meta-'+id);
+      if(el&&el.value!=='')novas[id]=Number(el.value);
+    });
+    _metasGerais=novas;
+    saveMetaMixForm();                       // monta _metaMix a partir do formulário
+    await Promise.all([
+      _cfgSalvar('metas_gerais',_metasGerais),
+      _cfgSalvar('meta_mix',_metaMix)
+    ]);
+    updateAll();
+    alert('✅ Metas salvas!');
+  }catch(e){
+    console.error('salvarMetas',e);
+    alert('⚠️ Não foi possível salvar as metas no servidor: '+e.message+
+          '\n\nElas ficaram guardadas apenas neste navegador.');
+    updateAll();
+  }finally{
+    if(btn)btn.disabled=false;
+  }
+}
 
 // ── OVERVIEW ──────────────────────────────────────────────────
 function updateOverview(){
